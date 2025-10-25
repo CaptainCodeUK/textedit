@@ -1,222 +1,231 @@
-# Implementation Tasks: Text Editor (001-text-editor)
+---
 
-This task plan implements the feature in `spec.md` using .NET 8 + Blazor (Server-in-Electron) with TailwindCSS and ElectronNET.API. It maps every Functional Requirement (FR-001..FR-034) to concrete work with test coverage and constitution gates.
+description: "Task list for implementing Text Editor (001-text-editor)"
 
-- Source of truth: `spec.md`, `plan.md`, `research.md`, `data-model.md`, `contracts/`
-- Quality gates (from constitution):
-  - Tests: ≥ 85% line, ≥ 80% branch coverage for Core and UI components
-  - Accessibility: No critical a11y violations; keyboard navigation for core flows
-  - Performance: Startup < 2s; close < 2s with 10 unsaved docs; preview ≤ 500ms for ≤100KB; open ≤ 10MB without freeze
-  - Docs: Updated quickstart and user-level help for new capabilities
+---
 
-## Phase 0 — Foundation and Tooling (Infra only)
+# Tasks: Text Editor Application (001-text-editor)
 
-Goal: Create solution/projects, shared libraries, baseline CI, testing harnesses, styles.
+**Input**: Design documents from `/specs/001-text-editor/`
+**Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/
 
-Tasks:
-- T-0.1 Create solution and projects
-  - TextEdit.App (Blazor Server UI)
-  - TextEdit.Core (domain: Document, Tab, EditorState)
-  - TextEdit.Shell (Electron.NET host/entrypoint)
-  - TextEdit.Tests (xUnit + FluentAssertions)
-  - TextEdit.ComponentTests (bUnit)
-  - TextEdit.E2E (Playwright .NET)
-- T-0.2 Configure TailwindCSS build and purging; base styles
-- T-0.3 Add Markdig
-- T-0.4 Wire ElectronNET.API and dev run profile
-- T-0.5 CI: build, test, coverage thresholds (coverlet)
-- T-0.6 Add coding guidelines, editorconfig, and pre-commit checks
+Tests are OPTIONAL per prompt; story phases below omit explicit test tasks. Quality-gate tests are consolidated later.
 
-Acceptance:
-- Solution builds, Electron shell launches a hello page; tests pipeline green
+## Phase 1: Setup (Project Initialization)
 
-FRs covered: None (foundation)
+**Purpose**: Create solution, projects, baseline configs matching plan.md
 
-## Phase 1 — Core Editing & File Operations
+- [ ] T001 Create solution file at textedit.sln
+- [ ] T002 Create ASP.NET Core host project at src/TextEdit.App/Program.cs and src/TextEdit.App/Startup.cs
+- [ ] T003 [P] Add Electron host bootstrap at src/TextEdit.App/ElectronHost.cs
+- [ ] T004 [P] Create Blazor UI project at src/TextEdit.UI/Pages/App.razor and src/TextEdit.UI/Shared/MainLayout.razor
+- [ ] T005 [P] Add Tailwind input and config at src/TextEdit.UI/Styles/input.css and src/TextEdit.UI/tailwind.config.cjs
+- [ ] T006 Create Core library at src/TextEdit.Core/TextEdit.Core.csproj
+- [ ] T007 [P] Create Infrastructure library at src/TextEdit.Infrastructure/TextEdit.Infrastructure.csproj
+- [ ] T008 [P] Create Markdown library at src/TextEdit.Markdown/TextEdit.Markdown.csproj
+- [ ] T009 Create unit test project at tests/unit/TextEdit.Core.Tests/TextEdit.Core.Tests.csproj
+- [ ] T010 [P] Create integration test project at tests/integration/TextEdit.App.Tests/TextEdit.App.Tests.csproj
+- [ ] T011 [P] Create contract test project at tests/contract/TextEdit.IPC.Tests/TextEdit.IPC.Tests.csproj
 
-Goal: Single-document editing plus basic file operations and tabbed UI.
+---
 
-Tasks:
-- T-1.1 Editor surface: textarea/monaco-like simple editor, input events, undo/redo per-doc store (Core)
-- T-1.2 New/Open/Save/Save As commands and keyboard shortcuts
-- T-1.3 Dirty flag tracking per document; visual indicator on tab
-- T-1.4 Tabs: add/close/switch, preservation of per-tab undo/redo
-- T-1.5 File watcher for external changes (timestamp/hash)
-- T-1.6 Encoding/EOL detection (UTF-8 default); normalize line endings on save
-- T-1.7 Close-tab prompt for unsaved changes (Save, Discard, Cancel)
+## Phase 2: Foundational (Blocking Prerequisites)
 
-Tests:
-- Unit: Document model state, undo/redo, dirty computation
-- Component: Tab strip behavior, indicators, prompts
-- E2E: New→type→Save→reopen→verify; Open existing→edit→Save
+**Purpose**: Core domain, services, IPC scaffolding, DI wiring (blocks all user stories)
 
-Acceptance:
-- Independent histories per tab; indicators match dirty state; basic IO works end-to-end
+- [ ] T012 Define Document model in src/TextEdit.Core/Documents/Document.cs
+- [ ] T013 [P] Define Tab model in src/TextEdit.Core/Documents/Tab.cs
+- [ ] T014 [P] Define EditorState in src/TextEdit.Core/Editing/EditorState.cs
+- [ ] T015 Implement UndoRedoService in src/TextEdit.Core/Editing/UndoRedoService.cs
+- [ ] T016 [P] Implement DocumentService in src/TextEdit.Core/Documents/DocumentService.cs
+- [ ] T017 [P] Implement TabService in src/TextEdit.Core/Documents/TabService.cs
+- [ ] T018 Implement FileSystemService in src/TextEdit.Infrastructure/FileSystem/FileSystemService.cs
+- [ ] T019 [P] Implement FileWatcher in src/TextEdit.Infrastructure/FileSystem/FileWatcher.cs
+- [ ] T020 [P] Implement PersistenceService in src/TextEdit.Infrastructure/Persistence/PersistenceService.cs
+- [ ] T021 Implement AutosaveService in src/TextEdit.Infrastructure/Autosave/AutosaveService.cs
+- [ ] T022 [P] Implement IpcBridge (open/save dialogs) in src/TextEdit.Infrastructure/Ipc/IpcBridge.cs
+- [ ] T023 Register DI for all services in src/TextEdit.App/Startup.cs
+- [ ] T024 [P] Add base layout and styles in src/TextEdit.UI/Shared/MainLayout.razor and src/TextEdit.UI/Styles/input.css
+- [ ] T025 Configure Electron window lifecycle in src/TextEdit.App/ElectronHost.cs
 
-FRs covered: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010, FR-023, FR-025
+**Checkpoint**: Foundation ready — user stories can start in parallel.
 
-## Phase 2 — Menus, Word Wrap, Status Bar
+---
 
-Goal: Standard menus and document info display; toggle word wrap.
+## Phase 3: User Story 1 - Basic Text Editing and File Operations (Priority: P1) 🎯 MVP
 
-Tasks:
-- T-2.1 File menu: New/Open/Save/Save As/Close
-- T-2.2 Edit menu: Undo/Redo/Cut/Copy/Paste/Select All
-- T-2.3 View menu: Word Wrap toggle
-- T-2.4 Status bar: line, column, characters; update on caret/mutations
+**Goal**: Create/open/edit/save single documents with independent undo/redo and dirty state
+**Independent Test**: New → type → Save → close → reopen file → verify exact content
 
-Tests:
-- Component: Menu options visible and invoke commands
-- E2E: Toggle wrap behavior verified visually/DOM; status bar updates
+### Implementation
 
-FRs covered: FR-011, FR-012, FR-013, FR-014, FR-015
+- [ ] T026 [US1] Create TextEditor component in src/TextEdit.UI/Components/Editor/TextEditor.razor
+- [ ] T027 [P] [US1] Add code-behind for editor logic in src/TextEdit.UI/Components/Editor/TextEditor.razor.cs
+- [ ] T028 [US1] Wire New/Open/Save/SaveAs commands in src/TextEdit.UI/Components/Editor/EditorCommands.cs
+- [ ] T029 [P] [US1] Integrate DocumentService + UndoRedoService in src/TextEdit.UI/Components/Editor/TextEditor.razor.cs
+- [ ] T030 [P] [US1] Invoke IpcBridge for file dialogs in src/TextEdit.UI/Components/Editor/EditorCommands.cs
+- [ ] T031 [US1] Implement dirty flag UI indicator on tab title in src/TextEdit.UI/Components/Tabs/TabItem.razor
+- [ ] T032 [P] [US1] Normalize encoding/EOL on save in src/TextEdit.Core/Documents/DocumentService.cs
 
-## Phase 3 — Markdown Preview
+**FRs**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008
 
-Goal: Render markdown preview and keep it in sync with edits within budgets.
+---
 
-Tasks:
-- T-3.1 Preview panel and layout toggle (edit-only, preview-only, split)
-- T-3.2 Render with Markdig; sanitize output; theme styles
-- T-3.3 Live update with debounce; respect large-file manual refresh rule
+## Phase 4: User Story 2 - Multi-Document Tabs with Change Tracking (Priority: P2)
 
-Tests:
-- Unit: Render basic markdown; no crashes on plain text
-- Component: Split view toggle; preview updates on edits
-- Perf check: ≤ 500ms render for ≤ 100KB docs
+**Goal**: Multiple tabs with independent histories and dirty indicators
+**Independent Test**: Open two docs, edit both, verify independent undo/redo and indicators
 
-FRs covered: FR-016, FR-017 (note: FR-033 large-file preview handled with Phase 6 cross-check)
+### Implementation
 
-## Phase 4 — Session Persistence & App Close (No blocking dialogs)
+- [ ] T033 [US2] Create TabStrip UI in src/TextEdit.UI/Components/Tabs/TabStrip.razor
+- [ ] T034 [P] [US2] Implement tab add/close/switch in src/TextEdit.UI/Components/Tabs/TabStrip.razor.cs
+- [ ] T035 [US2] Maintain per-tab undo/redo scope in src/TextEdit.Core/Editing/UndoRedoService.cs
+- [ ] T036 [P] [US2] Show dirty indicators in src/TextEdit.UI/Components/Tabs/TabItem.razor
 
-Goal: Persist unsaved content on close and restore on next launch without blocking.
+**FRs**: FR-009, FR-010, FR-007, FR-008, FR-025
 
-Tasks:
-- T-4.1 Temp storage service and format for new docs and modified existing files
-- T-4.2 On close: persist all unsaved docs; do not spawn multiple save dialogs
-- T-4.3 On startup: restore untitled and modified originals; mark as modified
-- T-4.4 Cleanup: delete temp files when saved/discarded
-- T-4.5 Crash recovery autosave every 30s; startup recovery prompt (Recovered section)
+---
 
-Tests:
-- Unit: Persistence format; cleanup logic
-- E2E: Create unsaved new→close→reopen→restored; Modify existing→close→reopen→restored
-- E2E: After save or discard, temp files removed
+## Phase 5: User Story 4 - Session Persistence on Application Close (Priority: P2)
 
-FRs covered: FR-018, FR-019, FR-020, FR-021, FR-022, FR-024, FR-034
+**Goal**: Persist unsaved work on close and restore on next launch (no blocking save dialogs)
+**Independent Test**: New unsaved doc → close app → reopen → restored as untitled; existing edited doc → close → reopen → restored changes
 
-## Phase 5 — Electron IPC & Dialogs Wiring
+### Implementation
 
-Goal: Implement Open/Save/Save As dialogs and contract checks.
+- [ ] T037 [US4] Persist unsaved new docs on close in src/TextEdit.Infrastructure/Persistence/PersistenceService.cs
+- [ ] T038 [P] [US4] Persist unsaved edits to existing files on close in src/TextEdit.Infrastructure/Persistence/PersistenceService.cs
+- [ ] T039 [US4] Restore persisted items on startup in src/TextEdit.App/Program.cs
+- [ ] T040 [P] [US4] Mark restored docs as modified in src/TextEdit.Core/Documents/Document.cs
+- [ ] T041 [US4] Delete temp files after save/discard in src/TextEdit.Infrastructure/Persistence/PersistenceService.cs
+- [ ] T042 [P] [US4] Hook Electron window close event to persistence in src/TextEdit.App/ElectronHost.cs
 
-Tasks:
-- T-5.1 Implement IPC channels per `contracts/*schema.json` for open/save dialogs
-- T-5.2 Validate requests/responses against JSON Schemas at runtime (dev-only)
-- T-5.3 Error surfaces: permission denied; missing paths; friendly messages
+**FRs**: FR-018, FR-019, FR-020, FR-021, FR-022, FR-024
 
-Tests:
-- Contract tests against schemas
-- E2E: Open via dialog; Save As path change reflected in tab title/path
+---
 
-FRs supported: FR-002, FR-003, FR-004, FR-023, FR-026, FR-031
+## Phase 6: User Story 3 - UI Menus, Word Wrap, Status Bar (Priority: P3)
 
-## Phase 6 — Edge Cases and Conflict Handling
+**Goal**: Standard menus, togglable word wrap, status bar info
+**Independent Test**: Use menus for New/Open/Save; toggle wrap; see status bar line/column/char
 
-Goal: Robust behavior under missing files, conflicts, large files, and storage issues.
+### Implementation
 
-Tasks:
-- T-6.1 Missing files on open/startup: error + locate/cancel; restore as Untitled with original path note
-- T-6.2 External modification detection: prompt Reload / Keep Mine / Save As; protect against silent overwrite
-- T-6.3 Conflicting save guard: block overwrite; force Save As to fork
-- T-6.4 Temp persistence unavailable (disk full/permission): warning banner; in-memory fallback; consolidated close dialog (Save As / Quit Anyway)
-- T-6.5 Permission-denied on save: preserve content; explain; offer Save As; maintain dirty until success
-- T-6.6 Large files: ≤10MB open with progress; >10MB warn and offer Read-Only or Cancel; manual-refresh preview for large files
+- [ ] T043 [US3] Build File/Edit/View menus in src/TextEdit.App/ElectronHost.cs
+- [ ] T044 [P] [US3] Wire menu items to editor commands in src/TextEdit.UI/Components/Editor/EditorCommands.cs
+- [ ] T045 [US3] Implement word wrap toggle in src/TextEdit.Core/Editing/EditorState.cs
+- [ ] T046 [P] [US3] Apply wrap setting in src/TextEdit.UI/Components/Editor/TextEditor.razor
+- [ ] T047 [US3] Add status bar component in src/TextEdit.UI/Components/StatusBar/StatusBar.razor
+- [ ] T048 [P] [US3] Track caret and char count in src/TextEdit.UI/Components/StatusBar/StatusBar.razor.cs
 
-Tests:
-- Component/E2E: Each prompt flow verified; no data loss without explicit consent
-- Perf: 9–10MB file open remains responsive; 25MB path shows warning and respects read-only
+**FRs**: FR-011, FR-012, FR-013, FR-014, FR-015
 
-FRs covered: FR-026, FR-027, FR-028, FR-029, FR-030, FR-031, FR-032, FR-033
+---
 
-## Phase 7 — Quality Gates and Accessibility
+## Phase 7: User Story 5 - Markdown Preview (Priority: P3)
 
-Goal: Meet constitution gates for tests, a11y, perf, and docs.
+**Goal**: Render text as markdown in preview with split view; manual refresh for large files
+**Independent Test**: Toggle preview and verify rendering; edit updates preview within budget
 
-Tasks:
-- T-7.1 Test coverage ≥85% line / ≥80% branch (Core + UI)
-- T-7.2 Accessibility pass: keyboard navigation for menus/tabs/dialogs; color contrast; focus states
-- T-7.3 Performance probes: startup/close timings; preview render budget; regressions blocked
-- T-7.4 Documentation: Quickstart updates; user help for recovery and conflict flows
+### Implementation
 
-Acceptance:
-- Reports included in CI artifacts; failures block merges
+- [ ] T049 [US5] Create MarkdownRenderer service in src/TextEdit.Markdown/MarkdownRenderer.cs
+- [ ] T050 [P] [US5] Add PreviewPanel component in src/TextEdit.UI/Components/Preview/PreviewPanel.razor
+- [ ] T051 [P] [US5] Implement split view layout in src/TextEdit.UI/Pages/Editor.razor
+- [ ] T052 [US5] Debounce preview updates in src/TextEdit.UI/Components/Preview/PreviewPanel.razor.cs
 
-FRs reinforced: SC-001..SC-010 success criteria, constitution gates
+**FRs**: FR-016, FR-017, FR-033 (with Phase 8 large file rules)
 
-## Phase 8 — Packaging & Release (Linux first)
+---
 
-Goal: Pack the app for Linux; smoke test binaries.
+## Phase 8: Edge Cases and Conflict Handling (Cross-Cutting)
 
-Tasks:
-- T-8.1 ElectronNET packaging for Linux target; produce AppImage/Deb (as supported)
-- T-8.2 Smoke tests on packaged app: open/save/close/restore basic scenarios
-- T-8.3 Release notes and versioning
+**Purpose**: Handle missing files, conflicts, temp failures, permissions, and large files
 
-Acceptance:
-- Installable artifact with green smoke test checklist
+- [ ] T053 Implement missing-file handling on open in src/TextEdit.Infrastructure/FileSystem/FileSystemService.cs
+- [ ] T054 [P] On startup, restore missing-original as Untitled in src/TextEdit.App/Program.cs
+- [ ] T055 Detect external modifications and prompt choices in src/TextEdit.Infrastructure/FileSystem/FileWatcher.cs
+- [ ] T056 [P] Block conflicting overwrite; offer Save As in src/TextEdit.Core/Documents/DocumentService.cs
+- [ ] T057 Handle temp persistence failures with fallback in src/TextEdit.Infrastructure/Persistence/PersistenceService.cs
+- [ ] T058 [P] Handle permission-denied on save with Save As in src/TextEdit.Core/Documents/DocumentService.cs
+- [ ] T059 Large file thresholds and read-only mode in src/TextEdit.Core/Documents/DocumentService.cs
+- [ ] T060 [P] Manual-refresh preview for large files in src/TextEdit.UI/Components/Preview/PreviewPanel.razor
+- [ ] T061 Autosave every 30s and recovery prompt in src/TextEdit.Infrastructure/Autosave/AutosaveService.cs
 
-FRs supported: Delivery readiness; no new FRs
+**FRs**: FR-026, FR-027, FR-028, FR-029, FR-030, FR-031, FR-032, FR-033, FR-034
+
+---
+
+## Phase 9: Quality & Constitution Compliance
+
+**Purpose**: Ensure gates for tests, a11y, performance, and docs are met before merge
+
+- [ ] T062 [P] Enforce coverage ≥85% line / ≥80% branch in tests/unit/ and tests/integration/
+- [ ] T063 [P] Accessibility pass (keyboard, contrast, focus) in tests/integration/TextEdit.App.Tests/
+- [ ] T064 [P] Performance probes for startup/close/preview in src/TextEdit.App/ElectronHost.cs
+- [ ] T065 Update quickstart and user guides in specs/001-text-editor/quickstart.md
+- [ ] T066 Final review for constitution principles in .specify/memory/constitution.md alignment
+
+---
+
+## Dependencies & Execution Order
+
+- Setup (Phase 1) → Foundational (Phase 2) → US1 (P1) → US2 (P2), US4 (P2) → US3 (P3), US5 (P3) → Edge Cases → Quality
+- User stories are independently testable per “Independent Test” notes and can run in parallel after Phase 2.
+
+### Parallel Opportunities
+
+- Marked [P] tasks in Phases 1–2 can run concurrently (different files)
+- Within US phases, [P] tasks modify distinct files/components and can run in parallel
+
+### Parallel Example: User Story 1
+
+- Run in parallel: T027 (code-behind), T029 (service integration), T030 (IPC invocation)
+- Then complete T026 (component) and T028 (commands) to finalize US1
 
 ---
 
 ## FR → Task Mapping (Traceability)
 
-- FR-001: T-1.1, T-1.2
-- FR-002: T-1.2, T-5.1, T-5.2
-- FR-003: T-1.2, T-5.1, T-5.2
-- FR-004: T-1.2, T-5.1, T-5.2
-- FR-005: T-1.1
-- FR-006: T-1.1, T-2.2
-- FR-007: T-1.3
-- FR-008: T-1.1, T-1.4
-- FR-009: T-1.4
-- FR-010: T-1.4
-- FR-011: T-2.1
-- FR-012: T-2.2
-- FR-013: T-2.3
-- FR-014: T-2.3
-- FR-015: T-2.4
-- FR-016: T-3.1, T-3.2
-- FR-017: T-3.1, T-3.2
-- FR-018: T-4.1, T-4.2
-- FR-019: T-4.1, T-4.2
-- FR-020: T-4.3
-- FR-021: T-4.3
-- FR-022: T-4.4
-- FR-023: T-1.7, T-5.1
-- FR-024: T-4.2
-- FR-025: T-1.3
-- FR-026: T-6.1
-- FR-027: T-6.1
-- FR-028: T-1.5, T-6.2
-- FR-029: T-6.3
-- FR-030: T-6.4
-- FR-031: T-5.3, T-6.5
-- FR-032: T-6.6
-- FR-033: T-3.3, T-6.6
-- FR-034: T-4.5
+- FR-001: T026, T028
+- FR-002: T028, T030, T018, T022
+- FR-003: T028, T030
+- FR-004: T028, T032
+- FR-005: T026
+- FR-006: T026, T029
+- FR-007: T031
+- FR-008: T029, T035
+- FR-009: T033, T034
+- FR-010: T034
+- FR-011: T043, T044
+- FR-012: T043, T044
+- FR-013: T043
+- FR-014: T045, T046
+- FR-015: T047, T048
+- FR-016: T049, T050
+- FR-017: T051, T052
+- FR-018: T037
+- FR-019: T038
+- FR-020: T039
+- FR-021: T039, T040
+- FR-022: T041
+- FR-023: T034 (close tab prompt will be added with editor commands) — ensure via UI integration
+- FR-024: T042 (no blocking dialogs on app close)
+- FR-025: T031
+- FR-026: T053
+- FR-027: T054
+- FR-028: T055
+- FR-029: T056
+- FR-030: T057
+- FR-031: T058
+- FR-032: T059
+- FR-033: T060 (and preview debounce T052)
+- FR-034: T061
 
-## Testing Strategy (Summary)
+---
 
-- Unit (xUnit + FluentAssertions): Core models/services; persistence; conflict logic
-- Component (bUnit): Menus, tabs, dialogs, editor state, status bar, preview toggle
-- E2E (Playwright): Primary flows; multi-tab; close/restore; conflict prompts; large-file behaviors
-- Contract tests: Validate IPC messages against JSON Schemas in `contracts/`
-- Coverage enforcement: CI fails below thresholds (≥85% line, ≥80% branch)
+## Implementation Strategy
 
-## Notes and Risks
-
-- JSON Schema validator compatibility: If CI lacks draft 2020-12 support, provide draft-07 fallbacks or switch `$schema` accordingly; keep `contracts/README.md` updated.
-- Large file performance: Guardrails and read-only mode to prevent UI stalls
-- Electron packaging variations by distro: confirm AppImage vs Deb support and document
+MVP: Complete Phases 1–2, then Phase 3 (US1). Stop and validate via the independent test. Next, deliver US2 and US4 (both P2). Finally, ship US3/US5 and Edge Cases, then Quality.
 
