@@ -31,7 +31,26 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+Verify alignment with TextEdit Constitution principles:
+
+- [ ] **Code Quality Standards**: Linting/static analysis tools identified for language stack
+- [ ] **Code Quality Standards**: Code review process defined with clear acceptance criteria
+- [ ] **Code Quality Standards**: Documentation requirements specified for public APIs
+- [ ] **Testing Standards**: Test coverage targets defined (80% minimum, 95% for critical paths)
+- [ ] **Testing Standards**: Unit, integration, and contract test requirements identified
+- [ ] **Testing Standards**: Test-first development workflow confirmed for new features
+- [ ] **Testing Standards**: CI pipeline configuration includes all required tests
+- [ ] **UX Consistency**: Design system compliance verified (if UI feature)
+- [ ] **UX Consistency**: Accessibility requirements (WCAG 2.1 AA) confirmed (if UI feature)
+- [ ] **UX Consistency**: Responsive design targets defined (320px/768px/1920px) (if UI feature)
+- [ ] **UX Consistency**: Error handling and loading states specified (if UI feature)
+- [ ] **Performance Requirements**: Response time targets defined for API endpoints/pages
+- [ ] **Performance Requirements**: Resource efficiency constraints specified
+- [ ] **Performance Requirements**: Load testing requirements identified (if >100 concurrent users)
+- [ ] **Performance Requirements**: Monitoring and alerting strategy defined
+- [ ] **Performance Requirements**: Performance budget verified (1.5MB pages, 300KB JS) (if web feature)
+
+*If any gates cannot be met, document justification in Complexity Tracking section*
 
 ## Project Structure
 

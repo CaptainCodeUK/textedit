@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/textedit/ipc/openFileDialog.response.schema.json",
+  "title": "OpenFileDialogResponse",
+  "type": "object",
+  "properties": {
+    "canceled": { "type": "boolean" },
+    "filePaths": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "required": ["canceled", "filePaths"],
+  "additionalProperties": false
+}

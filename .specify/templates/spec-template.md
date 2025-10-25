@@ -105,6 +105,12 @@
 <!--
   ACTION REQUIRED: Define measurable success criteria.
   These must be technology-agnostic and measurable.
+  
+  Constitution Alignment: Success criteria should address:
+  - Code Quality: Review requirements, documentation needs
+  - Testing: Coverage expectations, test types required
+  - UX Consistency: Accessibility, responsive design, error handling (if UI feature)
+  - Performance: Response times, resource limits, scale expectations
 -->
 
 ### Measurable Outcomes

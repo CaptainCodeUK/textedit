@@ -146,7 +146,42 @@ Examples of foundational tasks (adjust based on your project):
 
 ---
 
-## Phase N: Polish & Cross-Cutting Concerns
+## Phase N: Quality & Constitution Compliance
+
+**Purpose**: Verify all constitution requirements before merge
+
+### Code Quality & Testing
+
+- [ ] TXXX [P] Run linting/static analysis and fix all errors
+- [ ] TXXX [P] Verify test coverage meets thresholds (80% minimum, 95% critical paths)
+- [ ] TXXX [P] Review and fix any flaky tests
+- [ ] TXXX Document public APIs and complex logic
+
+### UX & Accessibility (if UI feature)
+
+- [ ] TXXX [P] Verify WCAG 2.1 Level AA compliance
+- [ ] TXXX [P] Test responsive design on 320px/768px/1920px viewports
+- [ ] TXXX [P] Validate design system compliance
+- [ ] TXXX Test keyboard navigation and screen reader support
+- [ ] TXXX Verify error messages and loading states
+
+### Performance & Monitoring
+
+- [ ] TXXX [P] Run performance tests and verify latency targets
+- [ ] TXXX [P] Check resource usage (memory, bundle sizes)
+- [ ] TXXX Configure monitoring metrics and alerts
+- [ ] TXXX Verify performance budget compliance (if web feature)
+
+### Documentation & Deployment
+
+- [ ] TXXX Update README and user documentation
+- [ ] TXXX Create/update deployment runbook
+- [ ] TXXX Prepare rollback plan
+- [ ] TXXX Final code review addressing all constitution principles
+
+---
+
+## Phase N+1: Polish & Cross-Cutting Concerns
 
 **Purpose**: Improvements that affect multiple user stories
 

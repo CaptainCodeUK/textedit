@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/textedit/ipc/restoreSession.response.schema.json",
+  "title": "RestoreSessionResponse",
+  "type": "object",
+  "properties": {
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": { "enum": ["NewDocument", "ExistingFilePatch"] },
+          "originalFilePath": { "type": ["string", "null"] },
+          "content": { "type": "string" }
+        },
+        "required": ["kind", "content"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["records"],
+  "additionalProperties": false
+}

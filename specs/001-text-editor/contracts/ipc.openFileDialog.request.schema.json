@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/textedit/ipc/openFileDialog.request.schema.json",
+  "title": "OpenFileDialogRequest",
+  "type": "object",
+  "properties": {
+    "filters": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "multi": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}
