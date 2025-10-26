@@ -3,6 +3,13 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using TextEdit.Core.Abstractions;
+using TextEdit.Core.Documents;
+using TextEdit.Core.Editing;
+using TextEdit.Infrastructure.Autosave;
+using TextEdit.Infrastructure.FileSystem;
+using TextEdit.Infrastructure.Ipc;
+using TextEdit.Infrastructure.Persistence;
 
 namespace TextEdit.App;
 
@@ -27,10 +34,15 @@ public class Startup
         services.AddRazorPages();
         services.AddServerSideBlazor();
 
-        // Core services will be registered here in Phase 2
-        // services.AddScoped<IDocumentService, DocumentService>();
-        // services.AddScoped<ITabService, TabService>();
-        // etc.
+        // Phase 2: Register core/infrastructure services
+        services.AddSingleton<IUndoRedoService, UndoRedoService>();
+        services.AddSingleton<IFileSystem, FileSystemService>();
+        services.AddSingleton<DocumentService>();
+        services.AddSingleton<TabService>();
+        services.AddSingleton<FileWatcher>();
+        services.AddSingleton<PersistenceService>();
+        services.AddSingleton<AutosaveService>();
+        services.AddSingleton<IpcBridge>();
     }
 
     /// <summary>

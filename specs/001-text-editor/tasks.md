@@ -33,20 +33,20 @@ Tests are OPTIONAL per prompt; story phases below omit explicit test tasks. Qual
 
 **Purpose**: Core domain, services, IPC scaffolding, DI wiring (blocks all user stories)
 
-- [ ] T012 Define Document model in src/TextEdit.Core/Documents/Document.cs
-- [ ] T013 [P] Define Tab model in src/TextEdit.Core/Documents/Tab.cs
-- [ ] T014 [P] Define EditorState in src/TextEdit.Core/Editing/EditorState.cs
-- [ ] T015 Implement UndoRedoService in src/TextEdit.Core/Editing/UndoRedoService.cs
-- [ ] T016 [P] Implement DocumentService in src/TextEdit.Core/Documents/DocumentService.cs
-- [ ] T017 [P] Implement TabService in src/TextEdit.Core/Documents/TabService.cs
-- [ ] T018 Implement FileSystemService in src/TextEdit.Infrastructure/FileSystem/FileSystemService.cs
-- [ ] T019 [P] Implement FileWatcher in src/TextEdit.Infrastructure/FileSystem/FileWatcher.cs
-- [ ] T020 [P] Implement PersistenceService in src/TextEdit.Infrastructure/Persistence/PersistenceService.cs
-- [ ] T021 Implement AutosaveService in src/TextEdit.Infrastructure/Autosave/AutosaveService.cs
-- [ ] T022 [P] Implement IpcBridge (open/save dialogs) in src/TextEdit.Infrastructure/Ipc/IpcBridge.cs
-- [ ] T023 Register DI for all services in src/TextEdit.App/Startup.cs
-- [ ] T024 [P] Add base layout and styles in src/TextEdit.UI/Shared/MainLayout.razor and src/TextEdit.UI/Styles/input.css
-- [ ] T025 Configure Electron window lifecycle in src/TextEdit.App/ElectronHost.cs
+- [X] T012 Define Document model in src/TextEdit.Core/Documents/Document.cs
+- [X] T013 [P] Define Tab model in src/TextEdit.Core/Documents/Tab.cs
+- [X] T014 [P] Define EditorState in src/TextEdit.Core/Editing/EditorState.cs
+- [X] T015 Implement UndoRedoService in src/TextEdit.Core/Editing/UndoRedoService.cs
+- [X] T016 [P] Implement DocumentService in src/TextEdit.Core/Documents/DocumentService.cs
+- [X] T017 [P] Implement TabService in src/TextEdit.Core/Documents/TabService.cs
+- [X] T018 Implement FileSystemService in src/TextEdit.Infrastructure/FileSystem/FileSystemService.cs
+- [X] T019 [P] Implement FileWatcher in src/TextEdit.Infrastructure/FileSystem/FileWatcher.cs
+- [X] T020 [P] Implement PersistenceService in src/TextEdit.Infrastructure/Persistence/PersistenceService.cs
+- [X] T021 Implement AutosaveService in src/TextEdit.Infrastructure/Autosave/AutosaveService.cs
+- [X] T022 [P] Implement IpcBridge (open/save dialogs) in src/TextEdit.Infrastructure/Ipc/IpcBridge.cs
+- [X] T023 Register DI for all services in src/TextEdit.App/Startup.cs
+- [X] T024 [P] Add base layout and styles in src/TextEdit.UI/Shared/MainLayout.razor and src/TextEdit.UI/Styles/input.css
+- [X] T025 Configure Electron window lifecycle in src/TextEdit.App/ElectronHost.cs
 
 **Checkpoint**: Foundation ready — user stories can start in parallel.
 
