@@ -1,0 +1,23 @@
+@inherits LayoutComponentBase
+
+<div class="main-layout">
+    <header class="app-header">
+        <div class="header-content">
+            <span class="app-title">TextEdit</span>
+            @* Tab strip will be added in Phase 4 (US2): <TabStrip /> *@
+        </div>
+    </header>
+    
+    <main class="app-main">
+        @Body
+    </main>
+    
+    <footer class="app-footer">
+        @* Status bar will be added in Phase 6 (US3): <StatusBar /> *@
+        <span class="status-placeholder">Ready</span>
+    </footer>
+</div>
+
+@code {
+    // Layout component for consistent structure across all pages
+}

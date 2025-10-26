@@ -15,17 +15,17 @@ Tests are OPTIONAL per prompt; story phases below omit explicit test tasks. Qual
 
 **Purpose**: Create solution, projects, baseline configs matching plan.md
 
-- [ ] T001 Create solution file at textedit.sln
-- [ ] T002 Create ASP.NET Core host project at src/TextEdit.App/Program.cs and src/TextEdit.App/Startup.cs
-- [ ] T003 [P] Add Electron host bootstrap at src/TextEdit.App/ElectronHost.cs
-- [ ] T004 [P] Create Blazor UI project at src/TextEdit.UI/Pages/App.razor and src/TextEdit.UI/Shared/MainLayout.razor
-- [ ] T005 [P] Add Tailwind input and config at src/TextEdit.UI/Styles/input.css and src/TextEdit.UI/tailwind.config.cjs
-- [ ] T006 Create Core library at src/TextEdit.Core/TextEdit.Core.csproj
-- [ ] T007 [P] Create Infrastructure library at src/TextEdit.Infrastructure/TextEdit.Infrastructure.csproj
-- [ ] T008 [P] Create Markdown library at src/TextEdit.Markdown/TextEdit.Markdown.csproj
-- [ ] T009 Create unit test project at tests/unit/TextEdit.Core.Tests/TextEdit.Core.Tests.csproj
-- [ ] T010 [P] Create integration test project at tests/integration/TextEdit.App.Tests/TextEdit.App.Tests.csproj
-- [ ] T011 [P] Create contract test project at tests/contract/TextEdit.IPC.Tests/TextEdit.IPC.Tests.csproj
+- [X] T001 Create solution file at textedit.sln
+- [X] T002 Create ASP.NET Core host project at src/TextEdit.App/Program.cs and src/TextEdit.App/Startup.cs
+- [X] T003 [P] Add Electron host bootstrap at src/TextEdit.App/ElectronHost.cs
+- [X] T004 [P] Create Blazor UI project at src/TextEdit.UI/Pages/App.razor and src/TextEdit.UI/Shared/MainLayout.razor
+- [X] T005 [P] Add Tailwind input and config at src/TextEdit.UI/Styles/input.css and src/TextEdit.UI/tailwind.config.cjs
+- [X] T006 Create Core library at src/TextEdit.Core/TextEdit.Core.csproj
+- [X] T007 [P] Create Infrastructure library at src/TextEdit.Infrastructure/TextEdit.Infrastructure.csproj
+- [X] T008 [P] Create Markdown library at src/TextEdit.Markdown/TextEdit.Markdown.csproj
+- [X] T009 Create unit test project at tests/unit/TextEdit.Core.Tests/TextEdit.Core.Tests.csproj
+- [X] T010 [P] Create integration test project at tests/integration/TextEdit.App.Tests/TextEdit.App.Tests.csproj
+- [X] T011 [P] Create contract test project at tests/contract/TextEdit.IPC.Tests/TextEdit.IPC.Tests.csproj
 
 ---
 

@@ -1,0 +1,114 @@
+# .NET / C# / ASP.NET Core
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.pidb
+*.sln.iml
+packages/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]uild/
+[Ll]og/
+[Ll]ogs/
+TestResults/
+*.VisualState.xml
+*.vs
+.vs/
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.DotSettings.user
+
+# ASP.NET Scaffolding
+ScaffoldingReadMe.txt
+
+# .NET Core / .NET 8
+project.lock.json
+project.fragment.lock.json
+artifacts/
+.dotnet/
+
+# NuGet Packages
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+
+# Test Coverage
+coverage/
+*.coverage
+*.coveragexml
+coverlet-output/
+
+# Node.js / npm (for Tailwind)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Electron
+dist/
+out/
+electron-output/
+*.asar
+
+# Build outputs
+wwwroot/css/*.css
+!wwwroot/css/input.css
+wwwroot/js/
+*.min.js
+*.min.css
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# IDE / Editor
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/extensions.json
+*.swp
+*.swo
+*~
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.bak
+*.old
+
+# Application specific
+# Autosave/recovery temp files (app data dir)
+# Note: These are typically in OS temp/appdata, not repo
+
+# Keep important config files
+!.vscode/
+!.github/
+!.specify/
