@@ -15,10 +15,10 @@ var app = builder.Build();
 // Configure middleware
 startup.Configure(app, app.Environment);
 
-// Bootstrap Electron window
+// Bootstrap Electron window after the web host is fully started
 if (HybridSupport.IsElectronActive)
 {
-    await ElectronHost.InitializeAsync(app);
+    ElectronHost.Initialize(app);
 }
 
 await app.RunAsync();

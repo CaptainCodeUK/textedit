@@ -9,9 +9,21 @@ namespace TextEdit.App;
 public static class ElectronHost
 {
     /// <summary>
-    /// Initialize Electron window and configure menus
+    /// Wire up Electron window creation to occur only after the ASP.NET Core host has fully started.
+    /// This avoids Electron trying to load the URL before Kestrel is listening (ERR_CONNECTION_REFUSED).
     /// </summary>
-    public static async Task InitializeAsync(WebApplication app)
+    public static void Initialize(WebApplication app)
+    {
+        app.Lifetime.ApplicationStarted.Register(() =>
+        {
+            _ = Task.Run(CreateMainWindowAsync);
+        });
+    }
+
+    /// <summary>
+    /// Create the main BrowserWindow and configure lifecycle hooks.
+    /// </summary>
+    private static async Task CreateMainWindowAsync()
     {
         var window = await Electron.WindowManager.CreateWindowAsync(new BrowserWindowOptions
         {
