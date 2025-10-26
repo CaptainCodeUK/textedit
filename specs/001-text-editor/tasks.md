@@ -59,13 +59,13 @@ Tests are OPTIONAL per prompt; story phases below omit explicit test tasks. Qual
 
 ### Implementation
 
-- [ ] T026 [US1] Create TextEditor component in src/TextEdit.UI/Components/Editor/TextEditor.razor
-- [ ] T027 [P] [US1] Add code-behind for editor logic in src/TextEdit.UI/Components/Editor/TextEditor.razor.cs
-- [ ] T028 [US1] Wire New/Open/Save/SaveAs commands in src/TextEdit.UI/Components/Editor/EditorCommands.cs
-- [ ] T029 [P] [US1] Integrate DocumentService + UndoRedoService in src/TextEdit.UI/Components/Editor/TextEditor.razor.cs
-- [ ] T030 [P] [US1] Invoke IpcBridge for file dialogs in src/TextEdit.UI/Components/Editor/EditorCommands.cs
-- [ ] T031 [US1] Implement dirty flag UI indicator on tab title in src/TextEdit.UI/Components/Tabs/TabItem.razor
-- [ ] T032 [P] [US1] Normalize encoding/EOL on save in src/TextEdit.Core/Documents/DocumentService.cs
+- [X] T026 [US1] Create TextEditor component in src/TextEdit.UI/Components/Editor/TextEditor.razor
+- [X] T027 [P] [US1] Add code-behind for editor logic in src/TextEdit.UI/Components/Editor/TextEditor.razor.cs
+- [X] T028 [US1] Wire New/Open/Save/SaveAs commands in src/TextEdit.UI/Components/Editor/EditorCommands.cs
+- [X] T029 [P] [US1] Integrate DocumentService + UndoRedoService in src/TextEdit.UI/Components/Editor/TextEditor.razor.cs
+- [X] T030 [P] [US1] Invoke IpcBridge for file dialogs in src/TextEdit.UI/Components/Editor/EditorCommands.cs
+- [X] T031 [US1] Implement dirty flag UI indicator on tab title in src/TextEdit.UI/Components/Tabs/TabItem.razor
+- [X] T032 [P] [US1] Normalize encoding/EOL on save in src/TextEdit.Core/Documents/DocumentService.cs
 
 **FRs**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008
 

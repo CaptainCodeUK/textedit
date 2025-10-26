@@ -1,0 +1,17 @@
+@using TextEdit.Core.Documents
+@using TextEdit.Core.Editing
+
+<div class="editor flex flex-col h-full">
+    <div class="toolbar flex gap-2 mb-2">
+        <button class="btn" @onclick="HandleNew">New</button>
+        <button class="btn" @onclick="HandleOpen">Open…</button>
+        <button class="btn" @onclick="HandleSave" disabled="@(!CanSave)">Save</button>
+        <button class="btn" @onclick="HandleSaveAs">Save As…</button>
+        <span class="ml-4 text-sm text-gray-600">@CurrentDoc.Name @((CurrentDoc.IsDirty ? "*" : string.Empty))</span>
+    </div>
+
+    <textarea class="flex-1 w-full border rounded p-2 font-mono"
+              @bind="Content"
+              @bind:event="oninput"
+              rows="20"></textarea>
+</div>

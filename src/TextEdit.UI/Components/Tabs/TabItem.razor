@@ -1,0 +1,13 @@
+@using TextEdit.Core.Documents
+@code {
+    [Parameter] public Document Document { get; set; } = default!;
+}
+
+<div class="tab-item px-3 py-1 border-b-2" title="@Document.Name">
+    <span>@Document.Name</span>
+    @if (Document.IsDirty)
+    {
+        <span class="text-red-500 ml-1">*</span>
+    }
+    
+</div>

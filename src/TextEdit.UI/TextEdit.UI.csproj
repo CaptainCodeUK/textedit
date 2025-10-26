@@ -15,4 +15,9 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="8.0.20" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\TextEdit.Core\TextEdit.Core.csproj" />
+    <ProjectReference Include="..\TextEdit.Infrastructure\TextEdit.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>
