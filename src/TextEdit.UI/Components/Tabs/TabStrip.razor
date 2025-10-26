@@ -1,0 +1,54 @@
+@using TextEdit.UI.App
+@using TextEdit.Core.Documents
+@inject AppState State
+@implements System.IDisposable
+
+<div class="tab-strip" style="display:flex;gap:6px;align-items:flex-end;overflow-x:auto;">
+    @foreach (var t in State.Tabs)
+    {
+        var doc = State.GetDocument(t.DocumentId);
+        var title = doc?.Name ?? "Untitled";
+        var dirty = doc?.IsDirty == true ? " *" : string.Empty;
+        <button class="tab"
+                style="border:none;border-bottom:2px solid @(t.IsActive ? "#2563eb" : "transparent");padding:6px 10px;background:transparent;cursor:pointer;"
+                @onclick="(() => OnActivate(t.Id))"
+                title="@title">
+            <span>@title@dirty</span>
+            <span style="margin-left:8px;color:#9ca3af;" @onclick="(() => OnClose(t.Id))" @onclick:stopPropagation="true">✕</span>
+        </button>
+    }
+    <button class="tab-add" style="margin-left:8px;" @onclick="NewTab">+</button>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Ensure at least one tab exists so the strip always shows something
+        if (State.Tabs.Count == 0)
+        {
+            State.CreateNew();
+        }
+        State.Changed += OnStateChanged;
+    }
+
+    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+    private async Task NewTab()
+    {
+        State.CreateNew();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OnActivate(Guid id)
+    {
+        State.ActivateTab(id);
+    }
+
+    private void OnClose(Guid id)
+    {
+        State.CloseTab(id);
+    }
+    public void Dispose()
+    {
+        State.Changed -= OnStateChanged;
+    }
+}

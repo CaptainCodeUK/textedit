@@ -79,12 +79,25 @@ public static class ElectronHost
             Label = "Edit",
             Submenu = new MenuItem[]
             {
-                new MenuItem { Role = MenuRole.undo },
-                new MenuItem { Role = MenuRole.redo },
+                new MenuItem { Label = "Undo", Accelerator = "CmdOrCtrl+Z", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.UndoRequested); } },
+                new MenuItem { Label = "Redo", Accelerator = "CmdOrCtrl+Y", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.RedoRequested); } },
                 new MenuItem { Type = MenuType.separator },
                 new MenuItem { Role = MenuRole.cut },
                 new MenuItem { Role = MenuRole.copy },
                 new MenuItem { Role = MenuRole.paste },
+            }
+        };
+
+        var windowMenu = new MenuItem
+        {
+            Label = "Window",
+            Submenu = new MenuItem[]
+            {
+                new MenuItem { Label = "Next Tab", Accelerator = "Ctrl+Tab", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.NextTabRequested); } },
+                new MenuItem { Label = "Previous Tab", Accelerator = "Ctrl+Shift+Tab", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.PrevTabRequested); } },
+                new MenuItem { Type = MenuType.separator },
+                new MenuItem { Label = "Next Tab (PageDown)", Accelerator = "Ctrl+PageDown", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.NextTabRequested); } },
+                new MenuItem { Label = "Previous Tab (PageUp)", Accelerator = "Ctrl+PageUp", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.PrevTabRequested); } },
             }
         };
 
@@ -100,7 +113,7 @@ public static class ElectronHost
             }
         };
 
-        Electron.Menu.SetApplicationMenu(new[] { fileMenu, editMenu, viewMenu });
+    Electron.Menu.SetApplicationMenu(new[] { fileMenu, editMenu, viewMenu, windowMenu });
     }
 
     /// <summary>

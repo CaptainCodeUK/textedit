@@ -1,11 +1,11 @@
 @page "/"
-@layout MainLayout
 @using Microsoft.AspNetCore.Components
 
-<div class="app-container" style="height:100%;min-height:0;display:flex;flex-direction:column;">
-    <TextEditor />
-    
-</div>
+<LayoutView Layout="typeof(TextEdit.UI.Shared.MainLayout)">
+    <div class="app-container" style="height:100%;min-height:0;display:flex;flex-direction:column;">
+        <TextEditor />
+    </div>
+</LayoutView>
 
 @code {
     // App state and lifecycle

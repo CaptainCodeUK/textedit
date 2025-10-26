@@ -10,6 +10,10 @@ public static class EditorCommandHub
     public static Func<Task>? OpenRequested { get; set; }
     public static Func<Task>? SaveRequested { get; set; }
     public static Func<Task>? SaveAsRequested { get; set; }
+    public static Func<Task>? UndoRequested { get; set; }
+    public static Func<Task>? RedoRequested { get; set; }
+    public static Func<Task>? NextTabRequested { get; set; }
+    public static Func<Task>? PrevTabRequested { get; set; }
 
     public static Task InvokeSafe(Func<Task>? action)
         => action is null ? Task.CompletedTask : action();

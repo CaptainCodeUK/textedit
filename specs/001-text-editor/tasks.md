@@ -78,10 +78,10 @@ Tests are OPTIONAL per prompt; story phases below omit explicit test tasks. Qual
 
 ### Implementation
 
-- [ ] T033 [US2] Create TabStrip UI in src/TextEdit.UI/Components/Tabs/TabStrip.razor
-- [ ] T034 [P] [US2] Implement tab add/close/switch in src/TextEdit.UI/Components/Tabs/TabStrip.razor.cs
-- [ ] T035 [US2] Maintain per-tab undo/redo scope in src/TextEdit.Core/Editing/UndoRedoService.cs
-- [ ] T036 [P] [US2] Show dirty indicators in src/TextEdit.UI/Components/Tabs/TabItem.razor
+- [X] T033 [US2] Create TabStrip UI in src/TextEdit.UI/Components/Tabs/TabStrip.razor
+- [X] T034 [P] [US2] Implement tab add/close/switch in src/TextEdit.UI/Components/Tabs/TabStrip.razor.cs
+- [X] T035 [US2] Maintain per-tab undo/redo scope in src/TextEdit.Core/Editing/UndoRedoService.cs
+- [X] T036 [P] [US2] Show dirty indicators in src/TextEdit.UI/Components/Tabs/TabItem.razor
 
 **FRs**: FR-009, FR-010, FR-007, FR-008, FR-025
 

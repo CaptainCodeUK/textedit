@@ -70,6 +70,12 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+/* Tab strip styling for visibility */
+.tab-strip { padding: 6px 12px; background: #f8fafc; }
+.tab { background: transparent; border: none; padding: 6px 10px; margin-right: 6px; }
+.tab:hover { background: rgba(37,99,235,0.06); }
+.tab .close { margin-left:8px; color:#9ca3af; cursor:pointer; }
+
 #blazor-error-ui {
     background: lightyellow;
     bottom: 0;
