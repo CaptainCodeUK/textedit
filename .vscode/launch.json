@@ -1,0 +1,65 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch & Debug Electron App",
+            "type": "coreclr",
+            "request": "attach",
+            "preLaunchTask": "electronize:start",
+            "processId": "${command:pickProcess}",
+            "justMyCode": true
+        },
+        {
+            "name": "Launch Electron (Auto-Attach)",
+            "type": "coreclr",
+            "request": "attach",
+            "preLaunchTask": "electronize:start",
+            "processName": "TextEdit.App",
+            "justMyCode": true
+        },
+        {
+            "name": "Run Unit Tests",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "dotnet",
+            "args": [
+                "test",
+                "${workspaceFolder}/tests/unit/TextEdit.Core.Tests/TextEdit.Core.Tests.csproj",
+                "--logger:console;verbosity=detailed"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "Run All Tests",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "dotnet",
+            "args": [
+                "test",
+                "${workspaceFolder}/textedit.sln",
+                "--logger:console;verbosity=detailed"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "Launch ASP.NET Core (no Electron)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/src/TextEdit.App/bin/Debug/net8.0/TextEdit.App.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/TextEdit.App",
+            "stopAtEntry": false,
+            "console": "internalConsole",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        }
+    ],
+    "inputs": [],
+    "compounds": []
+}
