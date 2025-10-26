@@ -12,6 +12,7 @@
         <button class="tab"
                 style="border:none;border-bottom:2px solid @(t.IsActive ? "#2563eb" : "transparent");padding:6px 10px;background:transparent;cursor:pointer;"
                 @onclick="(() => OnActivate(t.Id))"
+                @onmousedown="(e => OnMouseDown(e, t.Id))"
                 title="@title">
             <span>@title@dirty</span>
             <span style="margin-left:8px;color:#9ca3af;" @onclick="(() => OnClose(t.Id))" @onclick:stopPropagation="true">✕</span>
@@ -47,6 +48,16 @@
     {
         State.CloseTab(id);
     }
+
+    private void OnMouseDown(MouseEventArgs e, Guid id)
+    {
+        // Middle mouse button (button 1) closes the tab
+        if (e.Button == 1)
+        {
+            State.CloseTab(id);
+        }
+    }
+
     public void Dispose()
     {
         State.Changed -= OnStateChanged;

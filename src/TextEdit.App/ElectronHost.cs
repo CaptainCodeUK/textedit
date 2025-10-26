@@ -59,6 +59,13 @@ public static class ElectronHost
     /// </summary>
     private static void ConfigureMenus()
     {
+        // Determine platform-specific quit accelerator
+        string quitAccelerator = "CmdOrCtrl+Q";
+        if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+        {
+            quitAccelerator = "Alt+F4";
+        }
+
         var fileMenu = new MenuItem
         {
             Label = "File",
@@ -70,7 +77,9 @@ public static class ElectronHost
                 new MenuItem { Label = "Save", Accelerator = "CmdOrCtrl+S", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.SaveRequested); } },
                 new MenuItem { Label = "Save As…", Accelerator = "CmdOrCtrl+Shift+S", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.SaveAsRequested); } },
                 new MenuItem { Type = MenuType.separator },
-                new MenuItem { Label = "Exit", Role = MenuRole.close }
+                new MenuItem { Label = "Close Tab", Accelerator = "CmdOrCtrl+W", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.CloseTabRequested); } },
+                new MenuItem { Type = MenuType.separator },
+                new MenuItem { Label = "Quit", Accelerator = quitAccelerator, Click = () => Electron.App.Quit() }
             }
         };
 

@@ -14,6 +14,7 @@ public static class EditorCommandHub
     public static Func<Task>? RedoRequested { get; set; }
     public static Func<Task>? NextTabRequested { get; set; }
     public static Func<Task>? PrevTabRequested { get; set; }
+    public static Func<Task>? CloseTabRequested { get; set; }
 
     public static Task InvokeSafe(Func<Task>? action)
         => action is null ? Task.CompletedTask : action();
