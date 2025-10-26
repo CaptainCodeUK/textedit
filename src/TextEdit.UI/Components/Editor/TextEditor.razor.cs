@@ -32,6 +32,11 @@ public partial class TextEditor : ComponentBase
     protected override void OnInitialized()
     {
         CurrentDoc = DocumentService.NewDocument();
+        // Register handlers for application menu integration
+        EditorCommandHub.NewRequested = HandleNew;
+        EditorCommandHub.OpenRequested = HandleOpen;
+        EditorCommandHub.SaveRequested = HandleSave;
+        EditorCommandHub.SaveAsRequested = HandleSaveAs;
     }
 
     protected async Task HandleNew()

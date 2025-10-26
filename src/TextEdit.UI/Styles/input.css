@@ -21,7 +21,7 @@
 }
 
 .app-main {
-    @apply flex-1 overflow-hidden;
+    @apply flex-1 overflow-hidden min-h-0;
 }
 
 .app-footer {
@@ -29,8 +29,12 @@
 }
 
 .app-container {
-    @apply w-full h-full p-4;
+    @apply w-full h-full p-4 flex flex-col min-h-0;
 }
+
+/* Editor layout helpers */
+.editor { @apply flex flex-col h-full min-h-0; }
+.editor-textarea { @apply flex-1 min-h-0 resize-none; }
 
 /* Editor-specific styles will be added in Phase 3 */
 /* Tab styles will be added in Phase 4 */

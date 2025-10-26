@@ -1,3 +1,59 @@
+/* Minimal runtime CSS to ensure layout stretches and editor fills space.
+   Tailwind build can replace/augment this later. */
+
+html, body { height: 100%; margin: 0; }
+
+.main-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  height: 100vh;
+}
+
+.app-header { flex: 0 0 auto; }
+.app-footer { flex: 0 0 auto; }
+
+.app-main {
+  flex: 1 1 auto;
+  min-height: 0; /* allow children to size to remainder height */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-container {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+
+.editor-textarea {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  resize: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.editor-textarea:focus {
+  outline: 2px solid #94a3b8; /* slate-400 */
+  outline-offset: 0;
+}
 /* TextEdit - Basic Styles */
 
 * {

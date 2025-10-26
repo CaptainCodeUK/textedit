@@ -1,17 +1,9 @@
 @using TextEdit.Core.Documents
 @using TextEdit.Core.Editing
 
-<div class="editor flex flex-col h-full">
-    <div class="toolbar flex gap-2 mb-2">
-        <button class="btn" @onclick="HandleNew">New</button>
-        <button class="btn" @onclick="HandleOpen">Open…</button>
-        <button class="btn" @onclick="HandleSave" disabled="@(!CanSave)">Save</button>
-        <button class="btn" @onclick="HandleSaveAs">Save As…</button>
-        <span class="ml-4 text-sm text-gray-600">@CurrentDoc.Name @((CurrentDoc.IsDirty ? "*" : string.Empty))</span>
-    </div>
-
-    <textarea class="flex-1 w-full border rounded p-2 font-mono"
+<div class="editor h-full min-h-0 flex flex-col" style="height:100%;min-height:0;display:flex;flex-direction:column;flex:1 1 auto;">
+    <textarea class="editor-textarea flex-1 min-h-0 w-full p-2 font-mono resize-none"
+              style="height:100%;min-height:0;flex:1 1 auto;box-sizing:border-box;border:none;outline:1px solid #d1d5db;border-radius:6px;padding-right:12px;padding-bottom:12px;caret-color:#111827;line-height:1.4;"
               @bind="Content"
-              @bind:event="oninput"
-              rows="20"></textarea>
+              @bind:event="oninput"></textarea>
 </div>

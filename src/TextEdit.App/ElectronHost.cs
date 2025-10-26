@@ -1,5 +1,6 @@
 using ElectronNET.API;
 using ElectronNET.API.Entities;
+using TextEdit.UI.Components.Editor;
 
 namespace TextEdit.App;
 
@@ -47,7 +48,7 @@ public static class ElectronHost
         };
 
         // Application menu will be configured in Phase 6 (US3)
-        // ConfigureMenus();
+    ConfigureMenus();
 
         // IPC handlers will be registered here in Phase 2
         // RegisterIpcHandlers();
@@ -58,10 +59,48 @@ public static class ElectronHost
     /// </summary>
     private static void ConfigureMenus()
     {
-        // TODO: Phase 6 - T043
-        // File menu: New, Open, Save, Save As, Exit
-        // Edit menu: Undo, Redo, Cut, Copy, Paste
-        // View menu: Word Wrap toggle
+        var fileMenu = new MenuItem
+        {
+            Label = "File",
+            Submenu = new MenuItem[]
+            {
+                new MenuItem { Label = "New", Accelerator = "CmdOrCtrl+N", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.NewRequested); } },
+                new MenuItem { Type = MenuType.separator },
+                new MenuItem { Label = "Open…", Accelerator = "CmdOrCtrl+O", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.OpenRequested); } },
+                new MenuItem { Label = "Save", Accelerator = "CmdOrCtrl+S", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.SaveRequested); } },
+                new MenuItem { Label = "Save As…", Accelerator = "CmdOrCtrl+Shift+S", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.SaveAsRequested); } },
+                new MenuItem { Type = MenuType.separator },
+                new MenuItem { Label = "Exit", Role = MenuRole.close }
+            }
+        };
+
+        var editMenu = new MenuItem
+        {
+            Label = "Edit",
+            Submenu = new MenuItem[]
+            {
+                new MenuItem { Role = MenuRole.undo },
+                new MenuItem { Role = MenuRole.redo },
+                new MenuItem { Type = MenuType.separator },
+                new MenuItem { Role = MenuRole.cut },
+                new MenuItem { Role = MenuRole.copy },
+                new MenuItem { Role = MenuRole.paste },
+            }
+        };
+
+        var viewMenu = new MenuItem
+        {
+            Label = "View",
+            Submenu = new MenuItem[]
+            {
+                new MenuItem { Role = MenuRole.reload },
+                new MenuItem { Role = MenuRole.toggledevtools },
+                new MenuItem { Type = MenuType.separator },
+                new MenuItem { Role = MenuRole.togglefullscreen }
+            }
+        };
+
+        Electron.Menu.SetApplicationMenu(new[] { fileMenu, editMenu, viewMenu });
     }
 
     /// <summary>
