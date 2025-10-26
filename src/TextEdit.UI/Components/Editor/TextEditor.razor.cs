@@ -49,10 +49,7 @@ public partial class TextEditor : ComponentBase, IDisposable
 
     protected override void OnInitialized()
     {
-        if (AppState.ActiveDocument is null)
-        {
-            AppState.CreateNew();
-        }
+        // Don't create a document here - App.razor's RestoreSessionAsync handles initialization
         AppState.Changed += OnAppStateChanged;
         // Register handlers for application menu integration
         EditorCommandHub.NewRequested = HandleNew;

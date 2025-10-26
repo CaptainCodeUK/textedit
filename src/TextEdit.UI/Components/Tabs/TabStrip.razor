@@ -24,11 +24,8 @@
 @code {
     protected override void OnInitialized()
     {
-        // Ensure at least one tab exists so the strip always shows something
-        if (State.Tabs.Count == 0)
-        {
-            State.CreateNew();
-        }
+        // Don't create tabs here; App.razor performs session restore and will
+        // create a new document only when no session exists.
         State.Changed += OnStateChanged;
     }
 

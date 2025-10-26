@@ -1,5 +1,7 @@
 @page "/"
 @using Microsoft.AspNetCore.Components
+@using TextEdit.UI.App
+@inject AppState AppState
 
 <LayoutView Layout="typeof(TextEdit.UI.Shared.MainLayout)">
     <div class="app-container" style="height:100%;min-height:0;display:flex;flex-direction:column;">
@@ -8,10 +10,26 @@
 </LayoutView>
 
 @code {
-    // App state and lifecycle
-    protected override void OnInitialized()
+    // Run restore only once on the client after the circuit is established to avoid
+    // duplicate execution during prerendering.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Initialize app state
-        // Load session persistence if available (Phase 5)
+        if (!firstRender) return;
+
+        try
+        {
+            // Restore previous session (unsaved documents) on startup
+            await AppState.RestoreSessionAsync();
+        }
+        catch (Exception ex)
+        {
+            // If restore fails, ensure we at least have one document
+            Console.WriteLine($"[App] Failed to restore session: {ex.Message}");
+            Console.WriteLine($"[App] Stack trace: {ex.StackTrace}");
+            if (AppState.ActiveDocument == null)
+            {
+                AppState.CreateNew();
+            }
+        }
     }
 }

@@ -94,12 +94,12 @@ Tests are OPTIONAL per prompt; story phases below omit explicit test tasks. Qual
 
 ### Implementation
 
-- [ ] T037 [US4] Persist unsaved new docs on close in src/TextEdit.Infrastructure/Persistence/PersistenceService.cs
-- [ ] T038 [P] [US4] Persist unsaved edits to existing files on close in src/TextEdit.Infrastructure/Persistence/PersistenceService.cs
-- [ ] T039 [US4] Restore persisted items on startup in src/TextEdit.App/Program.cs
-- [ ] T040 [P] [US4] Mark restored docs as modified in src/TextEdit.Core/Documents/Document.cs
-- [ ] T041 [US4] Delete temp files after save/discard in src/TextEdit.Infrastructure/Persistence/PersistenceService.cs
-- [ ] T042 [P] [US4] Hook Electron window close event to persistence in src/TextEdit.App/ElectronHost.cs
+- [X] T037 [US4] Persist unsaved new docs on close in src/TextEdit.Infrastructure/Persistence/PersistenceService.cs
+- [X] T038 [P] [US4] Persist unsaved edits to existing files on close in src/TextEdit.Infrastructure/Persistence/PersistenceService.cs
+- [X] T039 [US4] Restore persisted items on startup in src/TextEdit.App/Program.cs
+- [X] T040 [P] [US4] Mark restored docs as modified in src/TextEdit.Core/Documents/Document.cs
+- [X] T041 [US4] Delete temp files after save/discard in src/TextEdit.Infrastructure/Persistence/PersistenceService.cs
+- [X] T042 [P] [US4] Hook Electron window close event to persistence in src/TextEdit.App/ElectronHost.cs
 
 **FRs**: FR-018, FR-019, FR-020, FR-021, FR-022, FR-024
 

@@ -18,7 +18,13 @@ startup.Configure(app, app.Environment);
 // Bootstrap Electron window after the web host is fully started
 if (HybridSupport.IsElectronActive)
 {
-    ElectronHost.Initialize(app);
+    // Initialize Electron after ASP.NET starts listening
+    Task.Run(async () =>
+    {
+        // Give ASP.NET Core a moment to start listening
+        await Task.Delay(1000);
+        ElectronHost.Initialize(app);
+    });
 }
 
 await app.RunAsync();
