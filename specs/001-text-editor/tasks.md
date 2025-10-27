@@ -163,6 +163,12 @@ Tests are OPTIONAL per prompt; story phases below omit explicit test tasks. Qual
 
 **Purpose**: Ensure gates for tests, a11y, performance, and docs are met before merge
 
+- [ ] T063a [P] Simplicity review: reduce over-engineering/over-complication (YAGNI/KISS) across src/*
+- [ ] T063b Naming audit: ensure classes/methods/files/namespaces follow .NET conventions across src/*
+- [ ] T063c Remove dead/unused code and orphaned assets; eliminate redundant abstractions across src/* and tests/*
+- [ ] T063d TODO/FIXME/HACK/REVIEW sweep; resolve or track deferrals across src/* and tests/*
+- [ ] T063e [P] Spec completeness: verify all functions required by specs/001-text-editor/spec.md and specs/001-text-editor/contracts/* are implemented and covered by tests
+
 - [ ] T064 [P] Enforce coverage ≥85% line / ≥80% branch in tests/unit/ and tests/integration/
 - [ ] T065 [P] Accessibility pass (keyboard, contrast, focus) in tests/integration/TextEdit.App.Tests/
 - [ ] T066 [P] Performance probes for startup/close/preview in src/TextEdit.App/ElectronHost.cs
@@ -175,6 +181,8 @@ Tests are OPTIONAL per prompt; story phases below omit explicit test tasks. Qual
 
 - Setup (Phase 1) → Foundational (Phase 2) → US1 (P1) → US2 (P2), US4 (P2) → US3 (P3), US5 (P3) → Edge Cases → Quality
 - User stories are independently testable per “Independent Test” notes and can run in parallel after Phase 2.
+
+Legend: [P] = may be run in parallel when tasks touch distinct files/components; sequence if overlapping to avoid conflicts.
 
 ### Parallel Opportunities
 
