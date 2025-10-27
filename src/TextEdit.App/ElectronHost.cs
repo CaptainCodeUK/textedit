@@ -117,6 +117,8 @@ public static class ElectronHost
             Label = "View",
             Submenu = new MenuItem[]
             {
+                new MenuItem { Label = "Toggle Word Wrap", Accelerator = "Alt+Z", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.ToggleWordWrapRequested); } },
+                new MenuItem { Type = MenuType.separator },
                 new MenuItem { Role = MenuRole.reload },
                 new MenuItem { Role = MenuRole.toggledevtools },
                 new MenuItem { Type = MenuType.separator },

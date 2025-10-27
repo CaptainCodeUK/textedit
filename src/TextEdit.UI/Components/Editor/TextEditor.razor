@@ -4,9 +4,12 @@
 <div class="editor h-full min-h-0 flex flex-col" style="height:100%;min-height:0;display:flex;flex-direction:column;flex:1 1 auto;">
     <textarea id="main-editor-textarea"
               class="editor-textarea flex-1 min-h-0 w-full p-2 font-mono resize-none"
-              style="height:100%;min-height:0;flex:1 1 auto;box-sizing:border-box;border:none;outline:1px solid #d1d5db;border-radius:6px;padding-right:12px;padding-bottom:12px;caret-color:#111827;line-height:1.4;"
+              style="height:100%;min-height:0;flex:1 1 auto;box-sizing:border-box;border:none;outline:1px solid #d1d5db;border-radius:6px;padding-right:12px;padding-bottom:12px;caret-color:#111827;line-height:1.4;white-space:@(State.WordWrap ? "pre-wrap" : "pre");overflow-wrap:@(State.WordWrap ? "break-word" : "normal");"
               @ref="textareaElement"
               @bind="Content"
               @bind:event="oninput"
+              @onfocus="UpdateCaretPosition"
+              @onmouseup="UpdateCaretPosition"
+              @onkeyup="UpdateCaretPosition"
               @onblur="OnBlur"></textarea>
 </div>

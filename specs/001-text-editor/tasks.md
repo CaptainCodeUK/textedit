@@ -112,12 +112,12 @@ Tests are OPTIONAL per prompt; story phases below omit explicit test tasks. Qual
 
 ### Implementation
 
-- [ ] T043 [US3] Build File/Edit/View menus in src/TextEdit.App/ElectronHost.cs
-- [ ] T044 [P] [US3] Wire menu items to editor commands in src/TextEdit.UI/Components/Editor/EditorCommands.cs
-- [ ] T045 [US3] Implement word wrap toggle in src/TextEdit.Core/Editing/EditorState.cs
-- [ ] T046 [P] [US3] Apply wrap setting in src/TextEdit.UI/Components/Editor/TextEditor.razor
-- [ ] T047 [US3] Add status bar component in src/TextEdit.UI/Components/StatusBar/StatusBar.razor
-- [ ] T048 [P] [US3] Track caret and char count in src/TextEdit.UI/Components/StatusBar/StatusBar.razor.cs
+- [X] T043 [US3] Build File/Edit/View menus in src/TextEdit.App/ElectronHost.cs
+- [X] T044 [P] [US3] Wire menu items to editor commands in src/TextEdit.UI/Components/Editor/EditorCommands.cs
+- [X] T045 [US3] Implement word wrap toggle in src/TextEdit.Core/Editing/EditorState.cs
+- [X] T046 [P] [US3] Apply wrap setting in src/TextEdit.UI/Components/Editor/TextEditor.razor
+- [X] T047 [US3] Add status bar component in src/TextEdit.UI/Components/StatusBar/StatusBar.razor
+- [X] T048 [P] [US3] Track caret and char count in src/TextEdit.UI/Components/StatusBar/StatusBar.razor.cs
 
 **FRs**: FR-011, FR-012, FR-013, FR-014, FR-015
 

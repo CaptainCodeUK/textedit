@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using TextEdit.Core.Documents;
+using TextEdit.Core.Editing;
 using TextEdit.Infrastructure.Ipc;
 using TextEdit.Infrastructure.Persistence;
 
@@ -23,12 +24,14 @@ public class AppState
         _tabs = tabs;
         _ipc = ipc;
         _persistence = persistence;
+        EditorState = new EditorState();
     }
 
     public IReadOnlyList<Tab> Tabs => _tabs.Tabs;
     public Tab? ActiveTab => _tabs.Tabs.FirstOrDefault(t => t.IsActive);
     public Document? ActiveDocument => ActiveTab != null && _open.TryGetValue(ActiveTab.DocumentId, out var d) ? d : null;
     public IEnumerable<Document> AllDocuments => _open.Values;
+    public EditorState EditorState { get; }
 
     public event Action? Changed;
     private void NotifyChanged() => Changed?.Invoke();

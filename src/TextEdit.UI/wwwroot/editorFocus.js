@@ -19,6 +19,41 @@ window.editorFocus = {
         }, delayMs);
     },
 
+    // Get caret position (line, column, and absolute index) in textarea
+    getCaretPosition: function (elementId) {
+        const element = document.getElementById(elementId);
+        if (!element) {
+            return { line: 1, column: 1, index: 0 };
+        }
+
+        const text = element.value;
+        const caretPos = element.selectionStart;
+        
+        // Count lines up to caret
+        let line = 1;
+        let lastNewlinePos = -1;
+        
+        for (let i = 0; i < caretPos; i++) {
+            if (text[i] === '\n') {
+                line++;
+                lastNewlinePos = i;
+            }
+        }
+        
+        // Column is position from last newline (or start)
+        const column = caretPos - lastNewlinePos;
+        
+        return { line: line, column: column, index: caretPos };
+    },
+
+    // Set caret (selection) position by absolute index
+    setCaretPosition: function (elementId, index) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+        const pos = Math.max(0, Math.min(index || 0, element.value.length));
+        element.setSelectionRange(pos, pos);
+    },
+
     // Initialize global focus management
     initialize: function(editorId) {
         // Prevent focus loss when clicking on non-interactive areas

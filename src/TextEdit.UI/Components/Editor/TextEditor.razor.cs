@@ -18,12 +18,14 @@ public partial class TextEditor : ComponentBase, IDisposable
 
     private ElementReference textareaElement;
     protected Document? CurrentDoc => AppState.ActiveDocument;
-    protected EditorState State { get; } = new();
+    protected EditorState State => AppState.EditorState;
     private bool _suppressUndoPush;
     private CancellationTokenSource? _undoCts;
     private Guid? _lastEditedDocId;
     private string? _beforeEditContent;
     private static readonly TimeSpan _undoDebounce = TimeSpan.FromMilliseconds(400);
+    private bool _pendingCaretSync;
+    private Guid? _lastActiveDocId;
 
     protected string Content
     {
@@ -42,10 +44,10 @@ public partial class TextEditor : ComponentBase, IDisposable
                     // Update model immediately and debounce undo snapshot pushes
                     CurrentDoc.SetContent(value);
                     ScheduleUndoPush(CurrentDoc, value);
-                    // Notify UI (e.g., tab strip) that dirty state may have changed
-                    AppState.NotifyDocumentUpdated();
                 }
                 State.CharacterCount = value?.Length ?? 0;
+                State.NotifyChanged();
+                AppState.NotifyDocumentUpdated();
             }
         }
     }
@@ -68,6 +70,7 @@ public partial class TextEditor : ComponentBase, IDisposable
         EditorCommandHub.CloseTabRequested = HandleCloseTab;
     EditorCommandHub.CloseOthersRequested = HandleCloseOthers;
     EditorCommandHub.CloseRightRequested = HandleCloseRight;
+        EditorCommandHub.ToggleWordWrapRequested = HandleToggleWordWrap;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -75,6 +78,31 @@ public partial class TextEditor : ComponentBase, IDisposable
         if (firstRender)
         {
             await FocusEditorAsync();
+            // Initialize counts and caret on first render
+            State.CharacterCount = CurrentDoc?.Content.Length ?? 0;
+            _lastActiveDocId = CurrentDoc?.Id;
+            await UpdateCaretPosition();
+        }
+        if (_pendingCaretSync)
+        {
+            _pendingCaretSync = false;
+            // After a tab switch/render, focus, restore caret, and update status
+            await FocusEditorAsync();
+            if (CurrentDoc is not null)
+            {
+                var docId = CurrentDoc.Id;
+                var desiredIndex = 0;
+                if (State.CaretIndexByDocument.TryGetValue(docId, out var idx))
+                {
+                    desiredIndex = idx;
+                }
+                try
+                {
+                    await JSRuntime.InvokeVoidAsync("editorFocus.setCaretPosition", "main-editor-textarea", desiredIndex);
+                }
+                catch { /* ignore */ }
+            }
+            await UpdateCaretPosition();
         }
     }
 
@@ -84,8 +112,15 @@ public partial class TextEditor : ComponentBase, IDisposable
         FlushPendingUndoPush();
         InvokeAsync(async () =>
         {
-            StateHasChanged();
-            await FocusEditorAsync();
+            var newActiveId = CurrentDoc?.Id;
+            if (newActiveId != _lastActiveDocId)
+            {
+                // Active tab switched; defer caret restore until after render
+                State.CharacterCount = CurrentDoc?.Content.Length ?? 0;
+                _pendingCaretSync = true;
+                _lastActiveDocId = newActiveId;
+                StateHasChanged();
+            }
         });
     }
 
@@ -296,14 +331,54 @@ public partial class TextEditor : ComponentBase, IDisposable
         await FocusEditorAsync();
     }
 
+    protected Task HandleToggleWordWrap()
+    {
+        State.WordWrap = !State.WordWrap;
+        return InvokeAsync(StateHasChanged);
+    }
+
     protected void OnBlur(FocusEventArgs _)
     {
         FlushPendingUndoPush();
+    }
+
+    protected async Task OnFocus(FocusEventArgs _)
+    {
+        // When editor gains focus, update caret and counts immediately
+        State.CharacterCount = CurrentDoc?.Content.Length ?? 0;
+        await UpdateCaretPosition();
+    }
+
+    protected async Task UpdateCaretPosition()
+    {
+        try
+        {
+            var position = await JSRuntime.InvokeAsync<CaretPosition>("editorFocus.getCaretPosition", "main-editor-textarea");
+            State.CaretLine = position.Line;
+            State.CaretColumn = position.Column;
+            if (CurrentDoc is not null)
+            {
+                State.CaretIndexByDocument[CurrentDoc.Id] = position.Index;
+            }
+            // Notify StatusBar only; avoid causing full AppState change that re-renders editor
+            State.NotifyChanged();
+        }
+        catch
+        {
+            // Ignore errors getting caret position
+        }
     }
 
     public void Dispose()
     {
         FlushPendingUndoPush();
         AppState.Changed -= OnAppStateChanged;
+    }
+
+    private class CaretPosition
+    {
+        public int Line { get; set; }
+        public int Column { get; set; }
+        public int Index { get; set; }
     }
 }

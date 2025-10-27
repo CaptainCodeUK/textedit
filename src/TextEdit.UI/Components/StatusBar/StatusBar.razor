@@ -1,0 +1,44 @@
+@using TextEdit.UI.App
+@inject AppState AppState
+@implements IDisposable
+
+<div class="status-bar" style="display: flex; gap: 24px; align-items: center;">
+    <span class="status-item" style="font-weight: 500;">
+        @if (AppState.ActiveDocument != null)
+        {
+            <text>Ln @AppState.EditorState.CaretLine, Col @AppState.EditorState.CaretColumn</text>
+        }
+        else
+        {
+            <text>--</text>
+        }
+    </span>
+    <span class="status-item">
+        @AppState.EditorState.CharacterCount @(AppState.EditorState.CharacterCount == 1 ? "character" : "characters")
+    </span>
+    <span class="status-item" style="margin-left: auto; font-style: italic; color: #64748b;">
+        @if (AppState.ActiveDocument != null && !string.IsNullOrEmpty(AppState.ActiveDocument.FilePath))
+        {
+            <text>@System.IO.Path.GetFileName(AppState.ActiveDocument.FilePath)</text>
+        }
+        else
+        {
+            <text>Untitled</text>
+        }
+    </span>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Subscribe to editor-state-only updates to avoid re-rendering the whole editor on caret moves
+        AppState.EditorState.Changed += OnEditorStateChanged;
+    }
+
+    private void OnEditorStateChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        AppState.EditorState.Changed -= OnEditorStateChanged;
+    }
+}

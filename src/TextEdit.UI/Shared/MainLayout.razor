@@ -1,6 +1,8 @@
 @inherits LayoutComponentBase
 @using Microsoft.JSInterop
+@using TextEdit.UI.App
 @inject IJSRuntime JSRuntime
+@inject AppState AppState
 
 <div class="main-layout" @onclick="OnLayoutClick">
     <header class="app-header" @onclick="OnLayoutClick" @onclick:stopPropagation="false">
@@ -14,8 +16,7 @@
     </main>
     
     <footer class="app-footer" @onclick="OnLayoutClick" @onclick:stopPropagation="false">
-        @* Status bar will be added in Phase 6 (US3): <StatusBar /> *@
-        <span class="status-placeholder">Ready</span>
+        <TextEdit.UI.Components.StatusBar.StatusBar />
     </footer>
 </div>
 
