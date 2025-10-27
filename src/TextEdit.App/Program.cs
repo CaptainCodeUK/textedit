@@ -19,7 +19,7 @@ startup.Configure(app, app.Environment);
 if (HybridSupport.IsElectronActive)
 {
     // Initialize Electron after ASP.NET starts listening
-    Task.Run(async () =>
+    _ = Task.Run(async () =>
     {
         // Give ASP.NET Core a moment to start listening
         await Task.Delay(1000);

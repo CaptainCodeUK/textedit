@@ -8,6 +8,46 @@ namespace TextEdit.Infrastructure.Ipc;
 /// </summary>
 public class IpcBridge
 {
+    public enum CloseDecision
+    {
+        Save,
+        DontSave,
+        Cancel
+    }
+
+    public async Task<CloseDecision> ConfirmCloseDirtyAsync(string? name)
+    {
+        if (!HybridSupport.IsElectronActive)
+        {
+            return CloseDecision.Cancel;
+        }
+
+        var window = Electron.WindowManager.BrowserWindows.FirstOrDefault();
+        var opts = new MessageBoxOptions($"Save changes to '{(string.IsNullOrWhiteSpace(name) ? "Untitled" : name)}'?")
+        {
+            Type = MessageBoxType.question,
+            Buttons = new[] { "Save", "Don't Save", "Cancel" },
+            DefaultId = 0,
+            CancelId = 2,
+            NoLink = true
+        };
+        MessageBoxResult resp;
+        if (window is null)
+        {
+            // Fallback when window reference is unavailable
+            resp = await Electron.Dialog.ShowMessageBoxAsync(opts);
+        }
+        else
+        {
+            resp = await Electron.Dialog.ShowMessageBoxAsync(window, opts);
+        }
+        return resp.Response switch
+        {
+            0 => CloseDecision.Save,
+            1 => CloseDecision.DontSave,
+            _ => CloseDecision.Cancel
+        };
+    }
     public async Task<string?> ShowOpenFileDialogAsync()
     {
         if (!HybridSupport.IsElectronActive)

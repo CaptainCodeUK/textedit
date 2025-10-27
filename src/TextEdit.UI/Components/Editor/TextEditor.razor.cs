@@ -39,6 +39,8 @@ public partial class TextEditor : ComponentBase, IDisposable
                     // Update model immediately and debounce undo snapshot pushes
                     CurrentDoc.SetContent(value);
                     ScheduleUndoPush(CurrentDoc, value);
+                    // Notify UI (e.g., tab strip) that dirty state may have changed
+                    AppState.NotifyDocumentUpdated();
                 }
                 State.CharacterCount = value?.Length ?? 0;
             }
@@ -61,6 +63,8 @@ public partial class TextEditor : ComponentBase, IDisposable
         EditorCommandHub.NextTabRequested = HandleNextTab;
         EditorCommandHub.PrevTabRequested = HandlePrevTab;
         EditorCommandHub.CloseTabRequested = HandleCloseTab;
+    EditorCommandHub.CloseOthersRequested = HandleCloseOthers;
+    EditorCommandHub.CloseRightRequested = HandleCloseRight;
     }
 
     private void OnAppStateChanged()
@@ -230,12 +234,28 @@ public partial class TextEditor : ComponentBase, IDisposable
         return InvokeAsync(StateHasChanged);
     }
 
-    protected Task HandleCloseTab()
+    protected async Task HandleCloseTab()
     {
-        if (AppState.ActiveTab is null) return Task.CompletedTask;
+        if (AppState.ActiveTab is null) return;
         FlushPendingUndoPush();
-        AppState.CloseTab(AppState.ActiveTab.Id);
-        return InvokeAsync(StateHasChanged);
+        await AppState.CloseTabAsync(AppState.ActiveTab.Id);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected async Task HandleCloseOthers()
+    {
+        if (AppState.ActiveTab is null) return;
+        FlushPendingUndoPush();
+        await AppState.CloseOthersAsync(AppState.ActiveTab.Id);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected async Task HandleCloseRight()
+    {
+        if (AppState.ActiveTab is null) return;
+        FlushPendingUndoPush();
+        await AppState.CloseRightAsync(AppState.ActiveTab.Id);
+        await InvokeAsync(StateHasChanged);
     }
 
     protected void OnBlur(FocusEventArgs _)

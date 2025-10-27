@@ -1,4 +1,5 @@
 @using TextEdit.UI.App
+@using TextEdit.UI.Components.Editor
 @using TextEdit.Core.Documents
 @inject AppState State
 @implements System.IDisposable
@@ -12,10 +13,10 @@
         <button class="tab"
                 style="border:none;border-bottom:2px solid @(t.IsActive ? "#2563eb" : "transparent");padding:6px 10px;background:transparent;cursor:pointer;"
                 @onclick="(() => OnActivate(t.Id))"
-                @onmousedown="(e => OnMouseDown(e, t.Id))"
+                @onmouseup="(e => OnMouseUp(e, t.Id))"
                 title="@title">
             <span>@title@dirty</span>
-            <span style="margin-left:8px;color:#9ca3af;" @onclick="(() => OnClose(t.Id))" @onclick:stopPropagation="true">✕</span>
+            <span style="margin-left:8px;color:#9ca3af;" @onclick="(async () => await OnClose(t.Id))" @onclick:stopPropagation="true">✕</span>
         </button>
     }
     <button class="tab-add" style="margin-left:8px;" @onclick="NewTab">+</button>
@@ -41,17 +42,20 @@
         State.ActivateTab(id);
     }
 
-    private void OnClose(Guid id)
+    private async Task OnClose(Guid id)
     {
-        State.CloseTab(id);
+        // Activate the tab and route close via EditorCommandHub so the editor can flush
+        State.ActivateTab(id);
+        await EditorCommandHub.InvokeSafe(EditorCommandHub.CloseTabRequested);
     }
 
-    private void OnMouseDown(MouseEventArgs e, Guid id)
+    private async Task OnMouseUp(MouseEventArgs e, Guid id)
     {
         // Middle mouse button (button 1) closes the tab
         if (e.Button == 1)
         {
-            State.CloseTab(id);
+            State.ActivateTab(id);
+            await EditorCommandHub.InvokeSafe(EditorCommandHub.CloseTabRequested);
         }
     }
 

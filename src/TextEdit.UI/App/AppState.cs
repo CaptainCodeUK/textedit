@@ -33,6 +33,9 @@ public class AppState
     public event Action? Changed;
     private void NotifyChanged() => Changed?.Invoke();
 
+    // Notify UI that document state (e.g., dirty flag) changed
+    public void NotifyDocumentUpdated() => NotifyChanged();
+
     public async Task RestoreSessionAsync()
     {
         // Idempotence: if we already have tabs/documents, assume we've been restored/initialized
@@ -124,10 +127,42 @@ public class AppState
         NotifyChanged();
     }
 
-    public void CloseTab(Guid tabId)
+    public async Task<bool> CloseTabAsync(Guid tabId)
     {
         var tab = _tabs.Tabs.FirstOrDefault(t => t.Id == tabId);
-        if (tab is null) return;
+        if (tab is null) return false;
+
+        if (_open.TryGetValue(tab.DocumentId, out var doc) && doc is not null && doc.IsDirty)
+        {
+            // Confirm close for dirty documents
+            var decision = await _ipc.ConfirmCloseDirtyAsync(doc.Name);
+            if (decision == IpcBridge.CloseDecision.Cancel)
+            {
+                return false; // abort close
+            }
+
+            if (decision == IpcBridge.CloseDecision.Save)
+            {
+                // Save existing or Save As for untitled (for the specific doc being closed)
+                if (string.IsNullOrWhiteSpace(doc.FilePath))
+                {
+                    var path = await _ipc.ShowSaveFileDialogAsync();
+                    if (string.IsNullOrWhiteSpace(path))
+                    {
+                        return false; // user cancelled save-as
+                    }
+                    await _docs.SaveAsync(doc, path);
+                    // Clean up session file after successful save
+                    DeleteSessionFile(doc.Id);
+                }
+                else
+                {
+                    await _docs.SaveAsync(doc);
+                    DeleteSessionFile(doc.Id);
+                }
+            }
+            // If Don't Save: proceed to close without saving
+        }
         _tabs.CloseTab(tabId);
         _open.Remove(tab.DocumentId);
         if (_tabs.Tabs.Count == 0)
@@ -138,6 +173,33 @@ public class AppState
         else
         {
             NotifyChanged();
+        }
+        return true;
+    }
+
+    public async Task CloseOthersAsync(Guid keepTabId)
+    {
+        // Snapshot current order to avoid index shifting while closing
+        var toClose = _tabs.Tabs.Where(t => t.Id != keepTabId).Select(t => t.Id).ToList();
+        // Close from rightmost to leftmost for stability
+        foreach (var id in toClose.AsEnumerable().Reverse())
+        {
+            var ok = await CloseTabAsync(id);
+            if (!ok) break; // stop on cancel
+        }
+    }
+
+    public async Task CloseRightAsync(Guid fromTabId)
+    {
+        var list = _tabs.Tabs.ToList();
+        var idx = list.FindIndex(t => t.Id == fromTabId);
+        if (idx < 0) return;
+        var toClose = list.Skip(idx + 1).Select(t => t.Id).ToList();
+        // Close from rightmost to leftmost
+        foreach (var id in toClose.AsEnumerable().Reverse())
+        {
+            var ok = await CloseTabAsync(id);
+            if (!ok) break; // stop on cancel
         }
     }
 
