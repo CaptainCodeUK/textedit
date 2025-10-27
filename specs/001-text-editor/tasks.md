@@ -130,10 +130,10 @@ Tests are OPTIONAL per prompt; story phases below omit explicit test tasks. Qual
 
 ### Implementation
 
-- [ ] T049 [US5] Create MarkdownRenderer service in src/TextEdit.Markdown/MarkdownRenderer.cs
-- [ ] T050 [P] [US5] Add PreviewPanel component in src/TextEdit.UI/Components/Preview/PreviewPanel.razor
-- [ ] T051 [P] [US5] Implement split view layout in src/TextEdit.UI/Pages/Editor.razor
-- [ ] T052 [US5] Debounce preview updates in src/TextEdit.UI/Components/Preview/PreviewPanel.razor.cs
+- [X] T049 [US5] Create MarkdownRenderer service in src/TextEdit.Markdown/MarkdownRenderer.cs
+- [X] T050 [P] [US5] Add PreviewPanel component in src/TextEdit.UI/Components/Preview/PreviewPanel.razor
+- [X] T051 [P] [US5] Implement split view layout in src/TextEdit.UI/Pages/Editor.razor
+- [X] T052 [US5] Debounce preview updates in src/TextEdit.UI/Components/Preview/PreviewPanel.razor.cs
 
 **FRs**: FR-016, FR-017, FR-033 (with Phase 8 large file rules)
 

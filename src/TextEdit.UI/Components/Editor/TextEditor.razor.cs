@@ -71,6 +71,7 @@ public partial class TextEditor : ComponentBase, IDisposable
     EditorCommandHub.CloseOthersRequested = HandleCloseOthers;
     EditorCommandHub.CloseRightRequested = HandleCloseRight;
         EditorCommandHub.ToggleWordWrapRequested = HandleToggleWordWrap;
+        EditorCommandHub.TogglePreviewRequested = HandleTogglePreview;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -334,6 +335,15 @@ public partial class TextEditor : ComponentBase, IDisposable
     protected Task HandleToggleWordWrap()
     {
         State.WordWrap = !State.WordWrap;
+        State.NotifyChanged(); // Notify so menu checkmarks update
+        return InvokeAsync(StateHasChanged);
+    }
+
+    protected Task HandleTogglePreview()
+    {
+        State.ShowPreview = !State.ShowPreview;
+        State.NotifyChanged(); // Notify so menu checkmarks update
+        AppState.NotifyDocumentUpdated(); // Notify so layout updates
         return InvokeAsync(StateHasChanged);
     }
 

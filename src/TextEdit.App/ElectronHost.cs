@@ -14,6 +14,7 @@ namespace TextEdit.App;
 public static class ElectronHost
 {
     private static WebApplication? _app;
+    private static AppState? _appState;
 
     /// <summary>
     /// Initialize Electron window and native features - Phase 1
@@ -21,8 +22,18 @@ public static class ElectronHost
     public static void Initialize(WebApplication app)
     {
         _app = app;
+        _appState = app.Services.GetRequiredService<AppState>();
+        
+        // Subscribe to editor state changes to update menu checkmarks
+        _appState.EditorState.Changed += OnEditorStateChanged;
+        
         _ = CreateMainWindowAsync();
         RegisterIpcHandlers();
+    }
+
+    private static void OnEditorStateChanged()
+    {
+        ConfigureMenus();
     }
 
     /// <summary>
@@ -117,7 +128,8 @@ public static class ElectronHost
             Label = "View",
             Submenu = new MenuItem[]
             {
-                new MenuItem { Label = "Toggle Word Wrap", Accelerator = "Alt+Z", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.ToggleWordWrapRequested); } },
+                new MenuItem { Label = "Toggle Word Wrap", Accelerator = "Alt+Z", Type = MenuType.checkbox, Checked = _appState?.EditorState.WordWrap ?? false, Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.ToggleWordWrapRequested); } },
+                new MenuItem { Label = "Toggle Markdown Preview", Accelerator = "Alt+P", Type = MenuType.checkbox, Checked = _appState?.EditorState.ShowPreview ?? false, Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.TogglePreviewRequested); } },
                 new MenuItem { Type = MenuType.separator },
                 new MenuItem { Role = MenuRole.reload },
                 new MenuItem { Role = MenuRole.toggledevtools },

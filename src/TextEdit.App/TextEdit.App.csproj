@@ -16,5 +16,6 @@
     <ProjectReference Include="..\TextEdit.UI\TextEdit.UI.csproj" />
     <ProjectReference Include="..\TextEdit.Core\TextEdit.Core.csproj" />
     <ProjectReference Include="..\TextEdit.Infrastructure\TextEdit.Infrastructure.csproj" />
+    <ProjectReference Include="..\TextEdit.Markdown\TextEdit.Markdown.csproj" />
   </ItemGroup>
 </Project>

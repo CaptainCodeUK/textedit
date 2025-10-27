@@ -10,6 +10,7 @@ using TextEdit.Infrastructure.Autosave;
 using TextEdit.Infrastructure.FileSystem;
 using TextEdit.Infrastructure.Ipc;
 using TextEdit.Infrastructure.Persistence;
+using TextEdit.Markdown;
 using TextEdit.UI.App;
 
 namespace TextEdit.App;
@@ -44,6 +45,8 @@ public class Startup
         services.AddSingleton<PersistenceService>();
         services.AddSingleton<AutosaveService>();
         services.AddSingleton<IpcBridge>();
+        // Markdown rendering
+        services.AddSingleton<MarkdownRenderer>();
         // UI state
         services.AddSingleton<AppState>();
     }

@@ -1,15 +1,47 @@
 @page "/"
 @using Microsoft.AspNetCore.Components
 @using TextEdit.UI.App
+@using TextEdit.UI.Components.Preview
 @inject AppState AppState
 
 <LayoutView Layout="typeof(TextEdit.UI.Shared.MainLayout)">
     <div class="app-container" style="height:100%;min-height:0;display:flex;flex-direction:column;">
-        <TextEditor />
+        @page "/"
+@using TextEdit.Core.Documents
+@using TextEdit.UI.Components.Editor
+@using TextEdit.UI.Components.Preview
+@inject AppState AppState
+@implements IDisposable
+
+@if (AppState.EditorState.ShowPreview)
+        {
+            <div style="display:flex;height:100%;min-height:0;flex:1 1 auto;gap:1px;background:#d1d5db;">
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+                    <TextEditor />
+                </div>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:auto;">
+                    <PreviewPanel />
+                </div>
+            </div>
+        }
+        else
+        {
+            <TextEditor />
+        }
     </div>
 </LayoutView>
 
 @code {
+    protected override void OnInitialized()
+    {
+        AppState.Changed += OnAppStateChanged;
+    }
+
+    private void OnAppStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
     // Run restore only once on the client after the circuit is established to avoid
     // duplicate execution during prerendering.
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -31,5 +63,10 @@
                 AppState.CreateNew();
             }
         }
+    }
+
+    public void Dispose()
+    {
+        AppState.Changed -= OnAppStateChanged;
     }
 }

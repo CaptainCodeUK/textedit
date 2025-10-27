@@ -9,6 +9,7 @@ namespace TextEdit.Core.Editing;
 public class EditorState
 {
     public bool WordWrap { get; set; } = true;
+    public bool ShowPreview { get; set; } = false;
     public int CaretLine { get; set; } = 1;
     public int CaretColumn { get; set; } = 1;
     public int CharacterCount { get; set; } = 0;

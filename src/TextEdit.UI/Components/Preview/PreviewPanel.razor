@@ -1,0 +1,106 @@
+@using TextEdit.Markdown
+@using TextEdit.UI.App
+@inject MarkdownRenderer Renderer
+@inject AppState AppState
+@implements IDisposable
+
+<div class="preview-panel h-full min-h-0 flex flex-col overflow-auto" style="height:100%;min-height:0;flex:1 1 auto;padding:16px;background:#ffffff;">
+    @if (_isLarge && !_manualRefresh)
+    {
+        <div class="preview-warning" style="padding:12px;background:#fef3c7;border:1px solid #f59e0b;border-radius:4px;margin-bottom:16px;">
+            <p style="margin:0;font-size:14px;color:#92400e;">
+                <strong>Large document detected.</strong> Preview updates are disabled for performance.
+            </p>
+            <button @onclick="RefreshPreview" 
+                    style="margin-top:8px;padding:6px 12px;background:#f59e0b;color:white;border:none;border-radius:4px;cursor:pointer;font-size:13px;">
+                Refresh Preview
+            </button>
+        </div>
+    }
+    
+    <div class="markdown-content" style="max-width:800px;line-height:1.6;color:#1f2937;">
+        @((MarkupString)_renderedHtml)
+    </div>
+</div>
+
+@code {
+    private string _renderedHtml = string.Empty;
+    private bool _isLarge = false;
+    private bool _manualRefresh = false;
+    private CancellationTokenSource? _debounceCts;
+    private static readonly TimeSpan _debounceDelay = TimeSpan.FromMilliseconds(500);
+
+    protected override void OnInitialized()
+    {
+        AppState.Changed += OnStateChanged;
+        UpdatePreview();
+    }
+
+    private void OnStateChanged()
+    {
+        InvokeAsync(() =>
+        {
+            if (_isLarge && !_manualRefresh)
+            {
+                // Don't auto-update for large files
+                StateHasChanged();
+            }
+            else
+            {
+                ScheduleDebouncedUpdate();
+            }
+        });
+    }
+
+    private void ScheduleDebouncedUpdate()
+    {
+        // Cancel any pending update
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
+        _debounceCts = new CancellationTokenSource();
+        var ct = _debounceCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(_debounceDelay, ct);
+                if (!ct.IsCancellationRequested)
+                {
+                    await InvokeAsync(() =>
+                    {
+                        UpdatePreview();
+                        StateHasChanged();
+                    });
+                }
+            }
+            catch (TaskCanceledException) { }
+        });
+    }
+
+    private void RefreshPreview()
+    {
+        _manualRefresh = true;
+        UpdatePreview();
+        StateHasChanged();
+    }
+
+    private void UpdatePreview()
+    {
+        var content = AppState.ActiveDocument?.Content ?? string.Empty;
+        _isLarge = Renderer.IsLargeContent(content);
+        
+        if (!_isLarge || _manualRefresh)
+        {
+            _renderedHtml = Renderer.RenderToHtml(content);
+            _manualRefresh = false; // Reset after manual refresh
+        }
+    }
+
+    public void Dispose()
+    {
+        AppState.Changed -= OnStateChanged;
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
+    }
+}
