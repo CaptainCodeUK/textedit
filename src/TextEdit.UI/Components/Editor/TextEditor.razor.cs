@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
 using TextEdit.Core.Documents;
 using TextEdit.Core.Editing;
 using TextEdit.Infrastructure.Ipc;
@@ -13,7 +14,9 @@ public partial class TextEditor : ComponentBase, IDisposable
     [Inject] protected IUndoRedoService UndoRedo { get; set; } = default!;
     [Inject] protected IpcBridge Ipc { get; set; } = default!;
     [Inject] protected AppState AppState { get; set; } = default!;
+    [Inject] protected IJSRuntime JSRuntime { get; set; } = default!;
 
+    private ElementReference textareaElement;
     protected Document? CurrentDoc => AppState.ActiveDocument;
     protected EditorState State { get; } = new();
     private bool _suppressUndoPush;
@@ -67,11 +70,35 @@ public partial class TextEditor : ComponentBase, IDisposable
     EditorCommandHub.CloseRightRequested = HandleCloseRight;
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await FocusEditorAsync();
+        }
+    }
+
     private void OnAppStateChanged()
     {
         // flush any pending snapshot for the previous document before switching
         FlushPendingUndoPush();
-        InvokeAsync(StateHasChanged);
+        InvokeAsync(async () =>
+        {
+            StateHasChanged();
+            await FocusEditorAsync();
+        });
+    }
+
+    private async Task FocusEditorAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("editorFocus.focusDelayed", "main-editor-textarea", 10);
+        }
+        catch
+        {
+            // Ignore focus errors (e.g., during prerender or if JS not loaded)
+        }
     }
 
     private void FlushPendingUndoPush()
@@ -161,6 +188,7 @@ public partial class TextEditor : ComponentBase, IDisposable
         AppState.CreateNew();
         State.CharacterCount = 0;
         await InvokeAsync(StateHasChanged);
+        await FocusEditorAsync();
     }
 
     protected async Task HandleOpen()
@@ -169,6 +197,7 @@ public partial class TextEditor : ComponentBase, IDisposable
         await AppState.OpenAsync();
         State.CharacterCount = CurrentDoc?.Content.Length ?? 0;
         await InvokeAsync(StateHasChanged);
+        await FocusEditorAsync();
     }
 
     protected async Task HandleSave()
@@ -176,6 +205,7 @@ public partial class TextEditor : ComponentBase, IDisposable
         FlushPendingUndoPush();
         await AppState.SaveActiveAsync();
         await InvokeAsync(StateHasChanged);
+        await FocusEditorAsync();
     }
 
     protected async Task HandleSaveAs()
@@ -183,11 +213,12 @@ public partial class TextEditor : ComponentBase, IDisposable
         FlushPendingUndoPush();
         await AppState.SaveAsActiveAsync();
         await InvokeAsync(StateHasChanged);
+        await FocusEditorAsync();
     }
 
-    protected Task HandleUndo()
+    protected async Task HandleUndo()
     {
-        if (CurrentDoc is null) return Task.CompletedTask;
+        if (CurrentDoc is null) return;
         // Flush any pending changes first
         FlushPendingUndoPush();
         
@@ -201,12 +232,13 @@ public partial class TextEditor : ComponentBase, IDisposable
             _lastEditedDocId = CurrentDoc.Id;
             _beforeEditContent = text;
         }
-        return InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
+        await FocusEditorAsync();
     }
 
-    protected Task HandleRedo()
+    protected async Task HandleRedo()
     {
-        if (CurrentDoc is null) return Task.CompletedTask;
+        if (CurrentDoc is null) return;
         var text = UndoRedo.Redo(CurrentDoc.Id);
         if (text is not null)
         {
@@ -217,21 +249,24 @@ public partial class TextEditor : ComponentBase, IDisposable
             _lastEditedDocId = CurrentDoc.Id;
             _beforeEditContent = text;
         }
-        return InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
+        await FocusEditorAsync();
     }
 
-    protected Task HandleNextTab()
+    protected async Task HandleNextTab()
     {
         FlushPendingUndoPush();
         AppState.ActivateNextTab();
-        return InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
+        await FocusEditorAsync();
     }
 
-    protected Task HandlePrevTab()
+    protected async Task HandlePrevTab()
     {
         FlushPendingUndoPush();
         AppState.ActivatePreviousTab();
-        return InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
+        await FocusEditorAsync();
     }
 
     protected async Task HandleCloseTab()
@@ -240,6 +275,7 @@ public partial class TextEditor : ComponentBase, IDisposable
         FlushPendingUndoPush();
         await AppState.CloseTabAsync(AppState.ActiveTab.Id);
         await InvokeAsync(StateHasChanged);
+        await FocusEditorAsync();
     }
 
     protected async Task HandleCloseOthers()
@@ -248,6 +284,7 @@ public partial class TextEditor : ComponentBase, IDisposable
         FlushPendingUndoPush();
         await AppState.CloseOthersAsync(AppState.ActiveTab.Id);
         await InvokeAsync(StateHasChanged);
+        await FocusEditorAsync();
     }
 
     protected async Task HandleCloseRight()
@@ -256,6 +293,7 @@ public partial class TextEditor : ComponentBase, IDisposable
         FlushPendingUndoPush();
         await AppState.CloseRightAsync(AppState.ActiveTab.Id);
         await InvokeAsync(StateHasChanged);
+        await FocusEditorAsync();
     }
 
     protected void OnBlur(FocusEventArgs _)

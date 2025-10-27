@@ -1,10 +1,12 @@
 @using TextEdit.UI.App
 @using TextEdit.UI.Components.Editor
 @using TextEdit.Core.Documents
+@using Microsoft.JSInterop
 @inject AppState State
+@inject IJSRuntime JSRuntime
 @implements System.IDisposable
 
-<div class="tab-strip" style="display:flex;gap:6px;align-items:flex-end;overflow-x:auto;">
+<div class="tab-strip" style="display:flex;gap:6px;align-items:flex-end;overflow-x:auto;" @onclick="OnTabStripClick">
     @foreach (var t in State.Tabs)
     {
         var doc = State.GetDocument(t.DocumentId);
@@ -13,13 +15,15 @@
         <button class="tab"
                 style="border:none;border-bottom:2px solid @(t.IsActive ? "#2563eb" : "transparent");padding:6px 10px;background:transparent;cursor:pointer;"
                 @onclick="(() => OnActivate(t.Id))"
+                @onclick:stopPropagation="true"
                 @onmouseup="(e => OnMouseUp(e, t.Id))"
+                @onmouseup:stopPropagation="true"
                 title="@title">
             <span>@title@dirty</span>
             <span style="margin-left:8px;color:#9ca3af;" @onclick="(async () => await OnClose(t.Id))" @onclick:stopPropagation="true">✕</span>
         </button>
     }
-    <button class="tab-add" style="margin-left:8px;" @onclick="NewTab">+</button>
+    <button class="tab-add" style="margin-left:8px;" @onclick="NewTab" @onclick:stopPropagation="true">+</button>
 </div>
 
 @code {
@@ -31,15 +35,18 @@
     }
 
     private void OnStateChanged() => InvokeAsync(StateHasChanged);
+    
     private async Task NewTab()
     {
         State.CreateNew();
         await InvokeAsync(StateHasChanged);
+        await FocusEditorAsync();
     }
 
-    private void OnActivate(Guid id)
+    private async Task OnActivate(Guid id)
     {
         State.ActivateTab(id);
+        await FocusEditorAsync();
     }
 
     private async Task OnClose(Guid id)
@@ -56,6 +63,24 @@
         {
             State.ActivateTab(id);
             await EditorCommandHub.InvokeSafe(EditorCommandHub.CloseTabRequested);
+        }
+    }
+
+    private async Task OnTabStripClick(MouseEventArgs e)
+    {
+        // If clicking on empty area of tab strip (not on a button), restore focus
+        await FocusEditorAsync();
+    }
+
+    private async Task FocusEditorAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("editorFocus.focusDelayed", "main-editor-textarea", 50);
+        }
+        catch
+        {
+            // Ignore focus errors
         }
     }
 

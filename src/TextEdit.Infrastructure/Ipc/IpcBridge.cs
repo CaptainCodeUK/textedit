@@ -96,6 +96,13 @@ public class IpcBridge
         {
             return null;
         }
+        
+        // If no extension, append .txt
+        if (!Path.HasExtension(result))
+        {
+            result = result + ".txt";
+        }
+        
         return result;
     }
 }

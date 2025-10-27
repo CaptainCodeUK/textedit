@@ -1,7 +1,9 @@
 @inherits LayoutComponentBase
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
 
-<div class="main-layout">
-    <header class="app-header">
+<div class="main-layout" @onclick="OnLayoutClick">
+    <header class="app-header" @onclick="OnLayoutClick" @onclick:stopPropagation="false">
         <div class="header-tabs" style="border-bottom:1px solid rgba(0,0,0,0.05);">
             <TextEdit.UI.Components.Tabs.TabStrip />
         </div>
@@ -11,7 +13,7 @@
         @Body
     </main>
     
-    <footer class="app-footer">
+    <footer class="app-footer" @onclick="OnLayoutClick" @onclick:stopPropagation="false">
         @* Status bar will be added in Phase 6 (US3): <StatusBar /> *@
         <span class="status-placeholder">Ready</span>
     </footer>
@@ -19,4 +21,17 @@
 
 @code {
     // Layout component for consistent structure across all pages
+    
+    private async Task OnLayoutClick(MouseEventArgs e)
+    {
+        // Restore focus to editor when clicking on non-interactive areas
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("editorFocus.focusDelayed", "main-editor-textarea", 0);
+        }
+        catch
+        {
+            // Ignore focus errors
+        }
+    }
 }

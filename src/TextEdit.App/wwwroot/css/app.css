@@ -71,10 +71,35 @@ body {
 }
 
 /* Tab strip styling for visibility */
-.tab-strip { padding: 6px 12px; background: #f8fafc; }
-.tab { background: transparent; border: none; padding: 6px 10px; margin-right: 6px; }
+.tab-strip { 
+    padding: 6px 12px; 
+    background: #f8fafc;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.tab { 
+    background: transparent; 
+    border: none; 
+    padding: 6px 10px; 
+    margin-right: 6px;
+    user-select: none;
+}
 .tab:hover { background: rgba(37,99,235,0.06); }
 .tab .close { margin-left:8px; color:#9ca3af; cursor:pointer; }
+
+/* Prevent focus on header and footer */
+.app-header, .app-footer {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.app-footer {
+    padding: 4px 12px;
+    background: #f8fafc;
+    border-top: 1px solid rgba(0,0,0,0.05);
+    font-size: 12px;
+    color: #64748b;
+}
 
 #blazor-error-ui {
     background: lightyellow;
