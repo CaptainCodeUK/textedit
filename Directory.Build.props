@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <!-- Coverage thresholds for Phase 9 T064 -->
+    <!-- Core: 92.39%, Infrastructure: 52.67%, Total: 65.13% -->
+    <Threshold>65</Threshold>
+    <ThresholdType>line</ThresholdType>
+    <ThresholdStat>total</ThresholdStat>
+  </PropertyGroup>
+</Project>

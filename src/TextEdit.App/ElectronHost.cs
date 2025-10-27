@@ -3,6 +3,7 @@ using ElectronNET.API.Entities;
 using TextEdit.UI.App;
 using TextEdit.UI.Components.Editor;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics;
 
 namespace TextEdit.App;
 
@@ -41,6 +42,7 @@ public static class ElectronHost
     /// </summary>
     private static async Task CreateMainWindowAsync()
     {
+        var swStartup = Stopwatch.StartNew();
         var window = await Electron.WindowManager.CreateWindowAsync(new BrowserWindowOptions
         {
             Width = 1200,
@@ -61,7 +63,10 @@ public static class ElectronHost
         window.OnClosed += () => PersistAndQuit();
 
         // Application menu will be configured in Phase 6 (US3)
-    ConfigureMenus();
+        ConfigureMenus();
+
+        swStartup.Stop();
+        Console.WriteLine($"[Perf] Startup: main window created and menus configured in {swStartup.ElapsedMilliseconds} ms");
 
         // IPC handlers will be registered here in Phase 2
         // RegisterIpcHandlers();
@@ -143,6 +148,7 @@ public static class ElectronHost
 
     private static void PersistAndQuit()
     {
+        var swQuit = Stopwatch.StartNew();
         if (_app != null)
         {
             try
@@ -161,6 +167,8 @@ public static class ElectronHost
                 Console.WriteLine($"[ElectronHost] Failed to persist session on quit: {ex.Message}");
             }
         }
+        swQuit.Stop();
+        Console.WriteLine($"[Perf] Quit: session persisted in {swQuit.ElapsedMilliseconds} ms");
         Electron.App.Quit();
     }
 

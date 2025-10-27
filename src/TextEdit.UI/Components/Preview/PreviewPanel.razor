@@ -92,7 +92,14 @@
         
         if (!_isLarge || _manualRefresh)
         {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             _renderedHtml = Renderer.RenderToHtml(content);
+            sw.Stop();
+            try
+            {
+                Console.WriteLine($"[Perf] Preview render: length={content.Length} chars in {sw.ElapsedMilliseconds} ms");
+            }
+            catch { /* no-op for non-interactive environments */ }
             _manualRefresh = false; // Reset after manual refresh
         }
     }
