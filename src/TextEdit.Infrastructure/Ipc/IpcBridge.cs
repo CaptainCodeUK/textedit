@@ -15,6 +15,13 @@ public class IpcBridge
         Cancel
     }
 
+    public enum ExternalChangeDecision
+    {
+        Reload,
+        Keep,
+        Cancel
+    }
+
     public async Task<CloseDecision> ConfirmCloseDirtyAsync(string? name)
     {
         if (!HybridSupport.IsElectronActive)
@@ -104,5 +111,38 @@ public class IpcBridge
         }
         
         return result;
+    }
+
+    public async Task<ExternalChangeDecision> ConfirmReloadExternalAsync(string? name)
+    {
+        if (!HybridSupport.IsElectronActive)
+        {
+            return ExternalChangeDecision.Cancel;
+        }
+
+        var window = Electron.WindowManager.BrowserWindows.FirstOrDefault();
+        var opts = new MessageBoxOptions($"'{(string.IsNullOrWhiteSpace(name) ? "Untitled" : name)}' was modified on disk. Reload?")
+        {
+            Type = MessageBoxType.warning,
+            Buttons = new[] { "Reload", "Keep", "Cancel" },
+            DefaultId = 0,
+            CancelId = 2,
+            NoLink = true
+        };
+        MessageBoxResult resp;
+        if (window is null)
+        {
+            resp = await Electron.Dialog.ShowMessageBoxAsync(opts);
+        }
+        else
+        {
+            resp = await Electron.Dialog.ShowMessageBoxAsync(window, opts);
+        }
+        return resp.Response switch
+        {
+            0 => ExternalChangeDecision.Reload,
+            1 => ExternalChangeDecision.Keep,
+            _ => ExternalChangeDecision.Cancel
+        };
     }
 }

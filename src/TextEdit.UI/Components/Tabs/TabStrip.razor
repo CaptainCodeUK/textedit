@@ -11,7 +11,8 @@
     {
         var doc = State.GetDocument(t.DocumentId);
         var title = doc?.Name ?? "Untitled";
-        var dirty = doc?.IsDirty == true ? " ●" : string.Empty;
+    var dirty = doc?.IsDirty == true ? " ●" : string.Empty;
+    var external = doc?.HasExternalModification == true ? " ↻" : string.Empty;
         <button class="tab"
                 style="border:none;border-bottom:2px solid @(t.IsActive ? "#2563eb" : "transparent");padding:6px 10px;background:transparent;cursor:pointer;"
                 @onclick="(() => OnActivate(t.Id))"
@@ -19,7 +20,7 @@
                 @onmouseup="(e => OnMouseUp(e, t.Id))"
                 @onmouseup:stopPropagation="true"
                 title="@title">
-            <span>@title@dirty</span>
+            <span>@title@dirty@external</span>
             <span style="margin-left:8px;color:#9ca3af;" @onclick="(async () => await OnClose(t.Id))" @onclick:stopPropagation="true">✕</span>
         </button>
     }

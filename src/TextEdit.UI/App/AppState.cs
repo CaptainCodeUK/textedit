@@ -19,6 +19,7 @@ public class AppState : IDisposable
     private readonly PersistenceService _persistence;
     private readonly AutosaveService _autosave;
     private readonly Dictionary<Guid, FileWatcher> _watchers = new();
+    private readonly Dictionary<Guid, DateTimeOffset> _lastExternalChange = new();
 
     private readonly Dictionary<Guid, Document> _open = new();
 
@@ -330,11 +331,17 @@ public class AppState : IDisposable
         if (_watchers.ContainsKey(doc.Id)) return;
         
         var watcher = new FileWatcher();
+        var docId = doc.Id;
         watcher.ChangedExternally += path =>
         {
-            Console.WriteLine($"[AppState] External modification detected: {path}");
-            // TODO: Prompt user with choices (Reload, Keep Current, Compare)
-            // For now, just log the detection
+            // Debounce duplicate events within 1s
+            var now = DateTimeOffset.UtcNow;
+            if (_lastExternalChange.TryGetValue(docId, out var last) && (now - last).TotalMilliseconds < 1000)
+            {
+                return;
+            }
+            _lastExternalChange[docId] = now;
+            _ = HandleExternalFileChangeAsync(docId, path);
         };
         watcher.Watch(doc.FilePath);
         _watchers[doc.Id] = watcher;
@@ -360,5 +367,73 @@ public class AppState : IDisposable
             watcher.Dispose();
         }
         _watchers.Clear();
+    }
+
+    private async Task HandleExternalFileChangeAsync(Guid docId, string path)
+    {
+        try
+        {
+            if (!_open.TryGetValue(docId, out var doc) || doc is null)
+            {
+                return;
+            }
+
+            Console.WriteLine($"[AppState] External modification detected: {path}");
+
+            // If document has no unsaved edits, auto-reload from disk
+            if (!doc.IsDirty)
+            {
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(doc.FilePath) && File.Exists(doc.FilePath))
+                    {
+                        var content = await File.ReadAllTextAsync(doc.FilePath, doc.Encoding);
+                        doc.SetContentInternal(content);
+                        doc.MarkSaved(doc.FilePath);
+                        NotifyChanged();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[AppState] Failed to auto-reload '{doc.Name}': {ex.Message}");
+                }
+                return;
+            }
+
+            // Otherwise, prompt to reload or keep
+            doc.MarkExternalModification(true);
+            NotifyChanged();
+
+            var decision = await _ipc.ConfirmReloadExternalAsync(doc.Name);
+            if (decision == IpcBridge.ExternalChangeDecision.Reload)
+            {
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(doc.FilePath) && File.Exists(doc.FilePath))
+                    {
+                        var content = await File.ReadAllTextAsync(doc.FilePath, doc.Encoding);
+                        doc.SetContentInternal(content);
+                        // Discard unsaved changes, mark as saved to clear flags
+                        doc.MarkSaved(doc.FilePath);
+                        doc.MarkExternalModification(false);
+                        NotifyChanged();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[AppState] Failed to reload after external change: {ex.Message}");
+                }
+            }
+            else
+            {
+                // Keep current edits; keep indicator visible
+                doc.MarkExternalModification(true);
+                NotifyChanged();
+            }
+        }
+        catch
+        {
+            // Swallow handler exceptions to avoid crashing event pipeline
+        }
     }
 }

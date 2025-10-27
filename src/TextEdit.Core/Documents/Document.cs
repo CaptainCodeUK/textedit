@@ -14,6 +14,11 @@ public class Document
     public string Content { get; private set; } = string.Empty;
     public bool IsDirty { get; private set; }
     public bool IsReadOnly { get; private set; }
+    /// <summary>
+    /// Set when the backing file was changed on disk while the document is open.
+    /// When true and the document also has unsaved edits, the UI should surface a conflict indicator.
+    /// </summary>
+    public bool HasExternalModification { get; private set; }
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; private set; } = DateTimeOffset.UtcNow;
     public Encoding Encoding { get; set; } = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
@@ -55,6 +60,13 @@ public class Document
             FilePath = path;
         }
         IsDirty = false;
+        HasExternalModification = false;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public void MarkExternalModification(bool value = true)
+    {
+        HasExternalModification = value;
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 }

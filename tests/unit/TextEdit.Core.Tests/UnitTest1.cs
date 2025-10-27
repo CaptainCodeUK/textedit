@@ -209,4 +209,113 @@ public class DocumentTests
         doc.IsDirty.Should().BeTrue();
         doc.Content.Should().BeEmpty();
     }
+
+    [Fact]
+    public void IsReadOnly_DefaultsToFalse()
+    {
+        // Arrange & Act
+        var doc = new Document();
+
+        // Assert
+        doc.IsReadOnly.Should().BeFalse();
+    }
+
+    [Fact]
+    public void MarkReadOnly_SetsIsReadOnlyFlag()
+    {
+        // Arrange
+        var doc = new Document();
+
+        // Act
+        doc.MarkReadOnly(true);
+
+        // Assert
+        doc.IsReadOnly.Should().BeTrue();
+    }
+
+    [Fact]
+    public void MarkReadOnly_CanBeCleared()
+    {
+        // Arrange
+        var doc = new Document();
+        doc.MarkReadOnly(true);
+
+        // Act
+        doc.MarkReadOnly(false);
+
+        // Assert
+        doc.IsReadOnly.Should().BeFalse();
+    }
+
+    [Fact]
+    public void SetContent_WhenReadOnly_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var doc = new Document();
+        doc.MarkReadOnly(true);
+
+        // Act
+        var act = () => doc.SetContent("New content");
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("Cannot modify read-only document");
+    }
+
+    [Fact]
+    public void SetContentInternal_WhenReadOnly_AllowsContentChange()
+    {
+        // Arrange
+        var doc = new Document();
+        doc.MarkReadOnly(true);
+
+        // Act
+        doc.SetContentInternal("Internal content");
+
+        // Assert
+        doc.Content.Should().Be("Internal content");
+        doc.IsReadOnly.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SetContentInternal_DoesNotMarkDirty()
+    {
+        // Arrange
+        var doc = new Document();
+
+        // Act
+        doc.SetContentInternal("Content");
+
+        // Assert
+        doc.Content.Should().Be("Content");
+        doc.IsDirty.Should().BeFalse();
+    }
+
+    [Fact]
+    public void MarkDirtyInternal_SetsDirtyFlag()
+    {
+        // Arrange
+        var doc = new Document();
+
+        // Act
+        doc.MarkDirtyInternal();
+
+        // Assert
+        doc.IsDirty.Should().BeTrue();
+    }
+
+    [Fact]
+    public void MarkDirtyInternal_CanBeUsedAfterSetContentInternal()
+    {
+        // Arrange
+        var doc = new Document();
+        doc.SetContentInternal("Content");
+
+        // Act
+        doc.MarkDirtyInternal();
+
+        // Assert
+        doc.Content.Should().Be("Content");
+        doc.IsDirty.Should().BeTrue();
+    }
 }
