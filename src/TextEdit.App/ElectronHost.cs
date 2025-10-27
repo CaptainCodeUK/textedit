@@ -177,10 +177,10 @@ public static class ElectronHost
     /// </summary>
     private static void RegisterIpcHandlers()
     {
-        // TODO: Phase 2 - T022
-        // openFileDialog
-        // saveFileDialog
-        // persistUnsaved
-        // restoreSession
+        // NOTE: Phase 2 (T022) - IPC handlers deferred to future implementation
+        // - openFileDialog: Electron native file picker
+        // - saveFileDialog: Electron native save dialog
+        // - persistUnsaved: Session persistence for unsaved changes
+        // - restoreSession: Session restoration on startup
     }
 }

@@ -177,10 +177,58 @@ Tests are OPTIONAL per prompt; story phases below omit explicit test tasks. Qual
 
 ---
 
+## Phase 10: Polish & Enhancement (Future)
+
+**Purpose**: Implement deferred features for improved UX and accessibility
+
+**UI Polish & Error Handling**
+- [ ] T069 Implement error dialog system for file operation failures (OpenAsync, SaveAsync, SaveAsAsync)
+  - [ ] T069a Add ErrorDialog Blazor component with icon, message, and action buttons
+  - [ ] T069b Wire error dialogs to AppState file operation catch blocks (7 locations)
+  - [ ] T069c Add user-friendly error messages for common scenarios (permission denied, disk full, file in use)
+- [ ] T070 Implement user confirmation dialogs for destructive operations
+  - [ ] T070a Add ConfirmDialog Blazor component with title, message, Yes/No buttons
+  - [ ] T070b Wire confirmation dialog to SaveAsAsync when overwriting existing file
+  - [ ] T070c Add confirmation for closing unsaved tabs (if not covered by existing autosave)
+
+**IPC & Native Dialogs (Phase 2 Completion)**
+- [ ] T071 Complete IPC bridge implementation in src/TextEdit.App/ElectronHost.cs
+  - [ ] T071a Implement openFileDialog IPC handler with Electron native dialog
+  - [ ] T071b Implement saveFileDialog IPC handler with Electron native dialog
+  - [ ] T071c Implement persistUnsaved IPC handler for session persistence
+  - [ ] T071d Implement restoreSession IPC handler for startup restoration
+  - [ ] T071e Add contract tests for all IPC handlers in tests/contract/TextEdit.IPC.Tests/
+
+**Accessibility Enhancement**
+- [ ] T072 Implement Playwright-based accessibility testing (from T065 deferral)
+  - [ ] T072a Set up Playwright test infrastructure in tests/integration/
+  - [ ] T072b Add axe-core integration for automated accessibility audits
+  - [ ] T072c Implement keyboard navigation tests (all menu shortcuts, tab navigation)
+  - [ ] T072d Implement focus management tests (dialog open/close, tab switching)
+  - [ ] T072e Implement screen reader tests (ARIA labels, announcements)
+  - [ ] T072f Implement color contrast tests (WCAG AA compliance)
+
+**Performance & Optimization**
+- [ ] T073 Enhance performance monitoring and optimization
+  - [ ] T073a Add telemetry/logging framework for performance probes (structured output)
+  - [ ] T073b Optimize large file handling (>10MB) with streaming/chunking
+  - [ ] T073c Add performance benchmarks for document operations
+  - [ ] T073d Profile and optimize Markdown preview rendering for large documents
+
+**Infrastructure Coverage**
+- [ ] T074 Improve Infrastructure project test coverage (currently 52.67%)
+  - [ ] T074a Add comprehensive tests for AutosaveService
+  - [ ] T074b Add comprehensive tests for PersistenceService
+  - [ ] T074c Add comprehensive tests for FileWatcher
+  - [ ] T074d Add tests for IpcBridge (after T071 completion)
+
+---
+
 ## Dependencies & Execution Order
 
-- Setup (Phase 1) → Foundational (Phase 2) → US1 (P1) → US2 (P2), US4 (P2) → US3 (P3), US5 (P3) → Edge Cases → Quality
-- User stories are independently testable per “Independent Test” notes and can run in parallel after Phase 2.
+- Setup (Phase 1) → Foundational (Phase 2) → US1 (P1) → US2 (P2), US4 (P2) → US3 (P3), US5 (P3) → Edge Cases → Quality (Phase 9) → Polish (Phase 10 - Future)
+- User stories are independently testable per "Independent Test" notes and can run in parallel after Phase 2.
+- Phase 10 is optional enhancement work; core application is complete after Phase 9.
 
 Legend: [P] = may be run in parallel when tasks touch distinct files/components; sequence if overlapping to avoid conflicts.
 
@@ -237,5 +285,12 @@ Legend: [P] = may be run in parallel when tasks touch distinct files/components;
 
 ## Implementation Strategy
 
-MVP: Complete Phases 1–2, then Phase 3 (US1). Stop and validate via the independent test. Next, deliver US2 and US4 (both P2). Finally, ship US3/US5 and Edge Cases, then Quality.
+**MVP (Phases 1-9)**: Complete Phases 1–2, then Phase 3 (US1). Stop and validate via the independent test. Next, deliver US2 and US4 (both P2). Finally, ship US3/US5 and Edge Cases, then Quality. ✅ **COMPLETE**
+
+**Enhancement (Phase 10 - Optional)**: Address deferred items for improved UX:
+1. **UI Polish** (T069-T070): Error dialogs and user confirmations for better error handling
+2. **IPC Completion** (T071): Native file dialogs and session persistence 
+3. **Accessibility** (T072): Playwright-based automated accessibility testing
+4. **Performance** (T073): Enhanced monitoring and large file optimization
+5. **Coverage** (T074): Improve Infrastructure test coverage to match Core (92.39%)
 

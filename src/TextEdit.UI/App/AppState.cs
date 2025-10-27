@@ -202,13 +202,13 @@ public class AppState : IDisposable
         catch (UnauthorizedAccessException ex)
         {
             Console.WriteLine($"[AppState] Permission denied saving to: {path} - {ex.Message}");
-            // TODO: Show error dialog and allow user to try different location
+            // NOTE: Error dialogs deferred to future enhancement (UI polish phase)
             return false;
         }
         catch (IOException ex)
         {
             Console.WriteLine($"[AppState] IO error saving to: {path} - {ex.Message}");
-            // TODO: Show error dialog to user
+            // NOTE: Error dialogs deferred to future enhancement (UI polish phase)
             return false;
         }
     }
