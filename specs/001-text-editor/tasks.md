@@ -182,18 +182,18 @@ Tests are OPTIONAL per prompt; story phases below omit explicit test tasks. Qual
 **Purpose**: Implement deferred features for improved UX and accessibility
 
 **UI Polish & Error Handling**
-- [ ] T069 Implement error dialog system for file operation failures (OpenAsync, SaveAsync, SaveAsAsync)
-  - [ ] T069a Add ErrorDialog Blazor component with icon, message, and action buttons
-  - [ ] T069b Wire error dialogs to AppState file operation catch blocks (7 locations)
-  - [ ] T069c Add user-friendly error messages for common scenarios (permission denied, disk full, file in use)
-- [ ] T070 Implement user confirmation dialogs for destructive operations
-  - [ ] T070a Add ConfirmDialog Blazor component with title, message, Yes/No buttons
-  - [ ] T070b Wire confirmation dialog to SaveAsAsync when overwriting existing file
-  - [ ] T070c Add confirmation for closing unsaved tabs (if not covered by existing autosave)
+- [X] T069 Implement error dialog system for file operation failures (OpenAsync, SaveAsync, SaveAsAsync)
+  - [X] T069a Add ErrorDialog Blazor component with icon, message, and action buttons
+  - [X] T069b Wire error dialogs to AppState file operation catch blocks (7 locations)
+  - [X] T069c Add user-friendly error messages for common scenarios (permission denied, disk full, file in use)
+- [X] T070 Implement user confirmation dialogs for destructive operations
+  - [X] T070a Add ConfirmDialog Blazor component with title, message, Yes/No buttons
+  - [X] T070b Wire confirmation dialog to SaveAsAsync when overwriting existing file
+  - [X] T070c Add confirmation for closing unsaved tabs (already covered by IpcBridge.ConfirmCloseDirtyAsync)
 
 **IPC & Native Dialogs (Phase 2 Completion)**
 - [ ] T071 Complete IPC bridge implementation in src/TextEdit.App/ElectronHost.cs
-  - [ ] T071a Implement openFileDialog IPC handler with Electron native dialog
+  - [X] T071a Implement openFileDialog IPC handler with Electron native dialog
   - [ ] T071b Implement saveFileDialog IPC handler with Electron native dialog
   - [ ] T071c Implement persistUnsaved IPC handler for session persistence
   - [ ] T071d Implement restoreSession IPC handler for startup restoration

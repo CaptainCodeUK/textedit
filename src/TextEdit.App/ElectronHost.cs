@@ -4,6 +4,7 @@ using TextEdit.UI.App;
 using TextEdit.UI.Components.Editor;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
+using TextEdit.Infrastructure.Ipc;
 
 namespace TextEdit.App;
 
@@ -177,10 +178,60 @@ public static class ElectronHost
     /// </summary>
     private static void RegisterIpcHandlers()
     {
-        // NOTE: Phase 2 (T022) - IPC handlers deferred to future implementation
-        // - openFileDialog: Electron native file picker
-        // - saveFileDialog: Electron native save dialog
-        // - persistUnsaved: Session persistence for unsaved changes
-        // - restoreSession: Session restoration on startup
+        // Channel: openFileDialog.request -> openFileDialog.response
+        // Implements contracts/ipc.openFileDialog.* schemas
+        if (HybridSupport.IsElectronActive)
+        {
+            Electron.IpcMain.RemoveAllListeners("openFileDialog.request");
+            Electron.IpcMain.On("openFileDialog.request", async _ =>
+            {
+                try
+                {
+                    if (_app is null)
+                    {
+                        Console.WriteLine("[IPC] openFileDialog.request received before app initialized");
+                        return;
+                    }
+
+                    using var scope = _app.Services.CreateScope();
+                    var ipc = scope.ServiceProvider.GetRequiredService<IpcBridge>();
+                    var selectedPath = await ipc.ShowOpenFileDialogAsync();
+
+                    var window = Electron.WindowManager.BrowserWindows.FirstOrDefault();
+                    if (window is null)
+                    {
+                        Console.WriteLine("[IPC] No BrowserWindow available to send openFileDialog.response");
+                        return;
+                    }
+
+                    var response = new
+                    {
+                        canceled = string.IsNullOrWhiteSpace(selectedPath),
+                        filePaths = string.IsNullOrWhiteSpace(selectedPath) ? Array.Empty<string>() : new[] { selectedPath! }
+                    };
+
+                    Electron.IpcMain.Send(window, "openFileDialog.response", response);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[IPC] openFileDialog.request failed: {ex.Message}");
+                }
+            });
+
+            // Placeholders for future Phase 10 tasks (T071b–T071d)
+            Electron.IpcMain.RemoveAllListeners("persistUnsaved.request");
+            Electron.IpcMain.On("persistUnsaved.request", _ =>
+            {
+                // For now, AppState handles autosave/session; this channel can be wired in T071c.
+                Console.WriteLine("[IPC] persistUnsaved.request received (noop placeholder)");
+            });
+
+            Electron.IpcMain.RemoveAllListeners("restoreSession.request");
+            Electron.IpcMain.On("restoreSession.request", _ =>
+            {
+                // In Phase 10 T071d, respond with records per contracts/ipc.restoreSession.response.schema.json
+                Console.WriteLine("[IPC] restoreSession.request received (noop placeholder)");
+            });
+        }
     }
 }

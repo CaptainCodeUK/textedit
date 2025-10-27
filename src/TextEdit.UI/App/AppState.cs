@@ -18,18 +18,20 @@ public class AppState : IDisposable
     private readonly IpcBridge _ipc;
     private readonly PersistenceService _persistence;
     private readonly AutosaveService _autosave;
+    private readonly DialogService? _dialogService;
     private readonly Dictionary<Guid, FileWatcher> _watchers = new();
     private readonly Dictionary<Guid, DateTimeOffset> _lastExternalChange = new();
 
     private readonly Dictionary<Guid, Document> _open = new();
 
-    public AppState(DocumentService docs, TabService tabs, IpcBridge ipc, PersistenceService persistence, AutosaveService autosave)
+    public AppState(DocumentService docs, TabService tabs, IpcBridge ipc, PersistenceService persistence, AutosaveService autosave, DialogService? dialogService = null)
     {
         _docs = docs;
         _tabs = tabs;
         _ipc = ipc;
         _persistence = persistence;
         _autosave = autosave;
+        _dialogService = dialogService;
         EditorState = new EditorState();
         
         // Hook up autosave to trigger persistence
@@ -136,19 +138,19 @@ public class AppState : IDisposable
         catch (FileNotFoundException ex)
         {
             Console.WriteLine($"[AppState] File not found: {ex.FileName}");
-            // NOTE: Error dialogs deferred to future enhancement (UI polish phase)
+            _dialogService?.ShowErrorDialog("File Not Found", $"The file '{ex.FileName}' could not be found.");
             return null;
         }
         catch (UnauthorizedAccessException ex)
         {
             Console.WriteLine($"[AppState] Access denied: {path} - {ex.Message}");
-            // NOTE: Error dialogs deferred to future enhancement (UI polish phase)
+            _dialogService?.ShowErrorDialog("Access Denied", $"Permission denied when opening '{path}'. You may not have read access to this file.");
             return null;
         }
         catch (IOException ex)
         {
             Console.WriteLine($"[AppState] IO error opening file: {path} - {ex.Message}");
-            // NOTE: Error dialogs deferred to future enhancement (UI polish phase)
+            _dialogService?.ShowErrorDialog("I/O Error", $"An error occurred while opening '{path}': {ex.Message}");
             return null;
         }
     }
@@ -172,14 +174,14 @@ public class AppState : IDisposable
         catch (UnauthorizedAccessException ex)
         {
             Console.WriteLine($"[AppState] Permission denied saving file: {ActiveDocument.FilePath} - {ex.Message}");
-            // NOTE: User confirmation dialog deferred to future enhancement
-            // For now, automatically attempt Save As
+            _dialogService?.ShowErrorDialog("Permission Denied", $"Cannot save '{ActiveDocument.Name}'. The file may be read-only or you may not have write permission.");
+            // Optionally prompt user to Save As
             await SaveAsActiveAsync();
         }
         catch (IOException ex)
         {
             Console.WriteLine($"[AppState] IO error saving file: {ActiveDocument.FilePath} - {ex.Message}");
-            // NOTE: Error dialogs deferred to future enhancement (UI polish phase)
+            _dialogService?.ShowErrorDialog("Save Error", $"An error occurred while saving '{ActiveDocument.Name}': {ex.Message}");
         }
     }
 
@@ -188,6 +190,19 @@ public class AppState : IDisposable
         if (ActiveDocument is null) return false;
         var path = await _ipc.ShowSaveFileDialogAsync();
         if (string.IsNullOrWhiteSpace(path)) return false;
+        
+        // Check if file already exists and prompt for confirmation (T070b)
+        if (File.Exists(path) && _dialogService is not null)
+        {
+            var confirmed = await _dialogService.ShowConfirmDialogAsync(
+                "Overwrite File?",
+                $"The file '{Path.GetFileName(path)}' already exists. Do you want to replace it?");
+            
+            if (!confirmed)
+            {
+                return false; // User cancelled overwrite
+            }
+        }
         
         try
         {
@@ -202,13 +217,13 @@ public class AppState : IDisposable
         catch (UnauthorizedAccessException ex)
         {
             Console.WriteLine($"[AppState] Permission denied saving to: {path} - {ex.Message}");
-            // NOTE: Error dialogs deferred to future enhancement (UI polish phase)
+            _dialogService?.ShowErrorDialog("Permission Denied", $"Cannot save to '{path}'. You may not have write permission to this location.");
             return false;
         }
         catch (IOException ex)
         {
             Console.WriteLine($"[AppState] IO error saving to: {path} - {ex.Message}");
-            // NOTE: Error dialogs deferred to future enhancement (UI polish phase)
+            _dialogService?.ShowErrorDialog("Save Error", $"An error occurred while saving to '{path}': {ex.Message}");
             return false;
         }
     }

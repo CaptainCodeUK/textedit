@@ -49,6 +49,8 @@ public class Startup
         services.AddSingleton<MarkdownRenderer>();
         // UI state
         services.AddSingleton<AppState>();
+        // Dialog service
+        services.AddSingleton<DialogService>();
     }
 
     /// <summary>
