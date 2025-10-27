@@ -336,6 +336,7 @@ public partial class TextEditor : ComponentBase, IDisposable
     {
         State.WordWrap = !State.WordWrap;
         State.NotifyChanged(); // Notify so menu checkmarks update
+        AppState.PersistEditorPreferences();
         return InvokeAsync(StateHasChanged);
     }
 
@@ -344,6 +345,7 @@ public partial class TextEditor : ComponentBase, IDisposable
         State.ShowPreview = !State.ShowPreview;
         State.NotifyChanged(); // Notify so menu checkmarks update
         AppState.NotifyDocumentUpdated(); // Notify so layout updates
+        AppState.PersistEditorPreferences();
         return InvokeAsync(StateHasChanged);
     }
 

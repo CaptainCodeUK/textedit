@@ -143,15 +143,17 @@ Tests are OPTIONAL per prompt; story phases below omit explicit test tasks. Qual
 
 **Purpose**: Handle missing files, conflicts, temp failures, permissions, and large files
 
-- [ ] T053 Implement missing-file handling on open in src/TextEdit.Infrastructure/FileSystem/FileSystemService.cs
-- [ ] T054 [P] On startup, restore missing-original as Untitled in src/TextEdit.App/Program.cs
-- [ ] T055 Detect external modifications and prompt choices in src/TextEdit.Infrastructure/FileSystem/FileWatcher.cs
-- [ ] T056 [P] Block conflicting overwrite; offer Save As in src/TextEdit.Core/Documents/DocumentService.cs
-- [ ] T057 Handle temp persistence failures with fallback in src/TextEdit.Infrastructure/Persistence/PersistenceService.cs
-- [ ] T058 [P] Handle permission-denied on save with Save As in src/TextEdit.Core/Documents/DocumentService.cs
-- [ ] T059 Large file thresholds and read-only mode in src/TextEdit.Core/Documents/DocumentService.cs
-- [ ] T060 [P] Manual-refresh preview for large files in src/TextEdit.UI/Components/Preview/PreviewPanel.razor
-- [ ] T061 Autosave every 30s and recovery prompt in src/TextEdit.Infrastructure/Autosave/AutosaveService.cs
+- [X] T053 Implement missing-file handling on open in src/TextEdit.Infrastructure/FileSystem/FileSystemService.cs
+- [X] T054 [P] On startup, restore missing-original as Untitled in src/TextEdit.App/Program.cs
+- [X] T055 Persist saved file paths in session and restore on startup in src/TextEdit.Infrastructure/Persistence/PersistenceService.cs
+- [X] T056 Detect external modifications and prompt choices in src/TextEdit.Infrastructure/FileSystem/FileWatcher.cs
+- [X] T057 [P] Block conflicting overwrite; offer Save As in src/TextEdit.Core/Documents/DocumentService.cs
+- [X] T058 Handle temp persistence failures with fallback in src/TextEdit.Infrastructure/Persistence/PersistenceService.cs
+- [X] T059 [P] Handle permission-denied on save with Save As in src/TextEdit.Core/Documents/DocumentService.cs
+- [X] T060 Large file thresholds and read-only mode in src/TextEdit.Core/Documents/DocumentService.cs
+- [X] T061 [P] Manual-refresh preview for large files in src/TextEdit.UI/Components/Preview/PreviewPanel.razor
+- [X] T062 Autosave every 30s and recovery prompt in src/TextEdit.Infrastructure/Autosave/AutosaveService.cs
+- [X] T063 Display autosave status indicator in src/TextEdit.UI/Components/StatusBar/StatusBar.razor
 
 **FRs**: FR-026, FR-027, FR-028, FR-029, FR-030, FR-031, FR-032, FR-033, FR-034
 
@@ -161,11 +163,11 @@ Tests are OPTIONAL per prompt; story phases below omit explicit test tasks. Qual
 
 **Purpose**: Ensure gates for tests, a11y, performance, and docs are met before merge
 
-- [ ] T062 [P] Enforce coverage ≥85% line / ≥80% branch in tests/unit/ and tests/integration/
-- [ ] T063 [P] Accessibility pass (keyboard, contrast, focus) in tests/integration/TextEdit.App.Tests/
-- [ ] T064 [P] Performance probes for startup/close/preview in src/TextEdit.App/ElectronHost.cs
-- [ ] T065 Update quickstart and user guides in specs/001-text-editor/quickstart.md
-- [ ] T066 Final review for constitution principles in .specify/memory/constitution.md alignment
+- [ ] T064 [P] Enforce coverage ≥85% line / ≥80% branch in tests/unit/ and tests/integration/
+- [ ] T065 [P] Accessibility pass (keyboard, contrast, focus) in tests/integration/TextEdit.App.Tests/
+- [ ] T066 [P] Performance probes for startup/close/preview in src/TextEdit.App/ElectronHost.cs
+- [ ] T067 Update quickstart and user guides in specs/001-text-editor/quickstart.md
+- [ ] T068 Final review for constitution principles in .specify/memory/constitution.md alignment
 
 ---
 

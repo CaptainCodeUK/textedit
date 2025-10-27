@@ -43,15 +43,20 @@ public class PersistenceService
             }
             foreach (var doc in documents)
             {
-                // Only persist if: (1) new untitled doc with content, or (2) existing file with unsaved changes
-                if (doc.IsDirty || (string.IsNullOrWhiteSpace(doc.FilePath) && !string.IsNullOrWhiteSpace(doc.Content)))
+                // Persist all documents to restore full session state
+                // For saved files, only store metadata (no content to save disk space)
+                // For unsaved/dirty files, store full content for recovery
+                bool shouldPersist = !string.IsNullOrWhiteSpace(doc.FilePath) || !string.IsNullOrWhiteSpace(doc.Content) || doc.IsDirty;
+                
+                if (shouldPersist)
                 {
                     var sessionFile = Path.Combine(_sessionDir, $"{doc.Id}.json");
                     var metadata = new PersistedDocument
                     {
                         Id = doc.Id,
                         FilePath = doc.FilePath,
-                        Content = doc.Content,
+                        // Only persist content for unsaved/dirty documents
+                        Content = (doc.IsDirty || string.IsNullOrWhiteSpace(doc.FilePath)) ? doc.Content : null,
                         IsDirty = doc.IsDirty,
                         Encoding = doc.Encoding.WebName,
                         Eol = doc.Eol,
@@ -99,6 +104,14 @@ public class PersistenceService
                     
                     if (metadata != null)
                     {
+                        // Skip documents with empty GUID (corruption)
+                        if (metadata.Id == Guid.Empty)
+                        {
+                            Console.WriteLine($"[PersistenceService] Skipping document with empty GUID: {file}");
+                            try { File.Delete(file); } catch { /* ignore cleanup failures */ }
+                            continue;
+                        }
+                        
                         var doc = new Document
                         {
                             Id = metadata.Id,
@@ -108,32 +121,64 @@ public class PersistenceService
                         
                         var content = metadata.Content ?? string.Empty;
                         
-                        // If original file path exists and hasn't been modified externally, restore as that file
-                        // Otherwise restore as untitled with dirty state
-                        if (!string.IsNullOrWhiteSpace(metadata.FilePath) && File.Exists(metadata.FilePath))
+                        // Handle different restoration scenarios:
+                        // 1. Saved file (has path, no content in session) - reload from disk
+                        // 2. Dirty file (has path + content) - check for external changes
+                        // 3. Untitled (no path, has content) - restore as untitled
+                        
+                        if (!string.IsNullOrWhiteSpace(metadata.FilePath))
                         {
-                            var currentContent = await File.ReadAllTextAsync(metadata.FilePath, doc.Encoding);
-                            if (currentContent == content)
+                            if (File.Exists(metadata.FilePath))
                             {
-                                // File unchanged - can restore safely with path
-                                doc.MarkSaved(metadata.FilePath);
-                                if (!string.IsNullOrEmpty(content))
+                                // File exists on disk
+                                if (string.IsNullOrEmpty(content))
                                 {
-                                    doc.SetContent(content);
-                                    doc.MarkSaved(metadata.FilePath); // Clear dirty flag after setting content
+                                    // Saved file - reload from disk
+                                    try
+                                    {
+                                        content = await File.ReadAllTextAsync(metadata.FilePath, doc.Encoding);
+                                        doc.SetContentInternal(content);
+                                        doc.MarkSaved(metadata.FilePath);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Console.WriteLine($"[PersistenceService] Failed to reload saved file {metadata.FilePath}: {ex.Message}");
+                                        // Skip this document if we can't read it
+                                        continue;
+                                    }
+                                }
+                                else
+                                {
+                                    // Dirty file with unsaved changes - restore with path and dirty state
+                                    doc.SetContentInternal(content);
+                                    doc.MarkSaved(metadata.FilePath);
+                                    doc.MarkDirtyInternal();
+                                    Console.WriteLine($"[PersistenceService] Restored dirty file: {metadata.FilePath}");
                                 }
                             }
                             else
                             {
-                                // File changed externally - restore as untitled with original path in content
-                                doc.SetContent(content);
+                                // File no longer exists - restore as untitled if we have content
+                                if (!string.IsNullOrEmpty(content))
+                                {
+                                    doc.SetContentInternal(content);
+                                    doc.MarkDirtyInternal();
+                                    Console.WriteLine($"[PersistenceService] Original file not found, restoring as untitled: {metadata.FilePath}");
+                                }
+                                else
+                                {
+                                    // No content and no file - skip
+                                    continue;
+                                }
                             }
                         }
                         else
                         {
-                            // New untitled doc or file no longer exists
-                            doc.SetContent(content);
+                            // New untitled doc
+                            doc.SetContentInternal(content);
+                            doc.MarkDirtyInternal();
                         }
+                        
                         var order = metadata.Order ?? int.MaxValue;
                         entries.Add((doc, order, metadata.CreatedAt, metadata.UpdatedAt));
                         Console.WriteLine($"[PersistenceService] Restored doc Id={doc.Id}, Path='{doc.FilePath ?? "<untitled>"}', Dirty={doc.IsDirty}, Order={order}.");
@@ -196,6 +241,55 @@ public class PersistenceService
         {
             Console.WriteLine($"[PersistenceService] Failed to clear sessions: {ex.Message}");
         }
+    }
+
+    public void PersistEditorPreferences(bool wordWrap, bool showPreview)
+    {
+        try
+        {
+            var prefsFile = Path.Combine(_sessionDir, "editor-prefs.json");
+            var prefs = new EditorPreferences
+            {
+                WordWrap = wordWrap,
+                ShowPreview = showPreview
+            };
+            var json = JsonSerializer.Serialize(prefs);
+            File.WriteAllText(prefsFile, json);
+            Console.WriteLine($"[PersistenceService] Persisted editor preferences: WordWrap={wordWrap}, ShowPreview={showPreview} to '{prefsFile}'");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PersistenceService] Failed to persist editor preferences: {ex.Message}");
+        }
+    }
+
+    public (bool WordWrap, bool ShowPreview) RestoreEditorPreferences()
+    {
+        try
+        {
+            var prefsFile = Path.Combine(_sessionDir, "editor-prefs.json");
+            if (File.Exists(prefsFile))
+            {
+                var json = File.ReadAllText(prefsFile);
+                var prefs = JsonSerializer.Deserialize<EditorPreferences>(json);
+                if (prefs != null)
+                {
+                    return (prefs.WordWrap, prefs.ShowPreview);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PersistenceService] Failed to restore editor preferences: {ex.Message}");
+        }
+        // Return defaults
+        return (WordWrap: true, ShowPreview: false);
+    }
+
+    private class EditorPreferences
+    {
+        public bool WordWrap { get; set; }
+        public bool ShowPreview { get; set; }
     }
 
     private class PersistedDocument

@@ -11,7 +11,7 @@
     {
         var doc = State.GetDocument(t.DocumentId);
         var title = doc?.Name ?? "Untitled";
-        var dirty = doc?.IsDirty == true ? " *" : string.Empty;
+        var dirty = doc?.IsDirty == true ? " ●" : string.Empty;
         <button class="tab"
                 style="border:none;border-bottom:2px solid @(t.IsActive ? "#2563eb" : "transparent");padding:6px 10px;background:transparent;cursor:pointer;"
                 @onclick="(() => OnActivate(t.Id))"

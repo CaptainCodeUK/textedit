@@ -13,6 +13,7 @@ public class Document
     public string Name => FilePath is null ? "Untitled" : Path.GetFileName(FilePath);
     public string Content { get; private set; } = string.Empty;
     public bool IsDirty { get; private set; }
+    public bool IsReadOnly { get; private set; }
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; private set; } = DateTimeOffset.UtcNow;
     public Encoding Encoding { get; set; } = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
@@ -23,9 +24,28 @@ public class Document
 
     public void SetContent(string content)
     {
+        if (IsReadOnly) throw new InvalidOperationException("Cannot modify read-only document");
         Content = content;
         IsDirty = true;
         UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public void SetContentInternal(string content)
+    {
+        // Method for DocumentService/PersistenceService to load content without read-only check
+        Content = content;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public void MarkDirtyInternal()
+    {
+        // Method to manually mark document as dirty (for restoration)
+        IsDirty = true;
+    }
+
+    public void MarkReadOnly(bool readOnly = true)
+    {
+        IsReadOnly = readOnly;
     }
 
     public void MarkSaved(string? path = null)

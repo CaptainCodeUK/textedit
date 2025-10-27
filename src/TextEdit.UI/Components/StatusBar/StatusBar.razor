@@ -16,6 +16,24 @@
     <span class="status-item">
         @AppState.EditorState.CharacterCount @(AppState.EditorState.CharacterCount == 1 ? "character" : "characters")
     </span>
+    <span class="status-item" style="font-size: 0.875rem; color: #64748b;">
+        @if (AppState.AutosaveService.LastAutosave != DateTime.MinValue)
+        {
+            var timeSinceAutosave = DateTime.UtcNow - AppState.AutosaveService.LastAutosave;
+            if (timeSinceAutosave.TotalSeconds < 5)
+            {
+                <text>✓ Autosaved</text>
+            }
+            else
+            {
+                <text>Autosave: @FormatTimeAgo(timeSinceAutosave)</text>
+            }
+        }
+        else
+        {
+            <text>Autosave: waiting...</text>
+        }
+    </span>
     <span class="status-item" style="margin-left: auto; font-style: italic; color: #64748b;">
         @if (AppState.ActiveDocument != null && !string.IsNullOrEmpty(AppState.ActiveDocument.FilePath))
         {
@@ -36,6 +54,19 @@
     }
 
     private void OnEditorStateChanged() => InvokeAsync(StateHasChanged);
+
+    private string FormatTimeAgo(TimeSpan timeAgo)
+    {
+        if (timeAgo.TotalSeconds < 60)
+            return "just now";
+        if (timeAgo.TotalMinutes < 2)
+            return "1m ago";
+        if (timeAgo.TotalMinutes < 60)
+            return $"{(int)timeAgo.TotalMinutes}m ago";
+        if (timeAgo.TotalHours < 2)
+            return "1h ago";
+        return $"{(int)timeAgo.TotalHours}h ago";
+    }
 
     public void Dispose()
     {

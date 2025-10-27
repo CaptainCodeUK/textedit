@@ -3,28 +3,37 @@ using TextEdit.Core.Documents;
 using TextEdit.Core.Editing;
 using TextEdit.Infrastructure.Ipc;
 using TextEdit.Infrastructure.Persistence;
+using TextEdit.Infrastructure.FileSystem;
+using TextEdit.Infrastructure.Autosave;
 
 namespace TextEdit.UI.App;
 
 /// <summary>
 /// UI application state: manages open documents and tabs and exposes active selection.
 /// </summary>
-public class AppState
+public class AppState : IDisposable
 {
     private readonly DocumentService _docs;
     private readonly TabService _tabs;
     private readonly IpcBridge _ipc;
     private readonly PersistenceService _persistence;
+    private readonly AutosaveService _autosave;
+    private readonly Dictionary<Guid, FileWatcher> _watchers = new();
 
     private readonly Dictionary<Guid, Document> _open = new();
 
-    public AppState(DocumentService docs, TabService tabs, IpcBridge ipc, PersistenceService persistence)
+    public AppState(DocumentService docs, TabService tabs, IpcBridge ipc, PersistenceService persistence, AutosaveService autosave)
     {
         _docs = docs;
         _tabs = tabs;
         _ipc = ipc;
         _persistence = persistence;
+        _autosave = autosave;
         EditorState = new EditorState();
+        
+        // Hook up autosave to trigger persistence
+        _autosave.AutosaveRequested += HandleAutosaveAsync;
+        _autosave.Start();
     }
 
     public IReadOnlyList<Tab> Tabs => _tabs.Tabs;
@@ -32,6 +41,7 @@ public class AppState
     public Document? ActiveDocument => ActiveTab != null && _open.TryGetValue(ActiveTab.DocumentId, out var d) ? d : null;
     public IEnumerable<Document> AllDocuments => _open.Values;
     public EditorState EditorState { get; }
+    public AutosaveService AutosaveService => _autosave;
 
     public event Action? Changed;
     private void NotifyChanged() => Changed?.Invoke();
@@ -41,9 +51,17 @@ public class AppState
 
     public async Task RestoreSessionAsync()
     {
+        // Always restore editor preferences first
+        var (wordWrap, showPreview) = _persistence.RestoreEditorPreferences();
+        EditorState.WordWrap = wordWrap;
+        EditorState.ShowPreview = showPreview;
+        Console.WriteLine($"[AppState] Restored editor preferences: WordWrap={wordWrap}, ShowPreview={showPreview}");
+
         // Idempotence: if we already have tabs/documents, assume we've been restored/initialized
         if (_tabs.Tabs.Count > 0 || _open.Count > 0)
         {
+            // Still need to notify UI of preference changes
+            NotifyChanged();
             return;
         }
 
@@ -52,6 +70,7 @@ public class AppState
         {
             _open[doc.Id] = doc;
             _tabs.AddTab(doc);
+            StartWatchingFile(doc);
         }
         
         // If no documents were restored, create a new one
@@ -65,12 +84,24 @@ public class AppState
         }
     }
 
+    private async Task HandleAutosaveAsync()
+    {
+        // Autosave persists both session and editor preferences
+        await PersistSessionAsync();
+        PersistEditorPreferences();
+    }
+
     public async Task PersistSessionAsync()
     {
         Console.WriteLine($"[AppState] PersistSessionAsync: open={_open.Count}, tabs={_tabs.Tabs.Count}.");
         // Persist documents in current tab order for stable restore
         var order = _tabs.Tabs.Select(t => t.DocumentId).ToList();
         await _persistence.PersistAsync(_open.Values, order);
+    }
+
+    public void PersistEditorPreferences()
+    {
+        _persistence.PersistEditorPreferences(EditorState.WordWrap, EditorState.ShowPreview);
     }
 
     public void DeleteSessionFile(Guid documentId)
@@ -91,11 +122,34 @@ public class AppState
     {
         var path = await _ipc.ShowOpenFileDialogAsync();
         if (string.IsNullOrWhiteSpace(path)) return null;
-        var doc = await _docs.OpenAsync(path!);
-        _open[doc.Id] = doc;
-        _tabs.AddTab(doc);
-        NotifyChanged();
-        return doc;
+        
+        try
+        {
+            var doc = await _docs.OpenAsync(path!);
+            _open[doc.Id] = doc;
+            _tabs.AddTab(doc);
+            StartWatchingFile(doc);
+            NotifyChanged();
+            return doc;
+        }
+        catch (FileNotFoundException ex)
+        {
+            Console.WriteLine($"[AppState] File not found: {ex.FileName}");
+            // TODO: Show error dialog to user in Phase 8
+            return null;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Console.WriteLine($"[AppState] Access denied: {path} - {ex.Message}");
+            // TODO: Show error dialog to user in Phase 8
+            return null;
+        }
+        catch (IOException ex)
+        {
+            Console.WriteLine($"[AppState] IO error opening file: {path} - {ex.Message}");
+            // TODO: Show error dialog to user in Phase 8
+            return null;
+        }
     }
 
     public async Task SaveActiveAsync()
@@ -106,10 +160,26 @@ public class AppState
             await SaveAsActiveAsync();
             return;
         }
-        await _docs.SaveAsync(ActiveDocument);
-        // Clean up session file after successful save
-        DeleteSessionFile(ActiveDocument.Id);
-        NotifyChanged();
+        
+        try
+        {
+            await _docs.SaveAsync(ActiveDocument);
+            // Clean up session file after successful save
+            DeleteSessionFile(ActiveDocument.Id);
+            NotifyChanged();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Console.WriteLine($"[AppState] Permission denied saving file: {ActiveDocument.FilePath} - {ex.Message}");
+            // TODO: Prompt user to Save As to different location in Phase 8
+            // For now, attempt Save As
+            await SaveAsActiveAsync();
+        }
+        catch (IOException ex)
+        {
+            Console.WriteLine($"[AppState] IO error saving file: {ActiveDocument.FilePath} - {ex.Message}");
+            // TODO: Show error dialog to user in Phase 8
+        }
     }
 
     public async Task<bool> SaveAsActiveAsync()
@@ -117,11 +187,29 @@ public class AppState
         if (ActiveDocument is null) return false;
         var path = await _ipc.ShowSaveFileDialogAsync();
         if (string.IsNullOrWhiteSpace(path)) return false;
-        await _docs.SaveAsync(ActiveDocument, path);
-        // Clean up session file after successful save
-        DeleteSessionFile(ActiveDocument.Id);
-        NotifyChanged();
-        return true;
+        
+        try
+        {
+            await _docs.SaveAsync(ActiveDocument, path);
+            // Clean up session file after successful save
+            DeleteSessionFile(ActiveDocument.Id);
+            // Start watching the newly saved file
+            StartWatchingFile(ActiveDocument);
+            NotifyChanged();
+            return true;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Console.WriteLine($"[AppState] Permission denied saving to: {path} - {ex.Message}");
+            // TODO: Show error dialog and allow user to try different location
+            return false;
+        }
+        catch (IOException ex)
+        {
+            Console.WriteLine($"[AppState] IO error saving to: {path} - {ex.Message}");
+            // TODO: Show error dialog to user
+            return false;
+        }
     }
 
     public void ActivateTab(Guid tabId)
@@ -168,6 +256,7 @@ public class AppState
         }
         _tabs.CloseTab(tabId);
         _open.Remove(tab.DocumentId);
+        StopWatchingFile(tab.DocumentId);
         if (_tabs.Tabs.Count == 0)
         {
             // Always keep an editor available
@@ -233,5 +322,43 @@ public class AppState
         var prev = (idx - 1 + _tabs.Tabs.Count) % _tabs.Tabs.Count;
         _tabs.ActivateTab(_tabs.Tabs[prev].Id);
         NotifyChanged();
+    }
+
+    private void StartWatchingFile(Document doc)
+    {
+        if (string.IsNullOrWhiteSpace(doc.FilePath)) return;
+        if (_watchers.ContainsKey(doc.Id)) return;
+        
+        var watcher = new FileWatcher();
+        watcher.ChangedExternally += path =>
+        {
+            Console.WriteLine($"[AppState] External modification detected: {path}");
+            // TODO: Prompt user with choices (Reload, Keep Current, Compare)
+            // For now, just log the detection
+        };
+        watcher.Watch(doc.FilePath);
+        _watchers[doc.Id] = watcher;
+    }
+
+    private void StopWatchingFile(Guid documentId)
+    {
+        if (_watchers.TryGetValue(documentId, out var watcher))
+        {
+            watcher.Stop();
+            watcher.Dispose();
+            _watchers.Remove(documentId);
+        }
+    }
+
+    public void Dispose()
+    {
+        _autosave.Stop();
+        
+        foreach (var watcher in _watchers.Values)
+        {
+            watcher.Stop();
+            watcher.Dispose();
+        }
+        _watchers.Clear();
     }
 }

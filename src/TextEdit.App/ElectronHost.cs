@@ -153,6 +153,7 @@ public static class ElectronHost
                 {
                     // Synchronous wait - we're shutting down anyway
                     appState.PersistSessionAsync().GetAwaiter().GetResult();
+                    appState.PersistEditorPreferences();
                 }
             }
             catch (Exception ex)
