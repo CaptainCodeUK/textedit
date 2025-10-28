@@ -200,13 +200,13 @@ Tests are OPTIONAL per prompt; story phases below omit explicit test tasks. Qual
   - [X] T071e Add contract tests for all IPC handlers in tests/contract/TextEdit.IPC.Tests/
 
 **Accessibility Enhancement**
-- [ ] T072 Implement Playwright-based accessibility testing (from T065 deferral)
-  - [ ] T072a Set up Playwright test infrastructure in tests/integration/
-  - [ ] T072b Add axe-core integration for automated accessibility audits
-  - [ ] T072c Implement keyboard navigation tests (all menu shortcuts, tab navigation)
-  - [ ] T072d Implement focus management tests (dialog open/close, tab switching)
-  - [ ] T072e Implement screen reader tests (ARIA labels, announcements)
-  - [ ] T072f Implement color contrast tests (WCAG AA compliance)
+- [X] T072 Implement Playwright-based accessibility testing (from T065 deferral)
+  - [X] T072a Set up Playwright test infrastructure in tests/integration/
+  - [X] T072b Add axe-core integration for automated accessibility audits
+  - [X] T072c Implement keyboard navigation tests (all menu shortcuts, tab navigation)
+  - [X] T072d Implement focus management tests (dialog open/close, tab switching)
+  - [X] T072e Implement screen reader tests (ARIA labels, announcements)
+  - [X] T072f Implement color contrast tests (WCAG AA compliance)
 
 **Performance & Optimization**
 - [ ] T073 Enhance performance monitoring and optimization
@@ -223,6 +223,33 @@ Tests are OPTIONAL per prompt; story phases below omit explicit test tasks. Qual
   - [ ] T074d Add tests for IpcBridge (after T071 completion)
 
 ---
+
+## Post-T074: Accessibility & QA Follow-ups (Deferred)
+
+These tasks are informed by the new accessibility tests and quality gates. They can be scheduled after T074.
+
+- [ ] T075 Add ARIA roles and labels in UI components
+  - Apply role/aria-* attributes across TabStrip, TextEditor, StatusBar, PreviewPanel, ErrorDialog, ConfirmDialog to meet AccessibilityTests expectations.
+  - Examples: role="tablist" and role="tab" with aria-selected/aria-controls; role="tabpanel" with aria-labelledby; role="status" with aria-live; role="alertdialog" with aria-labelledby/aria-describedby.
+
+- [ ] T076 Implement dialog focus management
+  - ErrorDialog/ConfirmDialog auto-focus primary button, trap Tab/Shift+Tab within the dialog, close on Escape, and restore focus to invoking element on close.
+
+- [ ] T077 StatusBar live region announcements
+  - Announce key state changes via aria-live regions: save success, dirty state, file opened, autosave complete, external modification detected, preview updated.
+
+- [ ] T078 Playwright DOM audits (Electron)
+  - Launch the Electron app with DevTools; connect Playwright and run axe-core against the real DOM to verify ARIA structure and color-contrast compliance.
+
+- [ ] T079 Resolve UI build warnings
+  - Fix duplicate using in `src/TextEdit.UI/Pages/App.razor`.
+  - Address async method without await in `src/TextEdit.UI/Components/Editor/TextEditor.razor.cs`.
+
+- [ ] T080 TabStrip keyboard arrow navigation
+  - Support Left/Right arrow navigation within tabs (optional aria-activedescendant pattern) in addition to existing accelerators.
+
+- [ ] T081 Focus editor on tab switch
+  - On tab activation, programmatically focus the editor textarea and announce the tab change (e.g., "Switched to [filename]").
 
 ## Dependencies & Execution Order
 
