@@ -107,6 +107,22 @@ See [`scripts/README.md`](scripts/README.md) for all available commands.
 - [Feature Specification](specs/001-text-editor/spec.md)
 - [Task List](specs/001-text-editor/tasks.md)
 - [Development Scripts](scripts/README.md)
+- [Quickstart Guide](specs/001-text-editor/quickstart.md) - Build, run, and test instructions
+
+## Building & Testing
+
+```fish
+# Build the solution
+./scripts/dev.fish build
+
+# Run unit tests with coverage
+dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura
+
+# Run the Electron app
+./scripts/dev.fish start
+```
+
+See [quickstart.md](specs/001-text-editor/quickstart.md) for detailed instructions.
 
 ## License
 

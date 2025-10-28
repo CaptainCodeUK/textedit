@@ -28,9 +28,9 @@
 
 ## Implementation Status
 
-**Current**: Placeholder integration tests exist  
-**Required**: Full Playwright/accessibility automated testing  
-**Deferred**: Phase 9 T065 marked for future enhancement
+**Completed**: Phase 10 T072 - Playwright + axe-core accessibility testing  
+**Coverage**: Keyboard navigation, focus management, ARIA labels, screen reader support, color contrast  
+**Test Suite**: `tests/integration/TextEdit.App.Tests/AccessibilityTests.cs` with 8 automated tests
 
 The application follows basic accessibility best practices:
 - Native HTML textarea for editing (inherent keyboard support)

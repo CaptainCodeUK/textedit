@@ -15,6 +15,7 @@ function show_help
     echo "  build              Build the solution"
     echo "  clean              Clean build artifacts"
     echo "  restore            Restore NuGet packages"
+    echo "  cleanup            Kill any lingering TextEdit/dotnet processes"
     echo "  run                Run the Electron app (debug mode)"
     echo "  test               Run all tests"
     echo "  test:unit          Run unit tests only"
@@ -26,6 +27,8 @@ end
 
 function cmd_build
     echo "🔨 Building solution..."
+    # Kill any lingering processes first
+    "$script_dir/kill-textedit.fish"
     dotnet build "$root_dir/textedit.sln"
 end
 
@@ -41,12 +44,16 @@ end
 
 function cmd_run
     echo "🚀 Starting Electron app..."
+    # Kill any lingering processes first
+    "$script_dir/kill-textedit.fish"
     cd "$root_dir/src/TextEdit.App"
     electronize start
 end
 
 function cmd_test
     echo "🧪 Running all tests..."
+    # Kill any lingering processes first
+    "$script_dir/kill-textedit.fish"
     dotnet test "$root_dir/textedit.sln" --logger "console;verbosity=normal"
 end
 
@@ -124,6 +131,8 @@ switch $argv[1]
         cmd_clean
     case restore
         cmd_restore
+    case cleanup
+        "$script_dir/kill-textedit.fish"
     case run
         cmd_run
     case test

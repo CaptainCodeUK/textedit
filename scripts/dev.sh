@@ -15,6 +15,7 @@ show_help() {
     echo "  build              Build the solution"
     echo "  clean              Clean build artifacts"
     echo "  restore            Restore NuGet packages"
+    echo "  cleanup            Kill any lingering TextEdit/dotnet processes"
     echo "  run                Run the Electron app (debug mode)"
     echo "  test               Run all tests"
     echo "  test:unit          Run unit tests only"
@@ -26,6 +27,8 @@ show_help() {
 
 cmd_build() {
     echo "🔨 Building solution..."
+    # Kill any lingering processes first
+    "$SCRIPT_DIR/kill-textedit.sh"
     dotnet build "$ROOT_DIR/textedit.sln"
 }
 
@@ -41,12 +44,16 @@ cmd_restore() {
 
 cmd_run() {
     echo "🚀 Starting Electron app..."
+    # Kill any lingering processes first
+    "$SCRIPT_DIR/kill-textedit.sh"
     cd "$ROOT_DIR/src/TextEdit.App"
     electronize start
 }
 
 cmd_test() {
     echo "🧪 Running all tests..."
+    # Kill any lingering processes first
+    "$SCRIPT_DIR/kill-textedit.sh"
     dotnet test "$ROOT_DIR/textedit.sln" --logger "console;verbosity=normal"
 }
 
@@ -130,6 +137,9 @@ case "$1" in
         ;;
     restore)
         cmd_restore
+        ;;
+    cleanup)
+        "$SCRIPT_DIR/kill-textedit.sh"
         ;;
     run)
         cmd_run

@@ -112,9 +112,9 @@ tests/
 
 - **Configuration**: `appsettings.json` and `appsettings.Development.json`
 - **Session storage**: `~/.config/TextEdit/Session/` (Linux) or equivalent per platform
-- **Performance**: Startup/quit/preview durations logged to console
+- **Performance**: Structured telemetry via `PerformanceLogger`; key operations logged to console
 - **Coverage gate**: Build fails if unit test coverage drops below 65%
-- **Accessibility**: Checklist created; full automation deferred
+- **Accessibility**: Playwright + axe-core automated tests implemented (T072 complete)
 
 ## Troubleshooting
 
