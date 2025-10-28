@@ -7,11 +7,13 @@ using TextEdit.Core.Editing;
 
 /// <summary>
 /// Handles creation, loading, saving, and updating of documents.
+/// Optimized for large file handling (>10MB) with streaming.
 /// </summary>
 public class DocumentService
 {
     private readonly IFileSystem _fs;
     private readonly IUndoRedoService _undo;
+    private const long LargeFileThreshold = 10 * 1024 * 1024; // 10MB
 
     public DocumentService(IFileSystem fs, IUndoRedoService undo)
     {
@@ -26,18 +28,27 @@ public class DocumentService
         return doc;
     }
 
-    public async Task<Document> OpenAsync(string path, Encoding? encoding = null)
+    public async Task<Document> OpenAsync(string path, Encoding? encoding = null, IProgress<int>? progress = null, CancellationToken cancellationToken = default)
     {
         if (!_fs.FileExists(path)) throw new FileNotFoundException("File not found", path);
         
-        // T060: Check file size and mark large files as read-only
-        var fileInfo = new FileInfo(path);
-        const long largeFileThreshold = 10 * 1024 * 1024; // 10MB
-        bool isLargeFile = fileInfo.Length >= largeFileThreshold;
+        var fileSize = _fs.GetFileSize(path);
+        bool isLargeFile = fileSize >= LargeFileThreshold;
         
         var doc = new Document();
         var enc = encoding ?? doc.Encoding;
-        var text = await _fs.ReadAllTextAsync(path, enc);
+        
+        // Use streaming for large files
+        string text;
+        if (isLargeFile)
+        {
+            Console.WriteLine($"[DocumentService] Large file detected ({fileSize} bytes), using streaming read: {path}");
+            text = await _fs.ReadLargeFileAsync(path, enc, progress, cancellationToken);
+        }
+        else
+        {
+            text = await _fs.ReadAllTextAsync(path, enc);
+        }
         
         // Normalize EOL to \n in memory
         text = text.Replace("\r\n", "\n").Replace('\r', '\n');
@@ -49,7 +60,7 @@ public class DocumentService
         if (isLargeFile)
         {
             doc.MarkReadOnly(true);
-            Console.WriteLine($"[DocumentService] Large file detected ({fileInfo.Length} bytes), opening in read-only mode: {path}");
+            Console.WriteLine($"[DocumentService] Large file opened in read-only mode: {path}");
         }
         
         _undo.Attach(doc, doc.Content);
@@ -65,7 +76,7 @@ public class DocumentService
         _undo.Push(doc, content);
     }
 
-    public async Task SaveAsync(Document doc, string? path = null)
+    public async Task SaveAsync(Document doc, string? path = null, IProgress<int>? progress = null, CancellationToken cancellationToken = default)
     {
         var targetPath = path ?? doc.FilePath;
         if (string.IsNullOrWhiteSpace(targetPath)) throw new InvalidOperationException("No path specified for save.");
@@ -104,9 +115,20 @@ public class DocumentService
             text = text.Replace("\n", doc.Eol);
         }
         
-        // T059: Handle permission-denied on save
-        // UnauthorizedAccessException will bubble up to AppState where it's caught
-        await _fs.WriteAllTextAsync(targetPath!, text, doc.Encoding);
+        // Use streaming for large content
+        var contentSize = text.Length * doc.Encoding.GetByteCount("a"); // Approximate byte size
+        if (contentSize >= LargeFileThreshold)
+        {
+            Console.WriteLine($"[DocumentService] Large content detected (~{contentSize} bytes), using streaming write: {targetPath}");
+            await _fs.WriteLargeFileAsync(targetPath!, text, doc.Encoding, progress, cancellationToken);
+        }
+        else
+        {
+            // T059: Handle permission-denied on save
+            // UnauthorizedAccessException will bubble up to AppState where it's caught
+            await _fs.WriteAllTextAsync(targetPath!, text, doc.Encoding);
+        }
+        
         doc.MarkSaved(targetPath);
     }
 }

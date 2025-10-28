@@ -277,15 +277,21 @@ public class DocumentServiceTests
     [Fact]
     public async Task OpenAsync_LargeFile_MarksReadOnly()
     {
-        // Arrange: Create a 15MB file (over the 10MB threshold)
+    // Arrange: Create a 15MB file.
+    // NOTE: The large-file streaming threshold in production is 10MB
+    // (see src/TextEdit.Core/Documents/DocumentService.cs -> LargeFileThreshold).
+    // We intentionally use 15MB here to be safely above the threshold and avoid
+    // boundary-related flakiness. This ensures the streaming/read-only path is exercised.
         var tempFile = Path.GetTempFileName();
-        var largeContent = new string('x', 15 * 1024 * 1024); // 15MB
+    var largeContent = new string('x', 15 * 1024 * 1024); // 15MB (> 10MB threshold)
         
         try
         {
             await File.WriteAllTextAsync(tempFile, largeContent);
             _fileSystem.FileExists(tempFile).Returns(true);
-            _fileSystem.ReadAllTextAsync(tempFile, Arg.Any<Encoding>()).Returns(Task.FromResult(largeContent));
+                _fileSystem.GetFileSize(tempFile).Returns(15L * 1024 * 1024); // 15MB
+                _fileSystem.ReadLargeFileAsync(tempFile, Arg.Any<Encoding>(), Arg.Any<IProgress<int>>(), Arg.Any<CancellationToken>())
+                    .Returns(Task.FromResult(largeContent));
 
             // Act
             var doc = await _service.OpenAsync(tempFile);
