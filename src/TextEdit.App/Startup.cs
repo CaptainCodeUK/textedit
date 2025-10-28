@@ -43,7 +43,7 @@ public class Startup
         services.AddSingleton<TabService>();
         services.AddSingleton<FileWatcher>();
         services.AddSingleton<PersistenceService>();
-        services.AddSingleton<AutosaveService>();
+        services.AddSingleton<AutosaveService>(sp => new AutosaveService(intervalMs: 5000)); // 5 second autosave
         services.AddSingleton<IpcBridge>();
         // Markdown rendering
         services.AddSingleton<MarkdownRenderer>();

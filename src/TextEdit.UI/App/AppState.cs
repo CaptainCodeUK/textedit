@@ -98,6 +98,8 @@ public class AppState : IDisposable
         // Autosave persists both session and editor preferences
         await PersistSessionAsync();
         PersistEditorPreferences();
+        // Notify UI so StatusBar can update autosave indicator
+        NotifyChanged();
     }
 
     public async Task PersistSessionAsync()
