@@ -23,6 +23,7 @@ public class AppState : IDisposable
     private readonly Dictionary<Guid, DateTimeOffset> _lastExternalChange = new();
 
     private readonly Dictionary<Guid, Document> _open = new();
+    private int _stateVersion = 0;
 
     public AppState(DocumentService docs, TabService tabs, IpcBridge ipc, PersistenceService persistence, AutosaveService autosave, DialogService? dialogService = null)
     {
@@ -45,9 +46,14 @@ public class AppState : IDisposable
     public IEnumerable<Document> AllDocuments => _open.Values;
     public EditorState EditorState { get; }
     public AutosaveService AutosaveService => _autosave;
+    public int StateVersion => _stateVersion;
 
     public event Action? Changed;
-    private void NotifyChanged() => Changed?.Invoke();
+    private void NotifyChanged()
+    {
+        _stateVersion++;
+        Changed?.Invoke();
+    }
 
     // Notify UI that document state (e.g., dirty flag) changed
     public void NotifyDocumentUpdated() => NotifyChanged();
@@ -188,29 +194,20 @@ public class AppState : IDisposable
     public async Task<bool> SaveAsActiveAsync()
     {
         if (ActiveDocument is null) return false;
+        var documentId = ActiveDocument.Id; // Capture ID before save
         var path = await _ipc.ShowSaveFileDialogAsync();
         if (string.IsNullOrWhiteSpace(path)) return false;
         
-        // Check if file already exists and prompt for confirmation (T070b)
-        if (File.Exists(path) && _dialogService is not null)
-        {
-            var confirmed = await _dialogService.ShowConfirmDialogAsync(
-                "Overwrite File?",
-                $"The file '{Path.GetFileName(path)}' already exists. Do you want to replace it?");
-            
-            if (!confirmed)
-            {
-                return false; // User cancelled overwrite
-            }
-        }
+    // Trust the OS save dialog's overwrite confirmation. Do not prompt again here to avoid blocking.
         
         try
         {
             await _docs.SaveAsync(ActiveDocument, path);
             // Clean up session file after successful save
-            DeleteSessionFile(ActiveDocument.Id);
+            DeleteSessionFile(documentId);
             // Start watching the newly saved file
             StartWatchingFile(ActiveDocument);
+            // Force UI update
             NotifyChanged();
             return true;
         }

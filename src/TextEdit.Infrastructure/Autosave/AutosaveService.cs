@@ -23,13 +23,11 @@ public class AutosaveService : IDisposable
     public void Start()
     {
         _timer.Start();
-        Console.WriteLine("[AutosaveService] Started (interval: 30s)");
     }
 
     public void Stop()
     {
         _timer.Stop();
-        Console.WriteLine("[AutosaveService] Stopped");
     }
 
     private async void OnTimerElapsed(object? sender, ElapsedEventArgs e)
@@ -40,12 +38,11 @@ public class AutosaveService : IDisposable
             {
                 await AutosaveRequested.Invoke();
                 _lastAutosave = DateTime.UtcNow;
-                Console.WriteLine($"[AutosaveService] Autosave triggered at {_lastAutosave:HH:mm:ss}");
             }
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"[AutosaveService] Autosave failed: {ex.Message}");
+            // Swallow exceptions by design; autosave failures should not crash the app
         }
     }
 

@@ -192,12 +192,12 @@ Tests are OPTIONAL per prompt; story phases below omit explicit test tasks. Qual
   - [X] T070c Add confirmation for closing unsaved tabs (already covered by IpcBridge.ConfirmCloseDirtyAsync)
 
 **IPC & Native Dialogs (Phase 2 Completion)**
-- [ ] T071 Complete IPC bridge implementation in src/TextEdit.App/ElectronHost.cs
+- [X] T071 Complete IPC bridge implementation in src/TextEdit.App/ElectronHost.cs
   - [X] T071a Implement openFileDialog IPC handler with Electron native dialog
-  - [ ] T071b Implement saveFileDialog IPC handler with Electron native dialog
-  - [ ] T071c Implement persistUnsaved IPC handler for session persistence
-  - [ ] T071d Implement restoreSession IPC handler for startup restoration
-  - [ ] T071e Add contract tests for all IPC handlers in tests/contract/TextEdit.IPC.Tests/
+  - [X] T071b Implement saveFileDialog IPC handler with Electron native dialog
+  - [~] T071c Implement persistUnsaved IPC handler for session persistence (WONTFIX: internal AutosaveService already handles this automatically)
+  - [~] T071d Implement restoreSession IPC handler for startup restoration (WONTFIX: App.razor already calls AppState.RestoreSessionAsync on startup; no external consumers)
+  - [X] T071e Add contract tests for all IPC handlers in tests/contract/TextEdit.IPC.Tests/
 
 **Accessibility Enhancement**
 - [ ] T072 Implement Playwright-based accessibility testing (from T065 deferral)

@@ -9,20 +9,23 @@
 <div class="tab-strip" style="display:flex;gap:6px;align-items:flex-end;overflow-x:auto;" @onclick="OnTabStripClick">
     @foreach (var t in State.Tabs)
     {
-        var doc = State.GetDocument(t.DocumentId);
-        var title = doc?.Name ?? "Untitled";
-    var dirty = doc?.IsDirty == true ? " ●" : string.Empty;
-    var external = doc?.HasExternalModification == true ? " ↻" : string.Empty;
-        <button class="tab"
-                style="border:none;border-bottom:2px solid @(t.IsActive ? "#2563eb" : "transparent");padding:6px 10px;background:transparent;cursor:pointer;"
-                @onclick="(() => OnActivate(t.Id))"
-                @onclick:stopPropagation="true"
-                @onmouseup="(e => OnMouseUp(e, t.Id))"
-                @onmouseup:stopPropagation="true"
-                title="@title">
-            <span>@title@dirty@external</span>
-            <span style="margin-left:8px;color:#9ca3af;" @onclick="(async () => await OnClose(t.Id))" @onclick:stopPropagation="true">✕</span>
-        </button>
+        var currentTab = t;
+        var doc = State.GetDocument(currentTab.DocumentId);
+        if (doc != null)
+        {
+            // Use StateVersion to force complete re-render when anything changes
+            var renderKey = $"{currentTab.Id}-{State.StateVersion}";
+            <button @key="@renderKey" class="tab"
+                    style="border:none;border-bottom:2px solid @(currentTab.IsActive ? "#2563eb" : "transparent");padding:6px 10px;background:transparent;cursor:pointer;"
+                    @onclick="(() => OnActivate(currentTab.Id))"
+                    @onclick:stopPropagation="true"
+                    @onmouseup="(e => OnMouseUp(e, currentTab.Id))"
+                    @onmouseup:stopPropagation="true"
+                    title="@doc.Name">
+                <span>@doc.Name@(doc.IsDirty ? " ●" : "")@(doc.HasExternalModification ? " ↻" : "")</span>
+                <span style="margin-left:8px;color:#9ca3af;" @onclick="(async () => await OnClose(currentTab.Id))" @onclick:stopPropagation="true">✕</span>
+            </button>
+        }
     }
     <button class="tab-add" style="margin-left:8px;" @onclick="NewTab" @onclick:stopPropagation="true">+</button>
 </div>
@@ -35,7 +38,15 @@
         State.Changed += OnStateChanged;
     }
 
-    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+    private void OnStateChanged()
+    {
+        // Force immediate re-render on the UI thread
+        InvokeAsync(async () => 
+        {
+            await Task.Yield();
+            StateHasChanged();
+        });
+    }
     
     private async Task NewTab()
     {

@@ -49,11 +49,14 @@
 @code {
     protected override void OnInitialized()
     {
-        // Subscribe to editor-state-only updates to avoid re-rendering the whole editor on caret moves
+        // Subscribe to both EditorState changes (for caret position) and AppState changes (for document updates)
         AppState.EditorState.Changed += OnEditorStateChanged;
+        AppState.Changed += OnAppStateChanged;
     }
 
     private void OnEditorStateChanged() => InvokeAsync(StateHasChanged);
+    
+    private void OnAppStateChanged() => InvokeAsync(StateHasChanged);
 
     private string FormatTimeAgo(TimeSpan timeAgo)
     {
@@ -71,5 +74,6 @@
     public void Dispose()
     {
         AppState.EditorState.Changed -= OnEditorStateChanged;
+        AppState.Changed -= OnAppStateChanged;
     }
 }

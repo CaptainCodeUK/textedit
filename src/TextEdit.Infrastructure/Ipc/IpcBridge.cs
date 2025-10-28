@@ -22,7 +22,7 @@ public class IpcBridge
         Cancel
     }
 
-    public async Task<CloseDecision> ConfirmCloseDirtyAsync(string? name)
+    public virtual async Task<CloseDecision> ConfirmCloseDirtyAsync(string? name)
     {
         if (!HybridSupport.IsElectronActive)
         {
@@ -55,7 +55,7 @@ public class IpcBridge
             _ => CloseDecision.Cancel
         };
     }
-    public async Task<string?> ShowOpenFileDialogAsync()
+    public virtual async Task<string?> ShowOpenFileDialogAsync()
     {
         if (!HybridSupport.IsElectronActive)
         {
@@ -81,7 +81,7 @@ public class IpcBridge
         return result[0];
     }
 
-    public async Task<string?> ShowSaveFileDialogAsync()
+    public virtual async Task<string?> ShowSaveFileDialogAsync()
     {
         if (!HybridSupport.IsElectronActive)
         {
@@ -113,7 +113,7 @@ public class IpcBridge
         return result;
     }
 
-    public async Task<ExternalChangeDecision> ConfirmReloadExternalAsync(string? name)
+    public virtual async Task<ExternalChangeDecision> ConfirmReloadExternalAsync(string? name)
     {
         if (!HybridSupport.IsElectronActive)
         {

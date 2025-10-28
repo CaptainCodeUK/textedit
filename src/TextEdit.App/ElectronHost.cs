@@ -218,7 +218,45 @@ public static class ElectronHost
                 }
             });
 
-            // Placeholders for future Phase 10 tasks (T071b–T071d)
+            // Channel: saveFileDialog.request -> saveFileDialog.response
+            // Implements contracts/ipc.saveFileDialog.* schemas
+            Electron.IpcMain.RemoveAllListeners("saveFileDialog.request");
+            Electron.IpcMain.On("saveFileDialog.request", async _ =>
+            {
+                try
+                {
+                    if (_app is null)
+                    {
+                        Console.WriteLine("[IPC] saveFileDialog.request received before app initialized");
+                        return;
+                    }
+
+                    using var scope = _app.Services.CreateScope();
+                    var ipc = scope.ServiceProvider.GetRequiredService<IpcBridge>();
+                    var selectedPath = await ipc.ShowSaveFileDialogAsync();
+
+                    var window = Electron.WindowManager.BrowserWindows.FirstOrDefault();
+                    if (window is null)
+                    {
+                        Console.WriteLine("[IPC] No BrowserWindow available to send saveFileDialog.response");
+                        return;
+                    }
+
+                    var response = new
+                    {
+                        canceled = string.IsNullOrWhiteSpace(selectedPath),
+                        filePath = selectedPath
+                    };
+
+                    Electron.IpcMain.Send(window, "saveFileDialog.response", response);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[IPC] saveFileDialog.request failed: {ex.Message}");
+                }
+            });
+
+            // Placeholders for future Phase 10 tasks (T071c–T071d)
             Electron.IpcMain.RemoveAllListeners("persistUnsaved.request");
             Electron.IpcMain.On("persistUnsaved.request", _ =>
             {

@@ -67,7 +67,15 @@ public class AutosaveServiceTests : IDisposable
 
         // Act
         _service.Start();
-        await Task.WhenAny(tcs.Task, Task.Delay(500));
+        await Task.WhenAny(tcs.Task, Task.Delay(1000));
+
+        // The service updates LastAutosave after awaiting subscribers.
+        // Give it a short window to apply the update to avoid timing flakes.
+        var deadline = DateTime.UtcNow + TimeSpan.FromMilliseconds(500);
+        while (_service.LastAutosave <= initialValue && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(10);
+        }
 
         // Assert
         _service.LastAutosave.Should().BeAfter(initialValue);

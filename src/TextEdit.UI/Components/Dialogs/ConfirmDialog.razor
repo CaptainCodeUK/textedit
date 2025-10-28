@@ -50,13 +50,11 @@
 
     private async Task HandleYes()
     {
-        IsVisible = false;
         await OnResult.InvokeAsync(true);
     }
 
     private async Task HandleNo()
     {
-        IsVisible = false;
         await OnResult.InvokeAsync(false);
     }
 

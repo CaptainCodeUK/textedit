@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/textedit/ipc/saveFileDialog.request.schema.json",
+  "title": "SaveFileDialogRequest",
+  "type": "object",
+  "properties": {
+    "defaultPath": {
+      "type": ["string", "null"],
+      "description": "Default path or filename to suggest"
+    },
+    "filters": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "File type filters (e.g., 'txt', 'md')"
+    }
+  },
+  "additionalProperties": false
+}
