@@ -1,13 +1,19 @@
 @using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
 
 @if (IsVisible)
 {
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @onclick="HandleBackdropClick">
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" 
+         @onclick="HandleBackdropClick"
+         @onkeydown="HandleKeyDown">
         <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4" 
              role="alertdialog" 
              aria-labelledby="error-dialog-title" 
              aria-describedby="error-dialog-message"
-             @onclick:stopPropagation="true">
+             @onclick:stopPropagation="true"
+             @ref="dialogElement">
             <div class="flex items-start mb-4">
                 <div class="flex-shrink-0">
                     <svg class="h-6 w-6 text-red-600" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -23,9 +29,11 @@
             </div>
             <div class="flex justify-end space-x-3">
                 <button 
+                    @ref="okButtonElement"
                     type="button" 
                     class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-                    @onclick="HandleOk">
+                    @onclick="HandleOk"
+                    @onfocusout="HandleFocusOut">
                     OK
                 </button>
             </div>
@@ -46,15 +54,64 @@
     [Parameter]
     public EventCallback OnClose { get; set; }
 
+    private ElementReference dialogElement;
+    private ElementReference okButtonElement;
+    private bool _isClosing = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (IsVisible && !_isClosing)
+        {
+            // Auto-focus the OK button when dialog opens
+            await Task.Delay(10); // Small delay to ensure DOM is ready
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("eval", "document.querySelector('[role=\"alertdialog\"] button').focus()");
+            }
+            catch
+            {
+                // Ignore focus errors
+            }
+        }
+    }
+
     private async Task HandleOk()
     {
+        _isClosing = true;
         IsVisible = false;
         await OnClose.InvokeAsync();
+        _isClosing = false;
     }
 
     private async Task HandleBackdropClick()
     {
         // Allow clicking backdrop to close
         await HandleOk();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            await HandleOk();
+        }
+        // Focus trap is handled by HandleFocusOut - keep focus on the button
+    }
+
+    private async Task HandleFocusOut(FocusEventArgs e)
+    {
+        // If focus leaves the button while dialog is open, return it
+        if (IsVisible && !_isClosing)
+        {
+            await Task.Delay(10);
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("eval", "document.querySelector('[role=\"alertdialog\"] button')?.focus()");
+            }
+            catch
+            {
+                // Ignore focus errors
+            }
+        }
     }
 }

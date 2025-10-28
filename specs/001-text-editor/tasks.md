@@ -232,7 +232,7 @@ These tasks are informed by the new accessibility tests and quality gates. They 
   - Apply role/aria-* attributes across TabStrip, TextEditor, StatusBar, PreviewPanel, ErrorDialog, ConfirmDialog to meet AccessibilityTests expectations.
   - Examples: role="tablist" and role="tab" with aria-selected/aria-controls; role="tabpanel" with aria-labelledby; role="status" with aria-live; role="alertdialog" with aria-labelledby/aria-describedby.
 
-- [ ] T076 Implement dialog focus management
+- [X] T076 Implement dialog focus management
   - ErrorDialog/ConfirmDialog auto-focus primary button, trap Tab/Shift+Tab within the dialog, close on Escape, and restore focus to invoking element on close.
 
 - [ ] T077 StatusBar live region announcements

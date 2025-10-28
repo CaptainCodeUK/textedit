@@ -1,13 +1,19 @@
 @using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
 
 @if (IsVisible)
 {
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @onclick="HandleBackdropClick">
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" 
+         @onclick="HandleBackdropClick"
+         @onkeydown="HandleKeyDown">
         <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4" 
              role="dialog" 
              aria-labelledby="confirm-dialog-title" 
              aria-describedby="confirm-dialog-message"
-             @onclick:stopPropagation="true">
+             @onclick:stopPropagation="true"
+             @ref="dialogElement">
             <div class="flex items-start mb-4">
                 <div class="flex-shrink-0">
                     <svg class="h-6 w-6 text-yellow-600" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -23,15 +29,19 @@
             </div>
             <div class="flex justify-end space-x-3">
                 <button 
+                    @ref="noButtonElement"
                     type="button" 
                     class="px-4 py-2 bg-gray-200 text-gray-900 rounded hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
-                    @onclick="HandleNo">
+                    @onclick="HandleNo"
+                    @onkeydown="HandleButtonKeyDown">
                     No
                 </button>
                 <button 
+                    @ref="yesButtonElement"
                     type="button" 
                     class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    @onclick="HandleYes">
+                    @onclick="HandleYes"
+                    @onkeydown="HandleButtonKeyDown">
                     Yes
                 </button>
             </div>
@@ -52,19 +62,93 @@
     [Parameter]
     public EventCallback<bool> OnResult { get; set; }
 
+    private ElementReference dialogElement;
+    private ElementReference noButtonElement;
+    private ElementReference yesButtonElement;
+    private bool _isClosing = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (IsVisible && !_isClosing)
+        {
+            // Auto-focus the Yes button (primary action) when dialog opens
+            await Task.Delay(10); // Small delay to ensure DOM is ready
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("eval", "document.querySelector('[role=\"dialog\"] button:last-child').focus()");
+            }
+            catch
+            {
+                // Ignore focus errors
+            }
+        }
+    }
+
     private async Task HandleYes()
     {
+        _isClosing = true;
         await OnResult.InvokeAsync(true);
+        _isClosing = false;
     }
 
     private async Task HandleNo()
     {
+        _isClosing = true;
         await OnResult.InvokeAsync(false);
+        _isClosing = false;
     }
 
     private async Task HandleBackdropClick()
     {
         // Treat backdrop click as "No"
         await HandleNo();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            await HandleNo();
+        }
+    }
+
+    private async Task HandleButtonKeyDown(KeyboardEventArgs e)
+    {
+        // Trap Tab/Shift+Tab to cycle between the two buttons
+        if (e.Key == "Tab")
+        {
+            if (e.ShiftKey)
+            {
+                // Shift+Tab: cycle backward
+                await Task.Delay(1);
+                var activeElement = await JSRuntime.InvokeAsync<string>("eval", "document.activeElement.textContent");
+                if (activeElement == "No")
+                {
+                    // Move to Yes
+                    try { await JSRuntime.InvokeVoidAsync("eval", "document.querySelector('[role=\"dialog\"] button:last-child').focus()"); } catch { }
+                }
+                else
+                {
+                    // Move to No
+                    try { await JSRuntime.InvokeVoidAsync("eval", "document.querySelector('[role=\"dialog\"] button:first-of-type').focus()"); } catch { }
+                }
+            }
+            else
+            {
+                // Tab: cycle forward
+                await Task.Delay(1);
+                var activeElement = await JSRuntime.InvokeAsync<string>("eval", "document.activeElement.textContent");
+                if (activeElement == "Yes")
+                {
+                    // Move to No
+                    try { await JSRuntime.InvokeVoidAsync("eval", "document.querySelector('[role=\"dialog\"] button:first-of-type').focus()"); } catch { }
+                }
+                else
+                {
+                    // Move to Yes
+                    try { await JSRuntime.InvokeVoidAsync("eval", "document.querySelector('[role=\"dialog\"] button:last-child').focus()"); } catch { }
+                }
+            }
+        }
     }
 }
