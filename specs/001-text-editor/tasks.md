@@ -218,11 +218,11 @@ Tests are OPTIONAL per prompt; story phases below omit explicit test tasks. Qual
   - [DEFERRED] T073f Optimize StatusBar and TabStrip to minimize unnecessary re-renders (selective state tracking)
 
 **Infrastructure Coverage**
-- [ ] T074 Improve Infrastructure project test coverage (currently 52.67%)
-  - [ ] T074a Add comprehensive tests for AutosaveService
-  - [ ] T074b Add comprehensive tests for PersistenceService
-  - [ ] T074c Add comprehensive tests for FileWatcher
-  - [ ] T074d Add tests for IpcBridge (after T071 completion)
+- [X] T074 Improve Infrastructure project test coverage (baseline: 52.67% → current: 53.39%)
+  - [X] T074a Add comprehensive tests for AutosaveService
+  - [X] T074b Add comprehensive tests for PersistenceService
+  - [X] T074c Add comprehensive tests for FileWatcher
+  - [X] T074d Add tests for IpcBridge
 
 ---
 

@@ -6,6 +6,7 @@ using TextEdit.Infrastructure.Ipc;
 using TextEdit.Infrastructure.FileSystem;
 using TextEdit.Infrastructure.Persistence;
 using TextEdit.Infrastructure.Autosave;
+using TextEdit.Infrastructure.Telemetry;
 
 namespace TextEdit.App.Tests;
 
@@ -41,9 +42,10 @@ public class SaveAsTests : IDisposable
         };
         var persistence = new PersistenceService();
         var autosave = new AutosaveService(1000000); // very long interval; avoid firing in test
+        var perfLogger = new PerformanceLogger();
         var dialog = new DialogService();
 
-        var app = new AppState(docs, tabs, ipc, persistence, autosave, dialog);
+        var app = new AppState(docs, tabs, ipc, persistence, autosave, perfLogger, dialog);
 
         // Open original
         var opened = await app.OpenAsync();

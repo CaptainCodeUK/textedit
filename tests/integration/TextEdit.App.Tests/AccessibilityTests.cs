@@ -7,6 +7,7 @@ using TextEdit.Infrastructure.Ipc;
 using TextEdit.Infrastructure.FileSystem;
 using TextEdit.Infrastructure.Persistence;
 using TextEdit.Infrastructure.Autosave;
+using TextEdit.Infrastructure.Telemetry;
 
 namespace TextEdit.App.Tests;
 
@@ -309,7 +310,7 @@ public class AccessibilityTests
     }
     
     [Fact]
-    public async Task TabNavigation_BetweenTabs_PreservesFocus()
+    public void TabNavigation_BetweenTabs_PreservesFocus()
     {
         // Arrange: Create app state with multiple documents
         var fs = new FileSystemService();
@@ -319,8 +320,9 @@ public class AccessibilityTests
         var ipc = new TestIpcBridge();
         var persistence = new PersistenceService();
         var autosave = new AutosaveService(1000000);
+        var perfLogger = new PerformanceLogger();
         var dialog = new DialogService();
-        var app = new AppState(docs, tabs, ipc, persistence, autosave, dialog);
+        var app = new AppState(docs, tabs, ipc, persistence, autosave, perfLogger, dialog);
         
         // Create multiple documents
         var doc1 = app.CreateNew();
