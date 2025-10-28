@@ -111,7 +111,7 @@ public partial class TextEditor : ComponentBase, IDisposable
     {
         // flush any pending snapshot for the previous document before switching
         FlushPendingUndoPush();
-        InvokeAsync(async () =>
+        InvokeAsync(() =>
         {
             var newActiveId = CurrentDoc?.Id;
             if (newActiveId != _lastActiveDocId)
@@ -122,6 +122,7 @@ public partial class TextEditor : ComponentBase, IDisposable
                 _lastActiveDocId = newActiveId;
                 StateHasChanged();
             }
+            StateHasChanged();
         });
     }
 

@@ -2,8 +2,14 @@
 @inject AppState AppState
 @implements IDisposable
 
-<div class="status-bar" style="display: flex; gap: 24px; align-items: center;">
-    <span class="status-item" style="font-weight: 500;">
+<div class="status-bar" 
+     role="status" 
+     aria-live="polite" 
+     aria-atomic="false"
+     style="display: flex; gap: 24px; align-items: center;">
+    <span class="status-item" 
+          aria-label="Caret position: line @AppState.EditorState.CaretLine, column @AppState.EditorState.CaretColumn"
+          style="font-weight: 500;">
         @if (AppState.ActiveDocument != null)
         {
             <text>Ln @AppState.EditorState.CaretLine, Col @AppState.EditorState.CaretColumn</text>
@@ -13,7 +19,8 @@
             <text>--</text>
         }
     </span>
-    <span class="status-item">
+    <span class="status-item"
+          aria-label="Character count: @AppState.EditorState.CharacterCount characters">
         @AppState.EditorState.CharacterCount @(AppState.EditorState.CharacterCount == 1 ? "character" : "characters")
     </span>
     <span class="status-item" style="font-size: 0.875rem; color: #64748b;">
@@ -34,7 +41,8 @@
             <text>Autosave: waiting...</text>
         }
     </span>
-    <span class="status-item" style="margin-left: auto; font-style: italic; color: #64748b;">
+    <span class="status-item" 
+          style="margin-left: auto; font-style: italic; color: #64748b;">
         @if (AppState.ActiveDocument != null && !string.IsNullOrEmpty(AppState.ActiveDocument.FilePath))
         {
             <text>@System.IO.Path.GetFileName(AppState.ActiveDocument.FilePath)</text>
@@ -42,6 +50,10 @@
         else
         {
             <text>Untitled</text>
+        }
+        @if (AppState.ActiveDocument?.IsDirty == true)
+        {
+            <span aria-label="Document has unsaved changes" style="margin-left: 4px;">●</span>
         }
     </span>
 </div>

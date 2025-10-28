@@ -228,7 +228,7 @@ Tests are OPTIONAL per prompt; story phases below omit explicit test tasks. Qual
 
 These tasks are informed by the new accessibility tests and quality gates. They can be scheduled after T074.
 
-- [ ] T075 Add ARIA roles and labels in UI components
+- [X] T075 Add ARIA roles and labels in UI components
   - Apply role/aria-* attributes across TabStrip, TextEditor, StatusBar, PreviewPanel, ErrorDialog, ConfirmDialog to meet AccessibilityTests expectations.
   - Examples: role="tablist" and role="tab" with aria-selected/aria-controls; role="tabpanel" with aria-labelledby; role="status" with aria-live; role="alertdialog" with aria-labelledby/aria-describedby.
 
@@ -241,7 +241,7 @@ These tasks are informed by the new accessibility tests and quality gates. They 
 - [ ] T078 Playwright DOM audits (Electron)
   - Launch the Electron app with DevTools; connect Playwright and run axe-core against the real DOM to verify ARIA structure and color-contrast compliance.
 
-- [ ] T079 Resolve UI build warnings
+- [X] T079 Resolve UI build warnings
   - Fix duplicate using in `src/TextEdit.UI/Pages/App.razor`.
   - Address async method without await in `src/TextEdit.UI/Components/Editor/TextEditor.razor.cs`.
 

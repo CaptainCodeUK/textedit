@@ -6,7 +6,11 @@
 @inject IJSRuntime JSRuntime
 @implements System.IDisposable
 
-<div class="tab-strip" style="display:flex;gap:6px;align-items:flex-end;overflow-x:auto;" @onclick="OnTabStripClick">
+<nav class="tab-strip" 
+     role="tablist" 
+     aria-label="Open documents"
+     style="display:flex;gap:6px;align-items:flex-end;overflow-x:auto;" 
+     @onclick="OnTabStripClick">
     @foreach (var t in State.Tabs)
     {
         var currentTab = t;
@@ -15,7 +19,12 @@
         {
             // Use StateVersion to force complete re-render when anything changes
             var renderKey = $"{currentTab.Id}-{State.StateVersion}";
-            <button @key="@renderKey" class="tab"
+            <button @key="@renderKey" 
+                    class="tab"
+                    role="tab"
+                    id="tab-@currentTab.Id"
+                    aria-selected="@currentTab.IsActive.ToString().ToLower()"
+                    aria-controls="editor-panel"
                     style="border:none;border-bottom:2px solid @(currentTab.IsActive ? "#2563eb" : "transparent");padding:6px 10px;background:transparent;cursor:pointer;"
                     @onclick="(() => OnActivate(currentTab.Id))"
                     @onclick:stopPropagation="true"
@@ -23,12 +32,21 @@
                     @onmouseup:stopPropagation="true"
                     title="@doc.Name">
                 <span>@doc.Name@(doc.IsDirty ? " ●" : "")@(doc.HasExternalModification ? " ↻" : "")</span>
-                <span style="margin-left:8px;color:#9ca3af;" @onclick="(async () => await OnClose(currentTab.Id))" @onclick:stopPropagation="true">✕</span>
+                <span style="margin-left:8px;color:#9ca3af;" 
+                      aria-label="Close @doc.Name"
+                      role="button"
+                      tabindex="0"
+                      @onclick="(async () => await OnClose(currentTab.Id))" 
+                      @onclick:stopPropagation="true">✕</span>
             </button>
         }
     }
-    <button class="tab-add" style="margin-left:8px;" @onclick="NewTab" @onclick:stopPropagation="true">+</button>
-</div>
+    <button class="tab-add" 
+            style="margin-left:8px;" 
+            aria-label="New document"
+            @onclick="NewTab" 
+            @onclick:stopPropagation="true">+</button>
+</nav>
 
 @code {
     protected override void OnInitialized()
