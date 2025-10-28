@@ -235,7 +235,7 @@ These tasks are informed by the new accessibility tests and quality gates. They 
 - [X] T076 Implement dialog focus management
   - ErrorDialog/ConfirmDialog auto-focus primary button, trap Tab/Shift+Tab within the dialog, close on Escape, and restore focus to invoking element on close.
 
-- [ ] T077 StatusBar live region announcements
+- [X] T077 StatusBar live region announcements
   - Announce key state changes via aria-live regions: save success, dirty state, file opened, autosave complete, external modification detected, preview updated.
 
 - [ ] T078 Playwright DOM audits (Electron)

@@ -2,6 +2,7 @@
 @inject AppState AppState
 @implements IDisposable
 
+<!-- Visual status bar -->
 <div class="status-bar" 
      role="status" 
      aria-live="polite" 
@@ -58,17 +59,115 @@
     </span>
 </div>
 
+<!-- Screen reader announcements (visually hidden) -->
+<div role="status" 
+     aria-live="polite" 
+     aria-atomic="true"
+     style="position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden;">
+    @_announcement
+</div>
+
 @code {
+    private string _announcement = string.Empty;
+    private Guid? _lastDocId;
+    private bool _lastDirtyState;
+    private DateTime _lastAutosaveTime = DateTime.MinValue;
+    private bool _lastExternalModState;
+
     protected override void OnInitialized()
     {
         // Subscribe to both EditorState changes (for caret position) and AppState changes (for document updates)
         AppState.EditorState.Changed += OnEditorStateChanged;
         AppState.Changed += OnAppStateChanged;
+        
+        // Initialize tracking state
+        if (AppState.ActiveDocument != null)
+        {
+            _lastDocId = AppState.ActiveDocument.Id;
+            _lastDirtyState = AppState.ActiveDocument.IsDirty;
+            _lastExternalModState = AppState.ActiveDocument.HasExternalModification;
+        }
     }
 
     private void OnEditorStateChanged() => InvokeAsync(StateHasChanged);
     
-    private void OnAppStateChanged() => InvokeAsync(StateHasChanged);
+    private void OnAppStateChanged()
+    {
+        InvokeAsync(async () =>
+        {
+            var currentDoc = AppState.ActiveDocument;
+            
+            // Document opened/switched
+            if (currentDoc != null && currentDoc.Id != _lastDocId)
+            {
+                _lastDocId = currentDoc.Id;
+                var fileName = !string.IsNullOrEmpty(currentDoc.FilePath) 
+                    ? System.IO.Path.GetFileName(currentDoc.FilePath) 
+                    : "Untitled";
+                await AnnounceAsync($"File opened: {fileName}");
+                _lastDirtyState = currentDoc.IsDirty;
+                _lastExternalModState = currentDoc.HasExternalModification;
+            }
+            // Dirty state changed
+            else if (currentDoc != null && currentDoc.IsDirty != _lastDirtyState)
+            {
+                _lastDirtyState = currentDoc.IsDirty;
+                if (currentDoc.IsDirty)
+                {
+                    await AnnounceAsync("Document has unsaved changes");
+                }
+                else
+                {
+                    var fileName = !string.IsNullOrEmpty(currentDoc.FilePath) 
+                        ? System.IO.Path.GetFileName(currentDoc.FilePath) 
+                        : "Document";
+                    await AnnounceAsync($"{fileName} saved successfully");
+                }
+            }
+            // External modification detected
+            else if (currentDoc != null && currentDoc.HasExternalModification && !_lastExternalModState)
+            {
+                _lastExternalModState = true;
+                var fileName = !string.IsNullOrEmpty(currentDoc.FilePath) 
+                    ? System.IO.Path.GetFileName(currentDoc.FilePath) 
+                    : "File";
+                await AnnounceAsync($"External modification detected: {fileName}");
+            }
+            else if (currentDoc != null && !currentDoc.HasExternalModification)
+            {
+                _lastExternalModState = false;
+            }
+            
+            // Autosave completed
+            var currentAutosaveTime = AppState.AutosaveService.LastAutosave;
+            if (currentAutosaveTime != DateTime.MinValue && currentAutosaveTime != _lastAutosaveTime)
+            {
+                var timeSinceAutosave = DateTime.UtcNow - currentAutosaveTime;
+                if (timeSinceAutosave.TotalSeconds < 2)
+                {
+                    await AnnounceAsync("Autosave complete");
+                }
+                _lastAutosaveTime = currentAutosaveTime;
+            }
+            
+            StateHasChanged();
+        });
+    }
+
+    private async Task AnnounceAsync(string message)
+    {
+        // Clear and set to trigger screen reader announcement
+        _announcement = string.Empty;
+        StateHasChanged();
+        await Task.Delay(50); // Small delay to ensure clear is processed
+        _announcement = message;
+        StateHasChanged();
+        
+        // Clear after a few seconds to avoid clutter
+        await Task.Delay(3000);
+        _announcement = string.Empty;
+        StateHasChanged();
+    }
 
     private string FormatTimeAgo(TimeSpan timeAgo)
     {
