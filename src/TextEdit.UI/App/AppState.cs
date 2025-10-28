@@ -5,6 +5,7 @@ using TextEdit.Infrastructure.Ipc;
 using TextEdit.Infrastructure.Persistence;
 using TextEdit.Infrastructure.FileSystem;
 using TextEdit.Infrastructure.Autosave;
+using TextEdit.Infrastructure.Telemetry;
 
 namespace TextEdit.UI.App;
 
@@ -18,6 +19,7 @@ public class AppState : IDisposable
     private readonly IpcBridge _ipc;
     private readonly PersistenceService _persistence;
     private readonly AutosaveService _autosave;
+    private readonly PerformanceLogger _perfLogger;
     private readonly DialogService? _dialogService;
     private readonly Dictionary<Guid, FileWatcher> _watchers = new();
     private readonly Dictionary<Guid, DateTimeOffset> _lastExternalChange = new();
@@ -25,13 +27,14 @@ public class AppState : IDisposable
     private readonly Dictionary<Guid, Document> _open = new();
     private int _stateVersion = 0;
 
-    public AppState(DocumentService docs, TabService tabs, IpcBridge ipc, PersistenceService persistence, AutosaveService autosave, DialogService? dialogService = null)
+    public AppState(DocumentService docs, TabService tabs, IpcBridge ipc, PersistenceService persistence, AutosaveService autosave, PerformanceLogger perfLogger, DialogService? dialogService = null)
     {
         _docs = docs;
         _tabs = tabs;
         _ipc = ipc;
         _persistence = persistence;
         _autosave = autosave;
+        _perfLogger = perfLogger;
         _dialogService = dialogService;
         EditorState = new EditorState();
         
@@ -60,6 +63,8 @@ public class AppState : IDisposable
 
     public async Task RestoreSessionAsync()
     {
+        using var _ = _perfLogger.BeginOperation("Session.Restore");
+        
         // Always restore editor preferences first
         var (wordWrap, showPreview) = _persistence.RestoreEditorPreferences();
         EditorState.WordWrap = wordWrap;
@@ -75,6 +80,7 @@ public class AppState : IDisposable
         }
 
         var restored = await _persistence.RestoreAsync();
+        _perfLogger.LogMetric("Session.DocumentCount", restored.Count());
         foreach (var doc in restored)
         {
             _open[doc.Id] = doc;
@@ -95,6 +101,8 @@ public class AppState : IDisposable
 
     private async Task HandleAutosaveAsync()
     {
+        using var _ = _perfLogger.BeginOperation("Autosave");
+        
         // Autosave persists both session and editor preferences
         await PersistSessionAsync();
         PersistEditorPreferences();
@@ -131,12 +139,15 @@ public class AppState : IDisposable
 
     public async Task<Document?> OpenAsync()
     {
+        using var _ = _perfLogger.BeginOperation("Document.Open");
+        
         var path = await _ipc.ShowOpenFileDialogAsync();
         if (string.IsNullOrWhiteSpace(path)) return null;
         
         try
         {
             var doc = await _docs.OpenAsync(path!);
+            _perfLogger.LogMetric("Document.Size", doc.Content.Length, "chars");
             _open[doc.Id] = doc;
             _tabs.AddTab(doc);
             StartWatchingFile(doc);
@@ -165,6 +176,8 @@ public class AppState : IDisposable
 
     public async Task SaveActiveAsync()
     {
+        using var _ = _perfLogger.BeginOperation("Document.Save");
+        
         if (ActiveDocument is null) return;
         if (string.IsNullOrWhiteSpace(ActiveDocument.FilePath))
         {
@@ -174,6 +187,7 @@ public class AppState : IDisposable
         
         try
         {
+            _perfLogger.LogMetric("Document.Size", ActiveDocument.Content.Length, "chars");
             await _docs.SaveAsync(ActiveDocument);
             // Clean up session file after successful save
             DeleteSessionFile(ActiveDocument.Id);

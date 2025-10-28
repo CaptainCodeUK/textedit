@@ -8,6 +8,7 @@ using TextEdit.Core.Documents;
 using TextEdit.Core.Editing;
 using TextEdit.Infrastructure.Autosave;
 using TextEdit.Infrastructure.FileSystem;
+using TextEdit.Infrastructure.Telemetry;
 using TextEdit.Infrastructure.Ipc;
 using TextEdit.Infrastructure.Persistence;
 using TextEdit.Markdown;
@@ -45,6 +46,8 @@ public class Startup
         services.AddSingleton<PersistenceService>();
         services.AddSingleton<AutosaveService>(sp => new AutosaveService(intervalMs: 5000)); // 5 second autosave
         services.AddSingleton<IpcBridge>();
+        // Performance monitoring
+        services.AddSingleton<PerformanceLogger>();
         // Markdown rendering
         services.AddSingleton<MarkdownRenderer>();
         // UI state
