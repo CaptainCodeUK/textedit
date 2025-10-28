@@ -245,11 +245,11 @@ These tasks are informed by the new accessibility tests and quality gates. They 
   - Fix duplicate using in `src/TextEdit.UI/Pages/App.razor`.
   - Address async method without await in `src/TextEdit.UI/Components/Editor/TextEditor.razor.cs`.
 
-- [ ] T080 TabStrip keyboard arrow navigation
+- [X] T080 TabStrip keyboard arrow navigation
   - Support Left/Right arrow navigation within tabs (optional aria-activedescendant pattern) in addition to existing accelerators.
 
-- [ ] T081 Focus editor on tab switch
-  - On tab activation, programmatically focus the editor textarea and announce the tab change (e.g., "Switched to [filename]").
+- [X] T081 Focus editor on tab switch
+  - Auto-focus the editor textarea when switching tabs; announce "Switched to [filename]" via live region.
 
 ## Dependencies & Execution Order
 

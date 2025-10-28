@@ -10,7 +10,8 @@
      role="tablist" 
      aria-label="Open documents"
      style="display:flex;gap:6px;align-items:flex-end;overflow-x:auto;" 
-     @onclick="OnTabStripClick">
+     @onclick="OnTabStripClick"
+     @onkeydown="OnTabStripKeyDown">
     @foreach (var t in State.Tabs)
     {
         var currentTab = t;
@@ -25,6 +26,7 @@
                     id="tab-@currentTab.Id"
                     aria-selected="@currentTab.IsActive.ToString().ToLower()"
                     aria-controls="editor-panel"
+                    tabindex="@(currentTab.IsActive ? "0" : "-1")"
                     style="border:none;border-bottom:2px solid @(currentTab.IsActive ? "#2563eb" : "transparent");padding:6px 10px;background:transparent;cursor:pointer;"
                     @onclick="(() => OnActivate(currentTab.Id))"
                     @onclick:stopPropagation="true"
@@ -48,7 +50,12 @@
             @onclick:stopPropagation="true">+</button>
 </nav>
 
+<!-- Hidden live region for tab switch announcements -->
+<div aria-live="polite" aria-atomic="true" class="sr-only">@_tabAnnouncement</div>
+
 @code {
+    private string _tabAnnouncement = string.Empty;
+    
     protected override void OnInitialized()
     {
         // Don't create tabs here; App.razor performs session restore and will
@@ -76,7 +83,69 @@
     private async Task OnActivate(Guid id)
     {
         State.ActivateTab(id);
+        await AnnounceTabSwitchAsync();
         await FocusEditorAsync();
+    }
+
+    private async Task OnTabStripKeyDown(KeyboardEventArgs e)
+    {
+        // Arrow key navigation for tabs
+        if (e.Key == "ArrowLeft" || e.Key == "ArrowRight")
+        {
+            var tabs = State.Tabs.ToList();
+            var activeTabIndex = tabs.FindIndex(t => t.IsActive);
+            if (activeTabIndex == -1) return;
+
+            int newIndex;
+            if (e.Key == "ArrowLeft")
+            {
+                // Move to previous tab (wrap around)
+                newIndex = activeTabIndex == 0 ? tabs.Count - 1 : activeTabIndex - 1;
+            }
+            else // ArrowRight
+            {
+                // Move to next tab (wrap around)
+                newIndex = (activeTabIndex + 1) % tabs.Count;
+            }
+
+            var targetTab = tabs[newIndex];
+            State.ActivateTab(targetTab.Id);
+            
+            // Focus the newly activated tab button
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("eval", $"document.getElementById('tab-{targetTab.Id}')?.focus()");
+            }
+            catch
+            {
+                // Ignore focus errors
+            }
+            
+            await AnnounceTabSwitchAsync();
+            await FocusEditorAsync();
+        }
+    }
+
+    private async Task AnnounceTabSwitchAsync()
+    {
+        var doc = State.ActiveDocument;
+        if (doc == null) return;
+
+        var fileName = !string.IsNullOrEmpty(doc.FilePath) 
+            ? System.IO.Path.GetFileName(doc.FilePath) 
+            : "Untitled";
+        
+        // Clear and set to trigger screen reader announcement
+        _tabAnnouncement = string.Empty;
+        StateHasChanged();
+        await Task.Delay(50);
+        _tabAnnouncement = $"Switched to {fileName}";
+        StateHasChanged();
+        
+        // Clear after announcement
+        await Task.Delay(3000);
+        _tabAnnouncement = string.Empty;
+        StateHasChanged();
     }
 
     private async Task OnClose(Guid id)
