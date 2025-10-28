@@ -238,7 +238,7 @@ These tasks are informed by the new accessibility tests and quality gates. They 
 - [X] T077 StatusBar live region announcements
   - Announce key state changes via aria-live regions: save success, dirty state, file opened, autosave complete, external modification detected, preview updated.
 
-- [ ] T078 Playwright DOM audits (Electron)
+- [X] T078 Playwright DOM audits (Electron)
   - Launch the Electron app with DevTools; connect Playwright and run axe-core against the real DOM to verify ARIA structure and color-contrast compliance.
 
 - [X] T079 Resolve UI build warnings
