@@ -76,12 +76,15 @@ public class PersistenceService
 ```
 
 **Session Files:**
-- Location: `/tmp/TextEdit/` or `%TEMP%\TextEdit\`
-- Format: `session-{documentId}.json`
-- Content: Document content, file path, dirty state, encoding, EOL, tab order
+- Location: OS application data directory under `TextEdit/Session`
+    - Windows: `%AppData%\TextEdit\Session`
+    - macOS: `~/Library/Application Support/TextEdit/Session`
+    - Linux: `~/.config/TextEdit/Session`
+- Format: `{documentId}.json`
+- Content: Document content (for unsaved/dirty docs), file path, dirty state, encoding, EOL, tab order
 
 **Preferences File:**
-- Location: `/tmp/TextEdit/preferences.json`
+- Location: Same folder as session files: `editor-prefs.json`
 - Content: `{ "WordWrap": bool, "ShowPreview": bool }`
 
 **Features:**
@@ -200,11 +203,12 @@ perfLogger.LogOperation("SaveFile", sw.ElapsedMilliseconds);
 
 ### Session Directory
 ```csharp
-// Default: /tmp/TextEdit/ or %TEMP%\TextEdit\
-var sessionDir = Path.Combine(Path.GetTempPath(), "TextEdit");
+// Uses OS application data folder (roaming) for durability
+var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+var sessionDir = Path.Combine(appData, "TextEdit", "Session");
 ```
 
-Override by passing different path to `PersistenceService` constructor.
+Note: The current implementation uses a fixed path under the user Application Data folder.
 
 ### Autosave Interval
 ```csharp

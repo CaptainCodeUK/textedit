@@ -99,7 +99,7 @@ Electron.NET configuration:
 - **TextEdit.Core** - Domain models and services
 - **TextEdit.Infrastructure** - File I/O and persistence
 - **TextEdit.Markdown** - Markdown rendering
-- **ElectronNET.API** (23.6.2) - Electron integration
+- **ElectronNET.API** - Electron integration
 - **ASP.NET Core 8** - Web host
 
 ## Running

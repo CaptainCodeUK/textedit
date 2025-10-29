@@ -1,7 +1,8 @@
 # TextEdit - A Modern Desktop Text Editor
 
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/8.0)
-[![ElectronNET](https://img.shields.io/badge/ElectronNET-23.6.2-47848F)](https://github.com/ElectronNET/Electron.NET)
+<!-- Electron.NET badge intentionally without version to avoid drift -->
+[![Electron.NET](https://img.shields.io/badge/Electron.NET-enabled-47848F)](https://github.com/ElectronNET/Electron.NET)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A cross-platform desktop text editor built with .NET 8, Blazor Server, and Electron.NET. Features multi-document tabs, markdown preview, session persistence, and smart autosave.
@@ -181,7 +182,11 @@ TextEdit automatically saves your work without intrusive save dialogs:
 - **Modified existing files** → Changes saved to temp files, restored with dirty flag
 - **Crash Recovery** → Autosave runs every 30 seconds
 
-Session files stored in OS-appropriate temp directory (`/tmp/TextEdit/` or `%TEMP%\TextEdit\`).
+Session and preference files are stored in the OS application data directory under `TextEdit/Session`:
+
+- Windows: `%AppData%\TextEdit\Session`
+- macOS: `~/Library/Application Support/TextEdit/Session`
+- Linux: `~/.config/TextEdit/Session`
 
 ## 📚 Documentation
 

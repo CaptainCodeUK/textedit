@@ -189,7 +189,7 @@ Benchmarks in `tests/benchmarks/TextEdit.Benchmarks/`:
 
 ## Dependencies
 
-- **Markdig** (0.37.0) - Markdown parsing and rendering
+- **Markdig** - Markdown parsing and rendering
 - **System.Security.Cryptography** - SHA256 hashing
 
 ## Design Decisions
