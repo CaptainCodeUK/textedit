@@ -55,12 +55,42 @@
 
 @code {
     private string _tabAnnouncement = string.Empty;
+    private int _lastTabCount;
+    private Guid? _lastActiveTabId;
+    private int _lastStateVersion;
     
     protected override void OnInitialized()
     {
         // Don't create tabs here; App.razor performs session restore and will
         // create a new document only when no session exists.
         State.Changed += OnStateChanged;
+        
+        // Initialize tracking state
+        _lastTabCount = State.Tabs.Count;
+        _lastActiveTabId = State.ActiveDocument?.Id;
+        _lastStateVersion = State.StateVersion;
+    }
+
+    protected override bool ShouldRender()
+    {
+        // Only re-render if tab-related state actually changed
+        var currentTabCount = State.Tabs.Count;
+        var currentActiveTabId = State.ActiveDocument?.Id;
+        var currentStateVersion = State.StateVersion;
+
+        var shouldRender = _lastTabCount != currentTabCount
+            || _lastActiveTabId != currentActiveTabId
+            || _lastStateVersion != currentStateVersion
+            || !string.IsNullOrEmpty(_tabAnnouncement); // Always render when announcing
+
+        if (shouldRender)
+        {
+            _lastTabCount = currentTabCount;
+            _lastActiveTabId = currentActiveTabId;
+            _lastStateVersion = currentStateVersion;
+        }
+
+        return shouldRender;
     }
 
     private void OnStateChanged()

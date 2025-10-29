@@ -257,7 +257,7 @@ public partial class TextEditor : ComponentBase, IDisposable
     {
         if (CurrentDoc is null) return;
         // Flush any pending changes first
-        FlushPendingUndoPush();
+    FlushPendingUndoPush();
         
         var text = UndoRedo.Undo(CurrentDoc.Id);
         if (text is not null)
@@ -268,6 +268,7 @@ public partial class TextEditor : ComponentBase, IDisposable
             // Reset edit tracking so next edit starts fresh
             _lastEditedDocId = CurrentDoc.Id;
             _beforeEditContent = text;
+            
         }
         await InvokeAsync(StateHasChanged);
         await FocusEditorAsync();
@@ -285,6 +286,7 @@ public partial class TextEditor : ComponentBase, IDisposable
             // Reset edit tracking so next edit starts fresh
             _lastEditedDocId = CurrentDoc.Id;
             _beforeEditContent = text;
+            
         }
         await InvokeAsync(StateHasChanged);
         await FocusEditorAsync();
@@ -394,4 +396,6 @@ public partial class TextEditor : ComponentBase, IDisposable
         public int Column { get; set; }
         public int Index { get; set; }
     }
+
+    
 }

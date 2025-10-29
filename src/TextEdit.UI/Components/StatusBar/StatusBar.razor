@@ -73,6 +73,10 @@
     private bool _lastDirtyState;
     private DateTime _lastAutosaveTime = DateTime.MinValue;
     private bool _lastExternalModState;
+    private int _lastCaretLine;
+    private int _lastCaretColumn;
+    private int _lastCharacterCount;
+    private string _lastFileName = string.Empty;
 
     protected override void OnInitialized()
     {
@@ -86,7 +90,53 @@
             _lastDocId = AppState.ActiveDocument.Id;
             _lastDirtyState = AppState.ActiveDocument.IsDirty;
             _lastExternalModState = AppState.ActiveDocument.HasExternalModification;
+            _lastFileName = !string.IsNullOrEmpty(AppState.ActiveDocument.FilePath)
+                ? System.IO.Path.GetFileName(AppState.ActiveDocument.FilePath)
+                : "Untitled";
         }
+        _lastCaretLine = AppState.EditorState.CaretLine;
+        _lastCaretColumn = AppState.EditorState.CaretColumn;
+        _lastCharacterCount = AppState.EditorState.CharacterCount;
+    }
+
+    protected override bool ShouldRender()
+    {
+        // Only re-render if displayed values actually changed
+        var currentDoc = AppState.ActiveDocument;
+        var currentDocId = currentDoc?.Id;
+        var currentDirty = currentDoc?.IsDirty ?? false;
+        var currentExtMod = currentDoc?.HasExternalModification ?? false;
+        var currentCaretLine = AppState.EditorState.CaretLine;
+        var currentCaretColumn = AppState.EditorState.CaretColumn;
+        var currentCharCount = AppState.EditorState.CharacterCount;
+        var currentAutosave = AppState.AutosaveService.LastAutosave;
+        var currentFileName = currentDoc != null && !string.IsNullOrEmpty(currentDoc.FilePath)
+            ? System.IO.Path.GetFileName(currentDoc.FilePath)
+            : (currentDoc != null ? "Untitled" : string.Empty);
+
+        var shouldRender = _lastDocId != currentDocId
+            || _lastDirtyState != currentDirty
+            || _lastExternalModState != currentExtMod
+            || _lastCaretLine != currentCaretLine
+            || _lastCaretColumn != currentCaretColumn
+            || _lastCharacterCount != currentCharCount
+            || _lastAutosaveTime != currentAutosave
+            || _lastFileName != currentFileName
+            || !string.IsNullOrEmpty(_announcement); // Always render when announcing
+
+        if (shouldRender)
+        {
+            _lastDocId = currentDocId;
+            _lastDirtyState = currentDirty;
+            _lastExternalModState = currentExtMod;
+            _lastCaretLine = currentCaretLine;
+            _lastCaretColumn = currentCaretColumn;
+            _lastCharacterCount = currentCharCount;
+            _lastAutosaveTime = currentAutosave;
+            _lastFileName = currentFileName;
+        }
+
+        return shouldRender;
     }
 
     private void OnEditorStateChanged() => InvokeAsync(StateHasChanged);
