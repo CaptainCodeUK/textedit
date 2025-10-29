@@ -1,21 +1,43 @@
 # Development Scripts
 
-Quick helper scripts for common development tasks.
+Quick helper scripts for common development tasks across **macOS, Linux, and Windows**.
+
+## Platform-Specific Scripts
+
+### macOS & Linux
+
+Use the **Fish shell** (`.fish`) or **Bash** (`.sh`) scripts:
+
+```bash
+# Fish shell (recommended on macOS/Linux with Fish installed)
+./scripts/dev.fish [command]
+
+# Bash (works on macOS/Linux with standard shells)
+./scripts/dev.sh [command]
+```
+
+### Windows
+
+Use the **PowerShell** (`.ps1`) scripts with a **CMD wrapper** (`.cmd`) for convenience:
+
+```cmd
+REM PowerShell directly
+.\scripts\dev.ps1 [command]
+
+REM CMD wrapper (recommended - auto-detects PowerShell)
+.\scripts\dev.cmd [command]
+```
+
+**Note**: On Windows, you may need to set execution policy for PowerShell scripts:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
 
 ## Available Scripts
 
-### `dev.fish` / `dev.sh`
+### Main Development Runner: `dev.*`
 
-Main development runner script available in both Fish and Bash versions.
-
-**Usage:**
-```bash
-# Fish shell
-./scripts/dev.fish [command]
-
-# Bash/other shells
-./scripts/dev.sh [command]
-```
+Platform-specific versions: `dev.fish` (Fish), `dev.sh` (Bash), `dev.ps1` (PowerShell), `dev.cmd` (CMD wrapper)
 
 **Commands:**
 
@@ -31,25 +53,80 @@ Main development runner script available in both Fish and Bash versions.
 - **`electronize:build`** - Build production Electron package for distribution
 - **`help`** - Show available commands
 
+**Examples:**
+
+```bash
+# macOS/Linux (Fish)
+./scripts/dev.fish build
+./scripts/dev.fish run
+./scripts/dev.fish test
+
+# macOS/Linux (Bash)
+./scripts/dev.sh build
+./scripts/dev.sh run
+./scripts/dev.sh test
+```
+
+```cmd
+REM Windows (CMD)
+.\scripts\dev.cmd build
+.\scripts\dev.cmd run
+.\scripts\dev.cmd test
+
+REM Windows (PowerShell)
+.\scripts\dev.ps1 build
+.\scripts\dev.ps1 run
+.\scripts\dev.ps1 test
+```
+
 ### PID & Cleanup Helpers
 
-- `find-dotnet-pid.fish` / `find-dotnet-pid.sh` — prints the PID of the dotnet process hosting `TextEdit.App.dll`.
-	Use this if you prefer the "Launch Electron (Auto PID)" debug config without process picking.
-	Example:
+#### Find .NET Process PID
 
-```fish
+Prints the PID of the dotnet process hosting `TextEdit.App.dll`. Useful for VS Code's "Launch Electron (Auto PID)" debug config.
+
+**Files:** `find-dotnet-pid.fish`, `find-dotnet-pid.sh`, `find-dotnet-pid.ps1`
+
+**Usage:**
+
+```bash
+# macOS/Linux (Fish)
 ./scripts/find-dotnet-pid.fish
+
+# macOS/Linux (Bash)
+./scripts/find-dotnet-pid.sh
+```
+
+```powershell
+# Windows (PowerShell)
+.\scripts\find-dotnet-pid.ps1
 ```
 
 Copy the printed PID into the VS Code prompt when starting the "Launch Electron (Auto PID)" config.
 
-- `kill-textedit.fish` / `kill-textedit.sh` — kills any lingering TextEdit.App, electronize, or dotnet test/build processes.
-	This is automatically run by `build`, `run`, and `test` commands, but you can also run it manually:
+#### Kill Lingering Processes
 
-```fish
+Kills any lingering TextEdit.App, electronize, or dotnet test/build processes. Safe to run even if nothing is running.
+
+**Files:** `kill-textedit.fish`, `kill-textedit.sh`, `kill-textedit.ps1`
+
+**Usage:**
+
+```bash
+# macOS/Linux (Fish)
 ./scripts/kill-textedit.fish
 # or use the dev.fish wrapper:
 ./scripts/dev.fish cleanup
+
+# macOS/Linux (Bash)
+./scripts/kill-textedit.sh
+```
+
+```powershell
+# Windows (PowerShell)
+.\scripts\kill-textedit.ps1
+# or use the wrapper:
+.\scripts\dev.ps1 cleanup
 ```
 
 **Why auto-cleanup?** Lingering dotnet processes from previous runs can interfere with builds and tests by holding file locks. The scripts now automatically clean up before major operations to prevent these issues.
@@ -58,6 +135,7 @@ Copy the printed PID into the VS Code prompt when starting the "Launch Electron 
 
 ### First Time Setup
 
+**macOS/Linux:**
 ```bash
 # 1. Restore dependencies
 ./scripts/dev.fish restore
@@ -69,8 +147,21 @@ Copy the printed PID into the VS Code prompt when starting the "Launch Electron 
 ./scripts/dev.fish build
 ```
 
+**Windows:**
+```cmd
+REM 1. Restore dependencies
+.\scripts\dev.cmd restore
+
+REM 2. Initialize Electron.NET (installs electronize CLI tool)
+.\scripts\dev.cmd electronize:init
+
+REM 3. Build the solution
+.\scripts\dev.cmd build
+```
+
 ### Development Workflow
 
+**macOS/Linux:**
 ```bash
 # Run the app in development mode
 ./scripts/dev.fish run
@@ -85,12 +176,33 @@ set pid (./scripts/find-dotnet-pid.fish); and echo $pid
 ./scripts/dev.fish test:coverage
 ```
 
+**Windows:**
+```cmd
+REM Run the app in development mode
+.\scripts\dev.cmd run
+
+REM Find PID for debugging (PowerShell)
+.\scripts\find-dotnet-pid.ps1
+
+REM Run tests during development
+.\scripts\dev.cmd test:unit
+
+REM Check test coverage
+.\scripts\dev.cmd test:coverage
+```
+
 ### Building for Production
 
+**All Platforms:**
 ```bash
-# Build production package (will prompt for platform)
+# macOS/Linux
 ./scripts/dev.fish electronize:build
+
+# Windows
+.\scripts\dev.cmd electronize:build
 ```
+
+The script will prompt you to select the target platform (Windows, macOS, or Linux).
 
 ## VS Code Integration
 

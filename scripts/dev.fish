@@ -46,6 +46,19 @@ function cmd_run
     echo "🚀 Starting Electron app..."
     # Kill any lingering processes first
     "$script_dir/kill-textedit.fish"
+    
+    # Check if electronize is installed
+    if not command -v electronize &> /dev/null
+        echo "❌ Error: electronize command not found"
+        echo ""
+        echo "Please install ElectronNET.CLI tool first:"
+        echo "  ./scripts/dev.fish electronize:init"
+        echo ""
+        echo "Or install manually:"
+        echo "  dotnet tool install -g ElectronNET.CLI"
+        return 1
+    end
+    
     cd "$root_dir/src/TextEdit.App"
     electronize start
 end
@@ -94,6 +107,19 @@ end
 
 function cmd_electronize_build
     echo "📦 Building production Electron package..."
+    
+    # Check if electronize is installed
+    if not command -v electronize &> /dev/null
+        echo "❌ Error: electronize command not found"
+        echo ""
+        echo "Please install ElectronNET.CLI tool first:"
+        echo "  ./scripts/dev.fish electronize:init"
+        echo ""
+        echo "Or install manually:"
+        echo "  dotnet tool install -g ElectronNET.CLI"
+        return 1
+    end
+    
     echo "Select target platform:"
     echo "  1) Windows"
     echo "  2) macOS"

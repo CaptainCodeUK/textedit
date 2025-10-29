@@ -6,8 +6,11 @@ set -euo pipefail
 
 found_any=0
 
+# Use compatible ps command for both Linux and macOS
+PS_CMD="ps -axo pid,command"
+
 # Kill TextEdit.App .NET processes
-textedit_pids=$(ps -eo pid,cmd | grep -E "(TextEdit\.App|electronize)" | grep -v grep | grep -v "kill-textedit" | awk '{print $1}' || true)
+textedit_pids=$($PS_CMD | grep -E "(TextEdit\.App|electronize)" | grep -v grep | grep -v "kill-textedit" | awk '{print $1}' || true)
 if [ -n "$textedit_pids" ]; then
     echo "🛑 Killing TextEdit.App processes: $textedit_pids"
     for pid in $textedit_pids; do
@@ -18,7 +21,7 @@ if [ -n "$textedit_pids" ]; then
 fi
 
 # Kill any dotnet build/test processes related to textedit
-dotnet_pids=$(ps -eo pid,cmd | grep -i dotnet | grep -iE "(textedit|test)" | grep -v grep | grep -v "kill-textedit" | grep -v "Code.ServiceHost" | awk '{print $1}' || true)
+dotnet_pids=$($PS_CMD | grep -i dotnet | grep -iE "(textedit|test)" | grep -v grep | grep -v "kill-textedit" | grep -v "Code.ServiceHost" | awk '{print $1}' || true)
 if [ -n "$dotnet_pids" ]; then
     echo "🛑 Killing dotnet test/build processes: $dotnet_pids"
     for pid in $dotnet_pids; do
@@ -29,7 +32,7 @@ if [ -n "$dotnet_pids" ]; then
 fi
 
 # Kill any Electron processes related to TextEdit
-electron_pids=$(ps -eo pid,cmd | grep -i electron | grep -iE "textedit" | grep -v grep | grep -v "kill-textedit" | awk '{print $1}' || true)
+electron_pids=$($PS_CMD | grep -i electron | grep -iE "textedit" | grep -v grep | grep -v "kill-textedit" | awk '{print $1}' || true)
 if [ -n "$electron_pids" ]; then
     echo "🛑 Killing Electron processes: $electron_pids"
     for pid in $electron_pids; do

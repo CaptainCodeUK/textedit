@@ -4,8 +4,11 @@
 
 set -euo pipefail
 
+# Use compatible ps command for both Linux and macOS
+PS_CMD="ps -axo pid,command"
+
 # Try to find TextEdit.App executable with electronPort argument (the .NET process)
-PID=$(ps -eo pid,cmd | grep "TextEdit.App.*electronPort" | grep -v grep | awk '{print $1}' | head -n1)
+PID=$($PS_CMD | grep "TextEdit.App.*electronPort" | grep -v grep | awk '{print $1}' | head -n1)
 
 if [ -n "${PID:-}" ]; then
   echo "$PID"
@@ -13,7 +16,7 @@ if [ -n "${PID:-}" ]; then
 fi
 
 # Fallback: look for TextEdit.App in Host/bin directory
-PID=$(ps -eo pid,cmd | grep "Host/bin/TextEdit.App" | grep -v grep | awk '{print $1}' | head -n1)
+PID=$($PS_CMD | grep "Host/bin/TextEdit.App" | grep -v grep | awk '{print $1}' | head -n1)
 
 if [ -n "${PID:-}" ]; then
   echo "$PID"
@@ -21,7 +24,7 @@ if [ -n "${PID:-}" ]; then
 fi
 
 # Fallback: look for dotnet hosting TextEdit.App.dll
-PID=$(ps -eo pid,cmd | grep -i "dotnet" | grep -i "TextEdit.App.dll" | grep -v grep | awk '{print $1}' | head -n1)
+PID=$($PS_CMD | grep -i "dotnet" | grep -i "TextEdit.App.dll" | grep -v grep | awk '{print $1}' | head -n1)
 
 if [ -n "${PID:-}" ]; then
   echo "$PID"
