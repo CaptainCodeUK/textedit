@@ -40,6 +40,20 @@ A cross-platform desktop text editor built with .NET 8, Blazor Server, and Elect
 
 ## 🛠️ Quick Start
 
+### Prerequisites
+
+Before building or running the application, install the Electron.NET CLI tool:
+
+```bash
+dotnet tool install ElectronNET.CLI -g
+```
+
+If already installed, update to the latest version:
+
+```bash
+dotnet tool update ElectronNET.CLI -g
+```
+
 ### Development
 
 ```bash
