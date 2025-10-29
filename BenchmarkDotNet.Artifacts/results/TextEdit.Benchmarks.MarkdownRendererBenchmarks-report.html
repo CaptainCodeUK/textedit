@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>TextEdit.Benchmarks.MarkdownRendererBenchmarks-20251029-001335</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.15.4, Linux CachyOS
+AMD Ryzen 5 5600X 3.73GHz, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 9.0.305
+  [Host]     : .NET 8.0.20 (8.0.20, 8.0.2025.41914), X64 RyuJIT x86-64-v3
+  Job-YFEFPZ : .NET 8.0.20 (8.0.20, 8.0.2025.41914), X64 RyuJIT x86-64-v3
+  ShortRun   : .NET 8.0.20 (8.0.20, 8.0.2025.41914), X64 RyuJIT x86-64-v3
+</code></pre>
+<pre><code>WarmupCount=3  
+</code></pre>
+
+<table>
+<thead><tr><th>Method                  </th><th>Job </th><th>IterationCount</th><th>LaunchCount</th><th>Mean      </th><th>Error      </th><th>StdDev    </th><th>Gen0</th><th>Gen1</th><th>Gen2</th><th>Allocated</th>
+</tr>
+</thead><tbody><tr><td>Render_PlainText_1KB</td><td>Job-YFEFPZ</td><td>10</td><td>Default</td><td>5,498.67 ns</td><td>643.308 ns</td><td>382.822 ns</td><td>0.1678</td><td>-</td><td>-</td><td>2840 B</td>
+</tr><tr><td>Render_SimpleMarkdown_2KB</td><td>Job-YFEFPZ</td><td>10</td><td>Default</td><td>63,343.62 ns</td><td>1,048.678 ns</td><td>624.051 ns</td><td>3.7842</td><td>0.4883</td><td>-</td><td>64329 B</td>
+</tr><tr><td>Render_MediumMarkdown_10KB</td><td>Job-YFEFPZ</td><td>10</td><td>Default</td><td>331,249.63 ns</td><td>5,523.924 ns</td><td>3,287.199 ns</td><td>19.5313</td><td>8.3008</td><td>-</td><td>327148 B</td>
+</tr><tr><td>Render_ComplexMarkdown_50KB</td><td>Job-YFEFPZ</td><td>10</td><td>Default</td><td>2,270,335.02 ns</td><td>44,738.093 ns</td><td>29,591.478 ns</td><td>187.5000</td><td>164.0625</td><td>54.6875</td><td>2427037 B</td>
+</tr><tr><td>Render_LargeDocument_100KB</td><td>Job-YFEFPZ</td><td>10</td><td>Default</td><td>4,950,380.19 ns</td><td>107,110.308 ns</td><td>70,846.837 ns</td><td>367.1875</td><td>359.3750</td><td>101.5625</td><td>4977036 B</td>
+</tr><tr><td>Render_VeryLargeDocument_500KB</td><td>Job-YFEFPZ</td><td>10</td><td>Default</td><td>43,735,979.91 ns</td><td>1,154,195.595 ns</td><td>686,843.285 ns</td><td>1750.0000</td><td>1666.6667</td><td>416.6667</td><td>25363332 B</td>
+</tr><tr><td>CheckIsLargeContent_Small</td><td>Job-YFEFPZ</td><td>10</td><td>Default</td><td>41.08 ns</td><td>0.783 ns</td><td>0.466 ns</td><td>-</td><td>-</td><td>-</td><td>-</td>
+</tr><tr><td>CheckIsLargeContent_Large</td><td>Job-YFEFPZ</td><td>10</td><td>Default</td><td>1,959.60 ns</td><td>40.793 ns</td><td>26.982 ns</td><td>-</td><td>-</td><td>-</td><td>-</td>
+</tr><tr><td>Render_PlainText_1KB</td><td>ShortRun</td><td>3</td><td>1</td><td>5,169.28 ns</td><td>899.422 ns</td><td>49.300 ns</td><td>0.1678</td><td>-</td><td>-</td><td>2840 B</td>
+</tr><tr><td>Render_SimpleMarkdown_2KB</td><td>ShortRun</td><td>3</td><td>1</td><td>64,828.66 ns</td><td>5,455.798 ns</td><td>299.051 ns</td><td>3.7842</td><td>0.4883</td><td>-</td><td>64329 B</td>
+</tr><tr><td>Render_MediumMarkdown_10KB</td><td>ShortRun</td><td>3</td><td>1</td><td>328,223.80 ns</td><td>39,589.357 ns</td><td>2,170.026 ns</td><td>19.5313</td><td>8.3008</td><td>-</td><td>327148 B</td>
+</tr><tr><td>Render_ComplexMarkdown_50KB</td><td>ShortRun</td><td>3</td><td>1</td><td>2,301,675.24 ns</td><td>380,639.195 ns</td><td>20,864.119 ns</td><td>187.5000</td><td>164.0625</td><td>54.6875</td><td>2427029 B</td>
+</tr><tr><td>Render_LargeDocument_100KB</td><td>ShortRun</td><td>3</td><td>1</td><td>5,022,215.91 ns</td><td>3,398,694.743 ns</td><td>186,293.928 ns</td><td>367.1875</td><td>359.3750</td><td>101.5625</td><td>4977002 B</td>
+</tr><tr><td>Render_VeryLargeDocument_500KB</td><td>ShortRun</td><td>3</td><td>1</td><td>49,869,755.75 ns</td><td>72,027,865.675 ns</td><td>3,948,090.381 ns</td><td>1750.0000</td><td>1666.6667</td><td>416.6667</td><td>25363349 B</td>
+</tr><tr><td>CheckIsLargeContent_Small</td><td>ShortRun</td><td>3</td><td>1</td><td>42.17 ns</td><td>28.114 ns</td><td>1.541 ns</td><td>-</td><td>-</td><td>-</td><td>-</td>
+</tr><tr><td>CheckIsLargeContent_Large</td><td>ShortRun</td><td>3</td><td>1</td><td>1,908.81 ns</td><td>82.786 ns</td><td>4.538 ns</td><td>-</td><td>-</td><td>-</td><td>-</td>
+</tr></tbody></table>
+</body>
+</html>

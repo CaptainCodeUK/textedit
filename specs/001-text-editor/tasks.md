@@ -212,7 +212,7 @@ Tests are OPTIONAL per prompt; story phases below omit explicit test tasks. Qual
   - [X] T073a Add telemetry/logging framework for performance probes (structured output)
   - [X] T073b Optimize large file handling (>10MB) with streaming/chunking
   - [X] T073c Add performance benchmarks for document operations
-  - [DEFERRED] T073d Profile and optimize Markdown preview rendering for large documents
+  - [X] T073d Profile and optimize Markdown preview rendering for large documents
   - [DEFERRED] T073e Implement debounced input for TextEditor to reduce re-renders during fast typing
   - [DEFERRED] T073f Optimize StatusBar and TabStrip to minimize unnecessary re-renders (selective state tracking)
 

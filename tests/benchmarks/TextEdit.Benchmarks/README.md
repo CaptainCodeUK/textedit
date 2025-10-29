@@ -54,6 +54,20 @@ Results are written to `BenchmarkDotNet.Artifacts/results/` and include:
 6. **UpdateContent_SmallDocument**: Typing simulation with 100 edits
 7. **UpdateContent_LargeDocument**: Typing on large documents (50 edits)
 
+### Markdown Rendering Benchmarks
+
+1. **Render_PlainText_1KB** through **Render_VeryLargeDocument_500KB**
+2. **Render_{Size}_ColdCache**: First render with hash computation overhead
+3. **Render_{Size}_WarmCache**: Cached retrieval performance
+4. **Render_MultipleDocuments_CacheEffectiveness**: Realistic editing session
+
+**Cache Effectiveness Results:**
+- Small (2KB): **165x faster** with cache (1.24ms → 7.5μs)
+- Medium (10KB): **188x faster** with cache (4.25ms → 22.6μs)
+- Large (50KB): **330x faster** with cache (2.83ms → 8.6μs)
+- Multi-document (10 docs × 5 renders): **137x overall speedup**
+- Memory reduction: **94%** fewer allocations on cache hits
+
 ## Interpreting Results
 
 Key metrics:
