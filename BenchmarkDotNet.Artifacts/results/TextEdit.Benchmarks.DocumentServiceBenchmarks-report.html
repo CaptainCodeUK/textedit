@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>TextEdit.Benchmarks.DocumentServiceBenchmarks-20251029-000252</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.15.4, Linux CachyOS
+AMD Ryzen 5 5600X 4.62GHz, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 9.0.305
+  [Host]     : .NET 8.0.20 (8.0.20, 8.0.2025.41914), X64 RyuJIT x86-64-v3
+  Job-YFEFPZ : .NET 8.0.20 (8.0.20, 8.0.2025.41914), X64 RyuJIT x86-64-v3
+  ShortRun   : .NET 8.0.20 (8.0.20, 8.0.2025.41914), X64 RyuJIT x86-64-v3
+</code></pre>
+<pre><code>WarmupCount=3  
+</code></pre>
+
+<table>
+<thead><tr><th>Method       </th><th>Job </th><th>IterationCount</th><th>LaunchCount</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Gen0</th><th>Gen1</th><th>Allocated</th>
+</tr>
+</thead><tbody><tr><td>OpenAsync_SmallFile</td><td>Job-YFEFPZ</td><td>10</td><td>Default</td><td>59.49 &mu;s</td><td>2.964 &mu;s</td><td>1.764 &mu;s</td><td>5.0049</td><td>2.4414</td><td>61.55 KB</td>
+</tr><tr><td>OpenAsync_SmallFile</td><td>ShortRun</td><td>3</td><td>1</td><td>53.68 &mu;s</td><td>3.932 &mu;s</td><td>0.216 &mu;s</td><td>5.0049</td><td>2.4414</td><td>61.55 KB</td>
+</tr></tbody></table>
+</body>
+</html>
