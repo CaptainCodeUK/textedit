@@ -30,31 +30,31 @@ function Show-Help {
 }
 
 function Invoke-Build {
-    Write-Host "🔨 Building solution..." -ForegroundColor Cyan
+    Write-Host "Building solution..." -ForegroundColor Cyan
     # Kill any lingering processes first
     & "$ScriptDir\kill-textedit.ps1"
     dotnet build "$RootDir\textedit.sln"
 }
 
 function Invoke-Clean {
-    Write-Host "🧹 Cleaning build artifacts..." -ForegroundColor Cyan
+    Write-Host "Cleaning build artifacts..." -ForegroundColor Cyan
     dotnet clean "$RootDir\textedit.sln"
 }
 
 function Invoke-Restore {
-    Write-Host "📦 Restoring NuGet packages..." -ForegroundColor Cyan
+    Write-Host "Restoring NuGet packages..." -ForegroundColor Cyan
     dotnet restore "$RootDir\textedit.sln"
 }
 
 function Invoke-Run {
-    Write-Host "🚀 Starting Electron app..." -ForegroundColor Cyan
+    Write-Host "Starting Electron app..." -ForegroundColor Cyan
     # Kill any lingering processes first
     & "$ScriptDir\kill-textedit.ps1"
     
     # Check if electronize is installed
     $electronizeCmd = Get-Command electronize -ErrorAction SilentlyContinue
     if (-not $electronizeCmd) {
-        Write-Host "❌ Error: electronize command not found" -ForegroundColor Red
+        Write-Host "Error: electronize command not found" -ForegroundColor Red
         Write-Host ""
         Write-Host "Please install ElectronNET.CLI tool first:"
         Write-Host "  .\scripts\dev.ps1 electronize:init"
@@ -74,19 +74,19 @@ function Invoke-Run {
 }
 
 function Invoke-Test {
-    Write-Host "🧪 Running all tests..." -ForegroundColor Cyan
+    Write-Host "Running all tests..." -ForegroundColor Cyan
     # Kill any lingering processes first
     & "$ScriptDir\kill-textedit.ps1"
     dotnet test "$RootDir\textedit.sln" --logger "console;verbosity=normal"
 }
 
 function Invoke-TestUnit {
-    Write-Host "🧪 Running unit tests..." -ForegroundColor Cyan
+    Write-Host "Running unit tests..." -ForegroundColor Cyan
     dotnet test "$RootDir\tests\unit\TextEdit.Core.Tests\TextEdit.Core.Tests.csproj" --logger "console;verbosity=normal"
 }
 
 function Invoke-TestCoverage {
-    Write-Host "🧪 Running tests with coverage..." -ForegroundColor Cyan
+    Write-Host "Running tests with coverage..." -ForegroundColor Cyan
     dotnet test "$RootDir\textedit.sln" `
         /p:CollectCoverage=true `
         /p:CoverletOutputFormat=cobertura `
@@ -94,7 +94,7 @@ function Invoke-TestCoverage {
 }
 
 function Invoke-ElectronizeInit {
-    Write-Host "⚡ Initializing Electron.NET..." -ForegroundColor Cyan
+    Write-Host "Initializing Electron.NET..." -ForegroundColor Cyan
     
     # Install electronize tool if not present
     Write-Host "Checking for ElectronNET.CLI tool..."
@@ -103,13 +103,13 @@ function Invoke-ElectronizeInit {
         Write-Host "Installing ElectronNET.CLI tool globally..."
         dotnet tool install -g ElectronNET.CLI
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "❌ Failed to install ElectronNET.CLI" -ForegroundColor Red
+            Write-Host "Failed to install ElectronNET.CLI" -ForegroundColor Red
             return
         }
-        Write-Host "✅ ElectronNET.CLI installed successfully" -ForegroundColor Green
+        Write-Host "ElectronNET.CLI installed successfully" -ForegroundColor Green
     }
     else {
-        Write-Host "✅ ElectronNET.CLI already installed" -ForegroundColor Green
+        Write-Host "ElectronNET.CLI already installed" -ForegroundColor Green
     }
     
     Push-Location "$RootDir\src\TextEdit.App"
@@ -123,12 +123,12 @@ function Invoke-ElectronizeInit {
 }
 
 function Invoke-ElectronizeBuild {
-    Write-Host "📦 Building production Electron package..." -ForegroundColor Cyan
+    Write-Host "Building production Electron package..." -ForegroundColor Cyan
     
     # Check if electronize is installed
     $electronizeCmd = Get-Command electronize -ErrorAction SilentlyContinue
     if (-not $electronizeCmd) {
-        Write-Host "❌ Error: electronize command not found" -ForegroundColor Red
+        Write-Host "Error: electronize command not found" -ForegroundColor Red
         Write-Host ""
         Write-Host "Please install ElectronNET.CLI tool first:"
         Write-Host "  .\scripts\dev.ps1 electronize:init"
