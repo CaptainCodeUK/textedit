@@ -224,7 +224,7 @@ Project uses single desktop application structure:
 - [ ] T104 [US5] Bind Copy button disabled state to ToolbarState.CanCopy
 - [ ] T105 [US5] Add Paste button to Toolbar with clipboard icon, wire to AppState.PasteAsync
 - [ ] T106 [US5] Bind Paste button disabled state to ToolbarState.CanPaste
-- [ ] T107 [US5] Add font family dropdown to Toolbar, populate with system monospace fonts
+ - [ ] T107 [US5] Add font family dropdown to Toolbar; use platform-specific curated lists (Windows: Consolas, Cascadia Mono, Courier New; macOS: SF Mono, Menlo, Monaco; Linux: Liberation Mono, DejaVu Sans Mono, Ubuntu Mono); always include generic 'monospace' fallback
 - [ ] T108 [US5] Bind font family dropdown to AppState.Preferences.FontFamily
 - [ ] T109 [US5] Add font size dropdown to Toolbar with range 8-72pt
 - [ ] T110 [US5] Bind font size dropdown to AppState.Preferences.FontSize
@@ -264,7 +264,7 @@ Project uses single desktop application structure:
 - [ ] T131 [P] [US6] Update View menu in ElectronHost.cs to add icon paths for theme/toolbar options
 - [ ] T132 [P] [US6] Update Help menu in ElectronHost.cs to add icon path: About (info/question)
 - [ ] T133 [US6] Implement icon size consistency (16x16px) across all menu items per FR-058
-- [ ] T134 [US6] Add theme-aware icon variations (light/dark) if needed
+ - [ ] T134 [US6] Ensure menu icons are legible in light and dark themes; provide light/dark variants or a verified CSS filter approach; include visual checks per FR-059
 - [ ] T135 [US6] Verify icons display correctly on all platforms (Windows, macOS, Linux)
 
 **Checkpoint**: Menu icons complete and consistent across all menus
@@ -349,7 +349,7 @@ Project uses single desktop application structure:
 ### Performance
 
 - [ ] T175 [P] Measure startup time with CLI args and verify <2s per spec
-- [ ] T176 [P] Measure theme switch time and verify <500ms per spec
+ - [ ] T176 [P] Measure theme switch time with ≥10 open tabs and verify <500ms per spec
 - [ ] T177 [P] Measure toolbar button response time and verify <200ms per spec
 - [ ] T178 [P] Measure font change time and verify <100ms per spec
 - [ ] T179 Verify app remains responsive during large file opening (>1MB)
@@ -384,6 +384,16 @@ Project uses single desktop application structure:
 - [ ] T198 Security review of preferences JSON parsing
 - [ ] T199 Test edge cases: very long file paths, many tabs (50+), rapid theme switching
 - [ ] T200 Test graceful degradation: corrupt preferences file, missing icons, unavailable fonts
+
+---
+
+## Additional validation tasks (from analysis)
+
+- [ ] T201 [P] [US1][Perf] Measure time to open tabs for up to 10 CLI files and assert ≤3s per SC-001
+- [ ] T202 [P] [US1] Verify non-blocking CLI error summary appears ≤2s after UI interactive per SC-016
+- [ ] T203 [P] [US2][Perf] Assert title bar updates (dirty/active) within ≤100ms per SC-013
+- [ ] T204 [P] [US5] Enforce and test font-size clamping to 8–72pt per FR-049a; confirm defaults per FR-048a/FR-049a
+- [ ] T205 [P] [US4] Implement prompt when opening a file whose extension was removed from recognized list (non-critical defaults); offer "Open as text" or "Use system default"; add tests
 
 ---
 
