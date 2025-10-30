@@ -11,8 +11,11 @@ using TextEdit.Infrastructure.FileSystem;
 using TextEdit.Infrastructure.Telemetry;
 using TextEdit.Infrastructure.Ipc;
 using TextEdit.Infrastructure.Persistence;
+using TextEdit.Infrastructure.Themes;
+using TextEdit.Core.Preferences;
 using TextEdit.Markdown;
 using TextEdit.UI.App;
+using TextEdit.UI.Services;
 
 namespace TextEdit.App;
 
@@ -50,6 +53,13 @@ public class Startup
         services.AddSingleton<PerformanceLogger>();
         // Markdown rendering
         services.AddSingleton<MarkdownRenderer>();
+        
+        // Phase 2 (v1.1): Preferences and theming infrastructure
+        services.AddSingleton<IPreferencesRepository, PreferencesRepository>();
+        services.AddSingleton<ThemeDetectionService>();
+        services.AddSingleton<ThemeManager>();
+        services.AddSingleton<MarkdownFormattingService>();
+        
         // UI state
         services.AddSingleton<AppState>();
         // Dialog service

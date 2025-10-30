@@ -29,9 +29,9 @@ Project uses single desktop application structure:
 
 **Purpose**: Project initialization and basic structure for v1.1 enhancements
 
-- [ ] T001 Review research.md decisions and ensure understanding of all technical approaches
-- [ ] T002 Review data-model.md entities and understand relationships
-- [ ] T003 [P] Review contracts/ for IPC message formats and JSON schemas
+- [X] T001 Review research.md decisions and ensure understanding of all technical approaches
+ - [X] T002 Review data-model.md entities and understand relationships
+ - [X] T003 [P] Review contracts/ for IPC message formats and JSON schemas
 
 ---
 
@@ -43,16 +43,16 @@ Project uses single desktop application structure:
 
 ### Core Layer - Preferences Domain
 
-- [ ] T005 [P] Define ThemeMode enum inside src/TextEdit.Core/Preferences/UserPreferences.cs (no separate file)
-- [ ] T006 [P] Create UserPreferences model in src/TextEdit.Core/Preferences/UserPreferences.cs with all fields per data-model.md
-- [ ] T007 [P] Create IPreferencesRepository interface in src/TextEdit.Core/Preferences/IPreferencesRepository.cs
+- [X] T005 [P] Define ThemeMode enum inside src/TextEdit.Core/Preferences/UserPreferences.cs (no separate file)
+- [X] T006 [P] Create UserPreferences model in src/TextEdit.Core/Preferences/UserPreferences.cs with all fields per data-model.md
+- [X] T007 [P] Create IPreferencesRepository interface in src/TextEdit.Core/Preferences/IPreferencesRepository.cs
 
 ### Infrastructure Layer - Persistence & IPC
 
-- [ ] T009 [P] Implement PreferencesRepository in src/TextEdit.Infrastructure/Persistence/PreferencesRepository.cs with JSON read/write
-- [ ] T010 [P] Implement atomic write pattern in PreferencesRepository per research.md
-- [ ] T011 [P] Add preferences JSON schema validation per contracts/preferences-schema.md
-- [ ] T012 [P] Implement ThemeDetectionService in src/TextEdit.Infrastructure/Themes/ThemeDetectionService.cs using Electron NativeTheme API
+- [X] T009 [P] Implement PreferencesRepository in src/TextEdit.Infrastructure/Persistence/PreferencesRepository.cs with JSON read/write
+- [X] T010 [P] Implement atomic write pattern in PreferencesRepository per research.md
+- [X] T011 [P] Add preferences JSON schema validation per contracts/preferences-schema.md
+- [X] T012 [P] Implement ThemeDetectionService in src/TextEdit.Infrastructure/Themes/ThemeDetectionService.cs using Electron NativeTheme API
 
 ### Infrastructure Layer - IPC Extensions
 
@@ -63,26 +63,26 @@ Project uses single desktop application structure:
 ### UI Layer - State Management & Services
 
 - [ ] T016 Define CSS custom properties (theme tokens) for colors in src/TextEdit.App/wwwroot/css/app.css; do not create ThemeColors.cs
-- [ ] T017 [P] Create ThemeManager service in src/TextEdit.UI/Services/ThemeManager.cs for applying themes
-- [ ] T018 [P] Create ToolbarState class in src/TextEdit.UI/App/ToolbarState.cs per data-model.md
+- [X] T017 [P] Create ThemeManager service in src/TextEdit.UI/Services/ThemeManager.cs for applying themes
+- [X] T018 [P] Create ToolbarState class in src/TextEdit.UI/App/ToolbarState.cs per data-model.md
 - [ ] T019 [P] Define MarkdownFormat enum inside src/TextEdit.UI/Services/MarkdownFormattingService.cs (no separate file)
-- [ ] T020 [P] Create MarkdownFormattingService in src/TextEdit.UI/Services/MarkdownFormattingService.cs with wrap/insert logic
+- [X] T020 [P] Create MarkdownFormattingService in src/TextEdit.UI/Services/MarkdownFormattingService.cs with wrap/insert logic
 
 ### App Layer - DI Registration
 
-- [ ] T021 Update Startup.cs in src/TextEdit.App/Startup.cs to register PreferencesRepository as singleton
-- [ ] T022 [P] Register ThemeDetectionService as singleton in Startup.cs
-- [ ] T023 [P] Register ThemeManager as singleton in Startup.cs
-- [ ] T024 [P] Register MarkdownFormattingService as singleton in Startup.cs
+- [X] T021 Update Startup.cs in src/TextEdit.App/Startup.cs to register PreferencesRepository as singleton
+- [X] T022 [P] Register ThemeDetectionService as singleton in Startup.cs
+- [X] T023 [P] Register ThemeManager as singleton in Startup.cs
+- [X] T024 [P] Register MarkdownFormattingService as singleton in Startup.cs
 
 ### AppState Extensions
 
-- [ ] T025 Extend AppState in src/TextEdit.UI/App/AppState.cs to add UserPreferences property
-- [ ] T026 [P] Add ToolbarState property to AppState
-- [ ] T027 [P] Add LoadPreferencesAsync method to AppState
-- [ ] T028 [P] Add SavePreferencesAsync method to AppState
-- [ ] T029 [P] Add ApplyThemeAsync method to AppState
-- [ ] T030 Update AppState.Changed event to fire on preference changes
+- [X] T025 Extend AppState in src/TextEdit.UI/App/AppState.cs to add UserPreferences property
+- [X] T026 [P] Add ToolbarState property to AppState
+- [X] T027 [P] Add LoadPreferencesAsync method to AppState
+- [X] T028 [P] Add SavePreferencesAsync method to AppState
+- [X] T029 [P] Add ApplyThemeAsync method to AppState
+- [X] T030 Update AppState.Changed event to fire on preference changes
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 

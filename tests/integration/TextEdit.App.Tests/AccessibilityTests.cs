@@ -3,11 +3,14 @@ using Xunit;
 using TextEdit.UI.App;
 using TextEdit.Core.Documents;
 using TextEdit.Core.Editing;
+using TextEdit.Core.Preferences;
 using TextEdit.Infrastructure.Ipc;
 using TextEdit.Infrastructure.FileSystem;
 using TextEdit.Infrastructure.Persistence;
 using TextEdit.Infrastructure.Autosave;
 using TextEdit.Infrastructure.Telemetry;
+using TextEdit.Infrastructure.Themes;
+using TextEdit.UI.Services;
 
 namespace TextEdit.App.Tests;
 
@@ -322,7 +325,10 @@ public class AccessibilityTests
         var autosave = new AutosaveService(1000000);
         var perfLogger = new PerformanceLogger();
         var dialog = new DialogService();
-        var app = new AppState(docs, tabs, ipc, persistence, autosave, perfLogger, dialog);
+        var prefsRepo = new PreferencesRepository();
+        var themeDetection = new ThemeDetectionService();
+        var themeManager = new ThemeManager();
+        var app = new AppState(docs, tabs, ipc, persistence, autosave, perfLogger, prefsRepo, themeDetection, themeManager, dialog);
         
         // Create multiple documents
         var doc1 = app.CreateNew();

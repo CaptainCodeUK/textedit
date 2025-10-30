@@ -6,6 +6,9 @@ using TextEdit.Infrastructure.Persistence;
 using TextEdit.Infrastructure.FileSystem;
 using TextEdit.Infrastructure.Autosave;
 using TextEdit.Infrastructure.Telemetry;
+using TextEdit.Core.Preferences;
+using TextEdit.Infrastructure.Themes;
+using TextEdit.UI.Services;
 
 namespace TextEdit.UI.App;
 
@@ -21,13 +24,26 @@ public class AppState : IDisposable
     private readonly AutosaveService _autosave;
     private readonly PerformanceLogger _perfLogger;
     private readonly DialogService? _dialogService;
+    private readonly IPreferencesRepository _prefsRepo;
+    private readonly ThemeDetectionService _themeDetection;
+    private readonly ThemeManager _themeManager;
     private readonly Dictionary<Guid, FileWatcher> _watchers = new();
     private readonly Dictionary<Guid, DateTimeOffset> _lastExternalChange = new();
 
     private readonly Dictionary<Guid, Document> _open = new();
     private int _stateVersion = 0;
 
-    public AppState(DocumentService docs, TabService tabs, IpcBridge ipc, PersistenceService persistence, AutosaveService autosave, PerformanceLogger perfLogger, DialogService? dialogService = null)
+    public AppState(
+        DocumentService docs, 
+        TabService tabs, 
+        IpcBridge ipc, 
+        PersistenceService persistence, 
+        AutosaveService autosave, 
+        PerformanceLogger perfLogger, 
+        IPreferencesRepository prefsRepo,
+        ThemeDetectionService themeDetection,
+        ThemeManager themeManager,
+        DialogService? dialogService = null)
     {
         _docs = docs;
         _tabs = tabs;
@@ -36,7 +52,13 @@ public class AppState : IDisposable
         _autosave = autosave;
         _perfLogger = perfLogger;
         _dialogService = dialogService;
+        _prefsRepo = prefsRepo;
+        _themeDetection = themeDetection;
+        _themeManager = themeManager;
+        
         EditorState = new EditorState();
+        ToolbarState = new ToolbarState();
+        Preferences = new UserPreferences(); // Will be loaded from disk
         
         // Hook up autosave to trigger persistence
         _autosave.AutosaveRequested += HandleAutosaveAsync;
@@ -48,6 +70,8 @@ public class AppState : IDisposable
     public Document? ActiveDocument => ActiveTab != null && _open.TryGetValue(ActiveTab.DocumentId, out var d) ? d : null;
     public IEnumerable<Document> AllDocuments => _open.Values;
     public EditorState EditorState { get; }
+    public ToolbarState ToolbarState { get; }
+    public UserPreferences Preferences { get; private set; }
     public AutosaveService AutosaveService => _autosave;
     public int StateVersion => _stateVersion;
 
@@ -65,7 +89,10 @@ public class AppState : IDisposable
     {
         using var _ = _perfLogger.BeginOperation("Session.Restore");
         
-        // Always restore editor preferences first
+        // Load user preferences first
+        await LoadPreferencesAsync();
+        
+        // Always restore editor preferences
         var (wordWrap, showPreview) = _persistence.RestoreEditorPreferences();
         EditorState.WordWrap = wordWrap;
         EditorState.ShowPreview = showPreview;
@@ -97,6 +124,57 @@ public class AppState : IDisposable
         {
             NotifyChanged();
         }
+    }
+
+    /// <summary>
+    /// Load user preferences from disk and apply theme
+    /// </summary>
+    public async Task LoadPreferencesAsync()
+    {
+        Preferences = await _prefsRepo.LoadAsync();
+        await ApplyThemeAsync();
+        NotifyChanged();
+    }
+
+    /// <summary>
+    /// Save user preferences to disk
+    /// </summary>
+    public async Task SavePreferencesAsync()
+    {
+        await _prefsRepo.SaveAsync(Preferences);
+        NotifyChanged();
+    }
+
+    /// <summary>
+    /// Apply current theme based on preferences (resolves System mode to Light/Dark)
+    /// </summary>
+    public async Task ApplyThemeAsync()
+    {
+        string resolvedTheme;
+        
+        if (Preferences.Theme == ThemeMode.System)
+        {
+            // Resolve system theme
+            resolvedTheme = await _themeDetection.GetCurrentOsThemeAsync();
+            
+            // Watch for OS theme changes if in System mode
+            _themeDetection.WatchThemeChanges(async (osTheme) =>
+            {
+                if (Preferences.Theme == ThemeMode.System)
+                {
+                    _themeManager.ApplyTheme(osTheme);
+                    NotifyChanged();
+                }
+            });
+        }
+        else
+        {
+            // Use explicit theme
+            resolvedTheme = Preferences.Theme == ThemeMode.Dark ? "Dark" : "Light";
+        }
+        
+        _themeManager.ApplyTheme(resolvedTheme);
+        NotifyChanged();
     }
 
     private async Task HandleAutosaveAsync()

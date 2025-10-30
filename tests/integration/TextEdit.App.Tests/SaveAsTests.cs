@@ -2,11 +2,14 @@ using FluentAssertions;
 using TextEdit.UI.App;
 using TextEdit.Core.Documents;
 using TextEdit.Core.Editing;
+using TextEdit.Core.Preferences;
 using TextEdit.Infrastructure.Ipc;
 using TextEdit.Infrastructure.FileSystem;
 using TextEdit.Infrastructure.Persistence;
 using TextEdit.Infrastructure.Autosave;
 using TextEdit.Infrastructure.Telemetry;
+using TextEdit.Infrastructure.Themes;
+using TextEdit.UI.Services;
 
 namespace TextEdit.App.Tests;
 
@@ -44,8 +47,11 @@ public class SaveAsTests : IDisposable
         var autosave = new AutosaveService(1000000); // very long interval; avoid firing in test
         var perfLogger = new PerformanceLogger();
         var dialog = new DialogService();
+        var prefsRepo = new PreferencesRepository();
+        var themeDetection = new ThemeDetectionService();
+        var themeManager = new ThemeManager();
 
-        var app = new AppState(docs, tabs, ipc, persistence, autosave, perfLogger, dialog);
+        var app = new AppState(docs, tabs, ipc, persistence, autosave, perfLogger, prefsRepo, themeDetection, themeManager, dialog);
 
         // Open original
         var opened = await app.OpenAsync();
