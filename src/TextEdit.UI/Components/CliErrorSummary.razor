@@ -1,0 +1,31 @@
+@using TextEdit.UI.App
+
+@if (InvalidFiles != null && InvalidFiles.Any())
+{
+    <div class="cli-error-summary">
+        <div class="cli-error-header">
+            <span class="cli-error-icon">⚠️</span>
+            <strong>Some files could not be opened</strong>
+            <button class="cli-error-close" @onclick="OnDismiss" aria-label="Dismiss">×</button>
+        </div>
+        <ul class="cli-error-list">
+            @foreach (var file in InvalidFiles)
+            {
+                <li>
+                    <code>@file.Path</code>
+                    <span class="cli-error-reason">@file.Reason</span>
+                </li>
+            }
+        </ul>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public IEnumerable<InvalidFileInfo>? InvalidFiles { get; set; }
+
+    [Parameter]
+    public EventCallback OnDismiss { get; set; }
+
+    public record InvalidFileInfo(string Path, string Reason);
+}

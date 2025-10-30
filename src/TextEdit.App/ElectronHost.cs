@@ -13,10 +13,11 @@ namespace TextEdit.App;
 /// Phase 1: Basic window setup
 /// Phase 2: File dialogs and IPC
 /// </summary>
-public static class ElectronHost
+public static partial class ElectronHost
 {
     private static WebApplication? _app;
     private static AppState? _appState;
+    private static string[] _initialArgs = Array.Empty<string>();
 
     /// <summary>
     /// Initialize Electron window and native features - Phase 1
@@ -29,8 +30,69 @@ public static class ElectronHost
         // Subscribe to editor state changes to update menu checkmarks
         _appState.EditorState.Changed += OnEditorStateChanged;
         
+        // Phase 3: Single-instance enforcement
+        _ = SetupSingleInstanceAsync();
+        
         _ = CreateMainWindowAsync();
         RegisterIpcHandlers();
+    }
+
+    /// <summary>
+    /// Setup single-instance enforcement. Second launches focus existing window and forward args.
+    /// </summary>
+    private static async Task SetupSingleInstanceAsync()
+    {
+        if (!HybridSupport.IsElectronActive) return;
+
+        var gotLock = await Electron.App.RequestSingleInstanceLockAsync((args, workingDirectory) =>
+        {
+            Console.WriteLine("[ElectronHost] Second instance launch detected, focusing window...");
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var window = Electron.WindowManager.BrowserWindows.FirstOrDefault();
+                    if (window != null)
+                    {
+                        if (await window.IsMinimizedAsync())
+                        {
+                            window.Unmaximize(); // Restore from minimized (sync call)
+                        }
+                        window.Show();
+                        window.Focus();
+                    }
+
+                    // Process command-line args from second instance
+                    var cliArgs = args.Skip(1).ToArray(); // Skip executable path
+                    if (_app != null && cliArgs.Length > 0)
+                    {
+                        var (valid, invalid) = CliArgProcessor.ParseAndValidate(cliArgs);
+                        using var scope = _app.Services.CreateScope();
+                        var state = scope.ServiceProvider.GetRequiredService<AppState>();
+                        if (valid.Count > 0)
+                        {
+                            await state.OpenFilesAsync(valid);
+                        }
+                        if (invalid.Count > 0)
+                        {
+                            state.SetCliInvalidFiles(invalid.Select(i => (i.Path, i.Reason)));
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[ElectronHost] Second-instance handling failed: {ex.Message}");
+                }
+            });
+        });
+        
+        if (!gotLock)
+        {
+            // This is a second instance - it will exit automatically
+            Console.WriteLine("[ElectronHost] Second instance detected, exiting...");
+            Electron.App.Exit();
+            return;
+        }
     }
 
     private static void OnEditorStateChanged()
@@ -71,6 +133,19 @@ public static class ElectronHost
 
         // IPC handlers will be registered here in Phase 2
         // RegisterIpcHandlers();
+
+        // Phase 3: Process initial CLI file arguments (non-blocking)
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await ElectronHost.ProcessInitialCliArgsAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[CLI] Processing initial args failed: {ex.Message}");
+            }
+        });
     }
 
     /// <summary>
@@ -270,6 +345,89 @@ public static class ElectronHost
                 // In Phase 10 T071d, respond with records per contracts/ipc.restoreSession.response.schema.json
                 Console.WriteLine("[IPC] restoreSession.request received (noop placeholder)");
             });
+        }
+    }
+}
+
+internal static class CliArgProcessor
+{
+    internal record InvalidFileInfo(string Path, string Reason);
+
+    internal static (List<string> valid, List<InvalidFileInfo> invalid) ParseAndValidate(IEnumerable<string> args)
+    {
+        var valid = new List<string>();
+        var invalid = new List<InvalidFileInfo>();
+
+        foreach (var raw in args)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) continue;
+            // Treat all arguments as file paths for simplicity per spec
+            string fullPath;
+            try
+            {
+                fullPath = Path.GetFullPath(raw);
+            }
+            catch
+            {
+                invalid.Add(new InvalidFileInfo(raw, "Invalid path"));
+                continue;
+            }
+
+            try
+            {
+                if (!File.Exists(fullPath))
+                {
+                    invalid.Add(new InvalidFileInfo(fullPath, "File not found"));
+                    continue;
+                }
+
+                // Check readability by attempting to open for read
+                using var fs = File.Open(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                valid.Add(fullPath);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                invalid.Add(new InvalidFileInfo(fullPath, "Permission denied"));
+            }
+            catch
+            {
+                invalid.Add(new InvalidFileInfo(fullPath, "Unreadable"));
+            }
+        }
+
+        return (valid, invalid);
+    }
+}
+
+public static partial class ElectronHost
+{
+    private static async Task ProcessInitialCliArgsAsync()
+    {
+        if (_app is null) return;
+        // Environment.GetCommandLineArgs includes the executable path as first entry
+        var args = Environment.GetCommandLineArgs().Skip(1).ToArray();
+        if (args.Length == 0) return;
+
+        var (valid, invalid) = CliArgProcessor.ParseAndValidate(args);
+
+        try
+        {
+            using var scope = _app.Services.CreateScope();
+            var state = scope.ServiceProvider.GetRequiredService<AppState>();
+            if (valid.Count > 0)
+            {
+                await state.OpenFilesAsync(valid);
+            }
+            if (invalid.Count > 0)
+            {
+                // Wire invalid files to AppState for UI display
+                state.SetCliInvalidFiles(invalid.Select(i => (i.Path, i.Reason)));
+                Console.WriteLine($"[CLI] Invalid files: {string.Join(", ", invalid.Select(i => i.Path + " (" + i.Reason + ")"))}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CLI] Failed to forward CLI files to AppState: {ex.Message}");
         }
     }
 }

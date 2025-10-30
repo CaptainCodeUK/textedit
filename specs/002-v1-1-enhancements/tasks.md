@@ -65,7 +65,7 @@ Project uses single desktop application structure:
 - [ ] T016 Define CSS custom properties (theme tokens) for colors in src/TextEdit.App/wwwroot/css/app.css; do not create ThemeColors.cs
 - [X] T017 [P] Create ThemeManager service in src/TextEdit.UI/Services/ThemeManager.cs for applying themes
 - [X] T018 [P] Create ToolbarState class in src/TextEdit.UI/App/ToolbarState.cs per data-model.md
-- [ ] T019 [P] Define MarkdownFormat enum inside src/TextEdit.UI/Services/MarkdownFormattingService.cs (no separate file)
+- [X] T019 [P] Define MarkdownFormat enum inside src/TextEdit.UI/Services/MarkdownFormattingService.cs (no separate file)
 - [X] T020 [P] Create MarkdownFormattingService in src/TextEdit.UI/Services/MarkdownFormattingService.cs with wrap/insert logic
 
 ### App Layer - DI Registration
@@ -96,19 +96,19 @@ Project uses single desktop application structure:
 
 ### Implementation for User Story 1
 
-- [ ] T031 [P] [US1] Implement CLI argument parsing in ElectronHost.cs in src/TextEdit.App/ElectronHost.cs using Environment.GetCommandLineArgs()
-- [ ] T032 [P] [US1] Implement path validation logic per contracts/cli-file-args.md (absolute/relative, exists, readable)
-- [ ] T033 [US1] Construct CommandLineArgs model with validFiles and invalidFiles arrays
-- [ ] T034 [US1] Implement single-instance enforcement using Electron.App.RequestSingleInstanceLockAsync() in ElectronHost.cs
-- [ ] T035 [US1] Register second-instance event handler to forward CLI args to existing window
+- [X] T031 [P] [US1] Implement CLI argument parsing in ElectronHost.cs in src/TextEdit.App/ElectronHost.cs using Environment.GetCommandLineArgs()
+- [X] T032 [P] [US1] Implement path validation logic per contracts/cli-file-args.md (absolute/relative, exists, readable)
+- [X] T033 [US1] Construct CommandLineArgs model with validFiles and invalidFiles arrays
+- [X] T034 [US1] Implement single-instance enforcement using Electron.App.RequestSingleInstanceLockAsync() in ElectronHost.cs
+- [X] T035 [US1] Register second-instance event handler to forward CLI args to existing window
 - [ ] T036 [US1] Implement IPC message sending for cli-file-args channel per contracts/cli-file-args.md
 - [ ] T037 [US1] Add IPC receiver in IpcBridge to handle cli-file-args messages
-- [ ] T038 [US1] Forward valid file paths to AppState.OpenFilesAsync method
-- [ ] T039 [US1] Create CliErrorSummary.razor component in src/TextEdit.UI/Components/CliErrorSummary.razor
-- [ ] T040 [US1] Implement non-blocking summary display showing invalidFiles with simple reasons
+- [X] T038 [US1] Forward valid file paths to AppState.OpenFilesAsync method
+- [X] T039 [US1] Create CliErrorSummary.razor component in src/TextEdit.UI/Components/CliErrorSummary.razor
+- [X] T040 [US1] Implement non-blocking summary display showing invalidFiles with simple reasons
 - [ ] T041 [US1] Update Program.cs in src/TextEdit.App/Program.cs to pass CLI args to Blazor on initial launch
-- [ ] T042 [US1] Add focus-window logic when second instance detected
-- [ ] T043 [US1] Update AppState to show CliErrorSummary component after startup if invalidFiles present
+- [X] T042 [US1] Add focus-window logic when second instance detected
+- [X] T043 [US1] Update AppState to show CliErrorSummary component after startup if invalidFiles present
 
 **Checkpoint**: Command-line file opening with single-instance should be fully functional
 

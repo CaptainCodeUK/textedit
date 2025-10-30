@@ -72,6 +72,7 @@ public class AppState : IDisposable
     public EditorState EditorState { get; }
     public ToolbarState ToolbarState { get; }
     public UserPreferences Preferences { get; private set; }
+    public List<(string Path, string Reason)> CliInvalidFiles { get; private set; } = new();
     public AutosaveService AutosaveService => _autosave;
     public int StateVersion => _stateVersion;
 
@@ -84,6 +85,55 @@ public class AppState : IDisposable
 
     // Notify UI that document state (e.g., dirty flag) changed
     public void NotifyDocumentUpdated() => NotifyChanged();
+
+    /// <summary>
+    /// Open multiple files by absolute path and add them as tabs in the current order.
+    /// Returns the list of successfully opened file paths.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> OpenFilesAsync(IEnumerable<string> absolutePaths)
+    {
+        if (absolutePaths is null) return Array.Empty<string>();
+        var opened = new List<string>();
+        foreach (var path in absolutePaths)
+        {
+            if (string.IsNullOrWhiteSpace(path)) continue;
+            try
+            {
+                var doc = await _docs.OpenAsync(path);
+                _open[doc.Id] = doc;
+                _tabs.AddTab(doc);
+                StartWatchingFile(doc);
+                opened.Add(path);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AppState] Failed to open '{path}': {ex.Message}");
+            }
+        }
+        if (opened.Count > 0)
+        {
+            NotifyChanged();
+        }
+        return opened;
+    }
+
+    /// <summary>
+    /// Set CLI invalid files for display in CliErrorSummary component.
+    /// </summary>
+    public void SetCliInvalidFiles(IEnumerable<(string Path, string Reason)> invalidFiles)
+    {
+        CliInvalidFiles = invalidFiles?.ToList() ?? new();
+        NotifyChanged();
+    }
+
+    /// <summary>
+    /// Clear CLI error summary.
+    /// </summary>
+    public void ClearCliInvalidFiles()
+    {
+        CliInvalidFiles.Clear();
+        NotifyChanged();
+    }
 
     public async Task RestoreSessionAsync()
     {
