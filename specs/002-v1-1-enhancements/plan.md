@@ -1,79 +1,130 @@
-# v1.1 Implementation Plan — Scrappy Text Editor
+````markdown
+# Implementation Plan: Scrappy Text Editor v1.1 Enhancements
 
-This plan turns the approved v1.1 specification into concrete delivery steps across Identity/Branding, CLI file opening, Options, Toolbar, Styling/Accessibility, and Title Bar updates. It follows the repo’s Clean Architecture and existing patterns (AppState orchestration, EditorCommandHub delegates, IPC contracts, session persistence).
+**Branch**: `002-v1-1-enhancements` | **Date**: 2025-10-30 | **Spec**: [spec.md](./spec.md)
+**Input**: Feature specification from `/specs/002-v1-1-enhancements/spec.md`
 
-## Scope and success
-- In scope: Everything defined in `spec.md` for v1.1, including clarifications for markdown formatting (wrap/insert) and CLI invalid path summary (non‑blocking, simple messages).
-- Out of scope: New editor engines, multi‑window support, plugin systems, or markdown preview feature changes.
-- Success: All acceptance scenarios pass; 65%+ total coverage; no regressions to session persistence or startup/shutdown SLAs.
+**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
 
-## Assumptions
-- Single-window, single-instance app remains.
-- Preferences persist under existing user prefs store (Infrastructure.PersistenceService).
-- Electron.NET remains the host; Electron menus → EditorCommandHub → AppState remains the command flow.
+## Summary
 
-## Architecture impact (by area)
-- Identity/Branding
-  - App name: Update UI strings, window title sources, and package name imagery; do not change assembly names unless required.
-  - App icon: Provide multi-res assets; wire in `electron.manifest.json` and platform-specific fields.
-  - About dialog: New Blazor dialog with version, author/org, license, technologies; open via menu/toolbar.
-- CLI open + invalid-path summary
-  - Ensure single-instance enforcement; marshal args from subsequent invocations to primary via IPC.
-  - On startup (or when receiving args), try open-valid paths; collect invalids with simple reasons.
-  - After startup, show a non-blocking summary UI listing skipped items and reasons.
-- Options (Theme/Extensions/Logging)
-  - Theme: Light/Dark/System (follow system); respect High Contrast; persist choice.
-  - Extensions: Manage list and default associations; persist.
-  - Logging toggle: Enable/disable Serilog rolling sink with rotation; reflect in UI; persist.
-- Toolbar
-  - Buttons: Open/Save, Cut/Copy/Paste; Font name/size (global, persisted); Markdown (H1, H2, Bold, Italic).
-  - Hook all to existing AppState operations or small additions; disable appropriately for read-only/large files.
-  - Markdown behaviors: wrap selection; when no selection, insert paired markers and place caret between.
-- Styling/Accessibility
-  - Introduce colorful yet accessible theme tokens; use system colors where appropriate; ensure WCAG AA.
-  - Menu icons and toolbar icons added; ensure contrast and theming.
-- Title bar
-  - Set window title to current tab’s filename + dirty indicator; update on changes.
+This feature implements a comprehensive set of user-facing enhancements to transform "TextEdit" into "Scrappy Text Editor" v1.1, including: command-line file opening with single-instance enforcement, complete rebranding with puppy-themed application icon, dark/light/system theme support, user preferences management (file extensions, logging, font settings), rich toolbar with file operations and markdown formatting, menu icons, enhanced visual styling with WCAG AA compliance, and improved title bar with filename display and dirty indicators. The technical approach leverages existing Electron.NET infrastructure for native integration, extends the current Blazor Server UI with new components and theming system, implements JSON-based preferences persistence in OS application data directories, and maintains the established Clean Architecture pattern across Core/Infrastructure/UI layers.
 
-## Phases and milestones
-1) Identity/Branding (rename, icon, About)
-2) CLI file open + invalid-path summary UI
-3) Options UI (Theme System/Light/Dark; Extensions; Logging toggle)
-4) Toolbar (file/clipboard, font global + persistence, markdown behaviors)
-5) Menu icons and overall styling pass (AA contrast)
-6) Title bar filename + dirty state
-7) Tests (unit, contract, integration) and coverage hardening
-8) Performance/QA sweep (startup/shutdown, markdown cache sanity)
+## Technical Context
 
-## Detailed design notes
-- Single-instance + CLI
-  - Primary instance detection via Electron (app.requestSingleInstanceLock). On second-instance, forward args to first via Electron.NET bridge; AppState opens valid files and accumulates invalids.
-  - Summary surface: Blazor non-modal panel/toast listing “skipped” with simple reasons (e.g., “File not found”, “Permission denied”, “Unreadable”).
-  - Contract tests: Add cases for valid-only, invalid-only, and mixed.
-- About dialog
-  - Component under UI/DialogService; content from assembly metadata + appsettings/license; include current year.
-- App icon + menu icons
-  - Place icon assets under `src/TextEdit.App/wwwroot/icons/` (multi-res). Update `electron.manifest.json` and platform fields. Use icons in Electron menu items.
-- Options UI
-  - Preferences page/sheet bound to AppState.UserPreferences with immediate apply + persist.
-  - Theme: integrate with Electron nativeTheme for “Follow System”; fallback to CSS variables; respect High Contrast.
-  - Logging: Toggle changes Serilog configuration at runtime or short restart prompt if needed; ensure low overhead when disabled.
-- Toolbar
-  - New Blazor component + lightweight service for toolbar state; wire actions to AppState and EditorCommandHub.
-  - Font name/size: applies globally to editor component; persist in preferences; changes re-render via StateVersion.
-  - Markdown commands: operate on EditorState selection; if no selection, insert paired markers and place caret between.
-- Title bar
-  - AppState emits title updates; ElectronHost sets BrowserWindow title. “•” or similar marker for dirty.
+**Language/Version**: C# 12 / .NET 8.0  
+**Primary Dependencies**: Electron.NET 23.6.2, ASP.NET Core (Blazor Server), Markdig (markdown rendering)  
+**Storage**: File system (JSON for preferences in OS app data directories, existing session persistence)  
+**Testing**: xUnit, Moq, Coverlet (65% line coverage minimum, 92%+ for Core layer)  
+**Target Platform**: Cross-platform desktop (Windows, macOS, Linux via Electron.NET)  
+**Project Type**: Desktop application (Blazor Server hosted in Electron shell)  
+**Performance Goals**: <2s startup, <500ms theme switching, <200ms toolbar operations, <100ms font changes  
+**Constraints**: WCAG AA contrast (4.5:1), single-instance enforcement, no UI blocking during CLI error handling  
+**Scale/Scope**: 8 user stories, 68 functional requirements, 17 success criteria, 4 new services, 10+ new UI components
 
-## Risks and mitigations
-- Runtime theming regressions → Add visual regression snapshots for key states; stick to tokenized CSS vars.
-- Logging toggle runtime reconfig → If hot-reload is unstable, require confirmation and perform quick restart.
-- CLI on Linux packaging nuances → Validate `electronize start/build` command-line delivery early.
-- Toolbar caret/selection edge cases → Add unit tests for empty selection, multi-line, and nested markers.
+## Constitution Check
 
-## Definition of Done
-- All spec acceptance scenarios pass (including clarified markdown and CLI summary behaviors).
-- Unit/contract/integration tests added; total coverage ≥ 65%.
-- Startup < 2s, Shutdown < 2s validated.
-- Accessibility checks: keyboard nav, screen reader labels, AA contrast.
-- Packaging: icon present, name “Scrappy Text Editor” displayed, menu icons load, title bar behavior verified.
+*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+
+Verify alignment with TextEdit Constitution principles:
+
+- [x] **Code Quality Standards**: Linting/static analysis tools identified for language stack (C# analyzer, nullable reference types enabled)
+- [x] **Code Quality Standards**: Code review process defined with clear acceptance criteria (PR review required, spec/task references)
+- [x] **Code Quality Standards**: Documentation requirements specified for public APIs (XML comments for public interfaces/services)
+- [x] **Testing Standards**: Test coverage targets defined (65% minimum overall, 92%+ for Core layer per Directory.Build.props)
+- [x] **Testing Standards**: Unit, integration, and contract test requirements identified (xUnit tests for all new services/components)
+- [x] **Testing Standards**: Test-first development workflow confirmed for new features (acceptance scenarios guide test creation)
+- [x] **Testing Standards**: CI pipeline configuration includes all required tests (existing test task infrastructure)
+- [x] **UX Consistency**: Design system compliance verified (extends existing Blazor component patterns, uses Tailwind CSS)
+- [x] **UX Consistency**: Accessibility requirements (WCAG 2.1 AA) confirmed (FR-025, FR-026, FR-061 specify 4.5:1 contrast, keyboard nav, screen reader support)
+- [x] **UX Consistency**: Responsive design targets defined (desktop application, single window, no responsive breakpoints needed)
+- [x] **UX Consistency**: Error handling and loading states specified (FR-004a non-blocking CLI errors, FR-053 disabled toolbar states, loading indicators in spec)
+- [x] **Performance Requirements**: Response time targets defined (FR startup <2s, theme switch <500ms, toolbar <200ms, font <100ms per spec)
+- [x] **Performance Requirements**: Resource efficiency constraints specified (no specific memory limits but maintains existing autosave/session behavior)
+- [x] **Performance Requirements**: Load testing requirements identified (N/A - single-user desktop app, no concurrent users)
+- [x] **Performance Requirements**: Monitoring and alerting strategy defined (N/A - desktop app, relies on local logging per FR-037 to FR-044)
+- [x] **Performance Requirements**: Performance budget verified (N/A - desktop app, not web, no transfer size limits)
+
+*All gates passed. No violations requiring justification.*
+
+## Project Structure
+
+### Documentation (this feature)
+
+```text
+specs/002-v1-1-enhancements/
+├── spec.md              # Feature specification (✅ complete)
+├── plan.md              # This file (/speckit.plan command output, ✅ complete)
+├── research.md          # Phase 0 output (✅ complete - 8 technical decisions)
+├── data-model.md        # Phase 1 output (✅ complete - 8 entities, relationships, state transitions)
+├── quickstart.md        # Phase 1 output (✅ complete - developer onboarding guide)
+├── contracts/           # Phase 1 output (✅ complete - 3 IPC/schema contracts)
+│   ├── cli-file-args.md        # IPC contract for command-line file arguments
+│   ├── theme-changed.md        # IPC contract for OS theme change notifications
+│   └── preferences-schema.md   # JSON schema for user preferences
+└── tasks.md             # Phase 2 output (/speckit.tasks command - pending)
+```
+
+### Source Code (repository root)
+
+```text
+src/
+├── TextEdit.App/           # Electron.NET host, native integration
+│   ├── ElectronHost.cs    # (MODIFY) Add CLI args parsing, single-instance, menu icons
+│   ├── Program.cs         # (MODIFY) Pass CLI args to Blazor
+│   ├── Startup.cs         # (MODIFY) Register new services (PreferencesService, ThemeService, etc.)
+│   └── wwwroot/           # (ADD) New app icons (puppy theme, multi-resolution)
+│
+├── TextEdit.Core/          # Pure domain logic, zero dependencies
+│   ├── Documents/         # (EXISTING) Document model
+│   ├── Editing/           # (EXISTING) Undo/redo
+│   └── Preferences/       # (NEW) UserPreferences model, PreferencesService interface
+│
+├── TextEdit.Infrastructure/ # External concerns (file I/O, IPC)
+│   ├── FileSystem/        # (EXISTING) File operations
+│   ├── Persistence/       # (MODIFY) Add PreferencesRepository for JSON storage
+│   ├── Ipc/               # (MODIFY) Extend IpcBridge for CLI args, theme detection
+│   └── Themes/            # (NEW) ThemeDetectionService for OS theme watching
+│
+├── TextEdit.Markdown/      # (MODIFY) Extend for theme-aware rendering
+│   └── MarkdownRenderer.cs
+│
+└── TextEdit.UI/            # Blazor components, AppState orchestrator
+    ├── App/               # (EXISTING) AppState
+    │   └── AppState.cs   # (MODIFY) Add preferences, theme, toolbar state management
+    ├── Components/        # (EXISTING) UI components
+    │   ├── TextEditor.razor       # (MODIFY) Apply theme, font preferences
+    │   ├── TabStrip.razor         # (EXISTING) Tab display
+    │   ├── StatusBar.razor        # (EXISTING) Status display
+    │   ├── AboutDialog.razor      # (NEW) About box with version/tech info
+    │   ├── OptionsDialog.razor    # (NEW) Theme/extensions/font/logging options
+    │   ├── Toolbar.razor          # (NEW) File/edit/markdown operations
+    │   └── CliErrorSummary.razor  # (NEW) Non-blocking post-startup error summary
+    ├── Services/          # (EXISTING) DialogService, EditorCommandHub
+    │   └── ThemeManager.cs # (NEW) Apply theme to UI components
+    └── wwwroot/           # (MODIFY) Add theme CSS, icon assets
+
+tests/
+├── unit/
+│   ├── TextEdit.Core.Tests/           # (ADD) Tests for PreferencesService, UserPreferences model
+│   ├── TextEdit.Infrastructure.Tests/ # (ADD) Tests for PreferencesRepository, ThemeDetectionService
+│   └── TextEdit.UI.Tests/             # (ADD) Tests for ThemeManager, new dialogs/toolbar
+├── integration/
+│   └── TextEdit.Integration.Tests/    # (ADD) CLI args parsing, preferences persistence, theme switching
+└── contract/
+    └── TextEdit.IPC.Tests/            # (ADD) CLI args IPC contract, preferences JSON schema
+```
+
+**Structure Decision**: This is a single desktop application project using Clean Architecture. The existing 5-project structure (App, Core, Infrastructure, Markdown, UI) is maintained. New functionality is added through:
+1. **Core layer** - New `Preferences/` folder for domain models and abstractions
+2. **Infrastructure layer** - New `Themes/` folder for OS integration, extended `Persistence/` for JSON preferences
+3. **UI layer** - New components for Options, About, Toolbar, CLI error summary; extended `AppState` for preferences/theme coordination
+4. **App layer** - Enhanced `ElectronHost` for CLI args and menu icons, updated `Startup` for DI registration
+
+No new projects needed. All enhancements fit within existing architectural boundaries.
+
+## Complexity Tracking
+
+> **Fill ONLY if Constitution Check has violations that must be justified**
+
+*No violations. All constitution gates passed.*

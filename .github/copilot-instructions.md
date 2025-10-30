@@ -213,3 +213,10 @@ See `BenchmarkDotNet.Artifacts/results/` for current benchmarks.
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
+
+## Active Technologies
+- C# 12 / .NET 8.0 + Electron.NET 23.6.2, ASP.NET Core (Blazor Server), Markdig (markdown rendering) (002-v1-1-enhancements)
+- File system (JSON for preferences in OS app data directories, existing session persistence) (002-v1-1-enhancements)
+
+## Recent Changes
+- 002-v1-1-enhancements: Added C# 12 / .NET 8.0 + Electron.NET 23.6.2, ASP.NET Core (Blazor Server), Markdig (markdown rendering)
