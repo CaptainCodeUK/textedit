@@ -5,6 +5,14 @@
 **Status**: Draft  
 **Input**: User description: "Command line handling, About box, Styling improvements, UI Options (dark mode, file extensions, logging), Toolbar (file ops, editing, markdown formatting), Menu icons, App icon (puppy theme), Rename to Scrappy Text Editor, Filename in title bar with dirty indicator"
 
+## Clarifications
+
+### Session 2025-10-30
+
+- Q: When a user changes the font via the toolbar, should this change apply globally to all open and future documents, only to the currently active document, or globally but only for the current session? → A: Globally to all open and future documents (saved as user preference)
+- Q: Should the toolbar be always visible with option to hide, always visible with no option to hide, or hidden by default with option to show? → A: Always visible with option to hide via View menu (preference persists)
+- Q: For the About dialog copyright and license information, what should be displayed? → A: Copyright year, author/organization name, and license type (e.g., "MIT License")
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Quick File Access via Command Line (Priority: P1)
@@ -97,8 +105,8 @@ Users need quick access to frequently used editing operations without navigating
 2. **Given** user clicks toolbar "Open" button, **When** the file dialog appears, **Then** it behaves identically to File > Open menu command
 3. **Given** user clicks toolbar "Save" button, **When** the active document is saved, **Then** it behaves identically to File > Save menu command
 4. **Given** user has selected text, **When** user clicks Cut/Copy/Paste toolbar buttons, **Then** they behave identically to Edit menu commands
-5. **Given** user clicks a font name dropdown in toolbar, **When** user selects a different font, **Then** the editor's text font changes immediately for the active document
-6. **Given** user clicks a font size dropdown in toolbar, **When** user selects a different size, **Then** the editor's text size changes immediately for the active document
+5. **Given** user clicks a font name dropdown in toolbar, **When** user selects a different font, **Then** the editor's text font changes immediately for all open documents and persists as a user preference
+6. **Given** user clicks a font size dropdown in toolbar, **When** user selects a different size, **Then** the editor's text size changes immediately for all open documents and persists as a user preference
 7. **Given** user has text selected or cursor positioned, **When** user clicks markdown formatting buttons (H1, H2, Bold, Italic), **Then** the appropriate markdown syntax is inserted or wraps the selection
 8. **Given** user has no document open, **When** user views toolbar, **Then** relevant buttons (Save, Cut, Copy, formatting) are disabled
 
@@ -204,7 +212,7 @@ Users need a more visually appealing and modern interface that uses system color
 - **FR-016**: About dialog MUST display version number (semantic versioning format: X.Y.Z)
 - **FR-017**: About dialog MUST display build date or release date
 - **FR-018**: About dialog MUST list core technologies: Blazor Server, Electron.NET, .NET 8, Markdig
-- **FR-019**: About dialog MUST display copyright information and license type
+- **FR-019**: About dialog MUST display copyright information including year, author/organization name, and license type (e.g., "© 2025 [Author/Org] - MIT License")
 - **FR-020**: About dialog MUST include a tagline or brief description (e.g., "A friendly, lightweight text editor for everyday writing and markdown")
 
 **Theme/Dark Mode:**
@@ -243,6 +251,8 @@ Users need a more visually appealing and modern interface that uses system color
 **Toolbar:**
 
 - **FR-045**: System MUST display toolbar below menu bar with buttons for common operations
+- **FR-045a**: System MUST provide "Show/Hide Toolbar" toggle in View menu that persists user preference across sessions
+- **FR-045b**: Toolbar MUST be visible by default on first launch
 - **FR-046**: Toolbar MUST include file operation buttons: Open, Save
 - **FR-047**: Toolbar MUST include clipboard operation buttons: Cut, Copy, Paste
 - **FR-048**: Toolbar MUST include font selection dropdown showing available system fonts
@@ -251,7 +261,7 @@ Users need a more visually appealing and modern interface that uses system color
 - **FR-051**: Toolbar buttons MUST execute same commands as their menu equivalents
 - **FR-052**: Toolbar buttons MUST show tooltips on hover explaining their function
 - **FR-053**: Toolbar buttons that don't apply to current state MUST be visually disabled (e.g., Save when no changes, Cut/Copy with no selection)
-- **FR-054**: Font and size changes via toolbar MUST apply immediately to active editor pane
+- **FR-054**: Font and size changes via toolbar MUST apply globally to all open and future documents as a saved user preference
 - **FR-055**: Markdown formatting buttons MUST insert appropriate syntax: wrap selection or insert at cursor position
 
 **Menu Icons:**
@@ -291,7 +301,7 @@ Users need a more visually appealing and modern interface that uses system color
 - **SC-006**: Users can add or remove file extensions in under 30 seconds with changes taking effect immediately
 - **SC-007**: Users can enable logging and verify log file creation within 10 seconds of performing any action
 - **SC-008**: All toolbar operations (file, clipboard, formatting) execute within 200 milliseconds of button click
-- **SC-009**: Font changes via toolbar apply immediately (under 100ms) to active editor
+- **SC-009**: Font changes via toolbar apply globally and persist across sessions, with visual update completing under 100ms
 - **SC-010**: Markdown formatting buttons correctly insert syntax wrapping selected text or at cursor position 100% of the time
 - **SC-011**: All text-on-background combinations achieve minimum 4.5:1 contrast ratio verified by automated accessibility tools
 - **SC-012**: Application icon displays clearly at all sizes (16x16 to 512x512) with puppy character recognizable at smallest size
