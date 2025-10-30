@@ -122,23 +122,23 @@ Project uses single desktop application structure:
 
 ### Implementation for User Story 2
 
-- [ ] T044 [P] [US2] Update electron.manifest.json in src/TextEdit.App/electron.manifest.json to change app name to "Scrappy Text Editor"
-- [ ] T045 [P] [US2] Update all window title references in ElectronHost.cs to use "Scrappy Text Editor"
-- [ ] T046 [P] [US2] Design or commission puppy-themed app icon (SVG source) per research.md
-- [ ] T047 [US2] Generate multi-resolution icon files (.ico, .icns, .png) using electron-icon-maker per research.md
-- [ ] T048 [US2] Place generated icons in src/TextEdit.App/wwwroot/icons/ folder
-- [ ] T049 [US2] Update electron.manifest.json to reference new icon path
-- [ ] T050 [US2] Implement AboutDialog.razor using parameters only (no separate AboutDialogInfo class)
-- [ ] T051 [US2] Create AboutDialog.razor component in src/TextEdit.UI/Components/AboutDialog.razor
-- [ ] T052 [US2] Populate AboutDialog with app name, version (from assembly), build date, description, technologies array
-- [ ] T053 [US2] Add copyright and license info to AboutDialog per spec clarifications
-- [ ] T054 [US2] Add "About Scrappy Text Editor" menu item to Help menu in ElectronHost.cs
-- [ ] T055 [US2] Wire About menu item to show AboutDialog via EditorCommandHub
-- [ ] T056 [US2] Implement title bar update logic in AppState to show "[filename] - Scrappy Text Editor" format
-- [ ] T057 [US2] Add dirty indicator logic to title bar (asterisk or bullet before filename when document.IsDirty)
-- [ ] T058 [US2] Update title bar when active tab changes
-- [ ] T059 [US2] Update title bar when document dirty state changes
-- [ ] T060 [US2] Handle no-file state showing just "Scrappy Text Editor" in title
+- [X] T044 [P] [US2] Update electron.manifest.json in src/TextEdit.App/electron.manifest.json to change app name to "Scrappy Text Editor"
+- [X] T045 [P] [US2] Update all window title references in ElectronHost.cs to use "Scrappy Text Editor"
+- [X] T046 [P] [US2] Design or commission puppy-themed app icon (SVG source) per research.md
+- [X] T047 [US2] Generate multi-resolution icon files (.ico, .icns, .png) using electron-icon-maker per research.md
+- [X] T048 [US2] Place generated icons in src/TextEdit.App/wwwroot/icons/ folder
+- [X] T049 [US2] Update electron.manifest.json to reference new icon path
+- [X] T050 [US2] Implement AboutDialog.razor using parameters only (no separate AboutDialogInfo class)
+- [X] T051 [US2] Create AboutDialog.razor component in src/TextEdit.UI/Components/AboutDialog.razor
+- [X] T052 [US2] Populate AboutDialog with app name, version (from assembly), build date, description, technologies array
+- [X] T053 [US2] Add copyright and license info to AboutDialog per spec clarifications
+- [X] T054 [US2] Add "About Scrappy Text Editor" menu item to Help menu in ElectronHost.cs
+- [X] T055 [US2] Wire About menu item to show AboutDialog via EditorCommandHub
+- [X] T056 [US2] Implement title bar update logic in AppState to show "[filename] - Scrappy Text Editor" format
+- [X] T057 [US2] Add dirty indicator logic to title bar (asterisk or bullet before filename when document.IsDirty)
+- [X] T058 [US2] Update title bar when active tab changes
+- [X] T059 [US2] Update title bar when document dirty state changes
+- [X] T060 [US2] Handle no-file state showing just "Scrappy Text Editor" in title
 
 **Checkpoint**: Application identity complete with branding, icon, About dialog, and dynamic title bar
 

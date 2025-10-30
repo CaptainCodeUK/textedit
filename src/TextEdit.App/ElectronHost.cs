@@ -114,7 +114,7 @@ public static partial class ElectronHost
             Height = 800,
             MinWidth = 800,
             MinHeight = 600,
-            Title = "TextEdit",
+            Title = "Scrappy Text Editor",
             WebPreferences = new WebPreferences
             {
                 NodeIntegration = false,
@@ -221,7 +221,16 @@ public static partial class ElectronHost
             }
         };
 
-        Electron.Menu.SetApplicationMenu(new[] { fileMenu, editMenu, viewMenu, windowMenu });
+        var helpMenu = new MenuItem
+        {
+            Label = "Help",
+            Submenu = new MenuItem[]
+            {
+                new MenuItem { Label = "About Scrappy Text Editor", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.AboutRequested); } }
+            }
+        };
+
+        Electron.Menu.SetApplicationMenu(new[] { fileMenu, editMenu, viewMenu, windowMenu, helpMenu });
     }
 
     private static void PersistAndQuit()
@@ -358,6 +367,43 @@ public static partial class ElectronHost
             // Implements contracts/theme-changed.md
             // Will be sent by ThemeDetectionService when OS theme changes
             Console.WriteLine("[IPC] theme-changed handler ready (sent from ThemeDetectionService)");
+
+            // Channel: shell:openExternal - Open URL in default browser
+            Electron.IpcMain.RemoveAllListeners("shell:openExternal");
+            Electron.IpcMain.On("shell:openExternal", async (args) =>
+            {
+                try
+                {
+                    if (args is string url && !string.IsNullOrWhiteSpace(url))
+                    {
+                        Console.WriteLine($"[IPC] Opening external URL in default browser: {url}");
+                        
+                        // Try using Process.Start as a workaround for Electron.NET shell issues
+                        // This should work cross-platform
+                        try
+                        {
+                            var psi = new ProcessStartInfo
+                            {
+                                FileName = url,
+                                UseShellExecute = true
+                            };
+                            Process.Start(psi);
+                            Console.WriteLine($"[IPC] Successfully launched URL via Process.Start");
+                        }
+                        catch (Exception processEx)
+                        {
+                            Console.WriteLine($"[IPC] Process.Start failed: {processEx.Message}, trying Electron.Shell");
+                            // Fallback to Electron.NET API
+                            var options = new OpenExternalOptions { Activate = true };
+                            await Electron.Shell.OpenExternalAsync(url, options);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[IPC] Failed to open external URL: {ex.Message}");
+                }
+            });
         }
     }
 }

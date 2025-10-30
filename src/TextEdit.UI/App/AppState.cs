@@ -80,11 +80,28 @@ public class AppState : IDisposable
     private void NotifyChanged()
     {
         _stateVersion++;
+        UpdateWindowTitle(); // T058, T059: Update title when state changes
         Changed?.Invoke();
     }
 
     // Notify UI that document state (e.g., dirty flag) changed
     public void NotifyDocumentUpdated() => NotifyChanged();
+
+    /// <summary>
+    /// Update the Electron window title based on current document (T056-T060)
+    /// </summary>
+    private void UpdateWindowTitle()
+    {
+        try
+        {
+            var title = GetWindowTitle();
+            _ipc.SetWindowTitle(title);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[AppState] Failed to update window title: {ex.Message}");
+        }
+    }
 
     /// <summary>
     /// Open multiple files by absolute path and add them as tabs in the current order.
@@ -208,7 +225,7 @@ public class AppState : IDisposable
             resolvedTheme = await _themeDetection.GetCurrentOsThemeAsync();
             
             // Watch for OS theme changes if in System mode
-            _themeDetection.WatchThemeChanges(async (osTheme) =>
+            _themeDetection.WatchThemeChanges((osTheme) =>
             {
                 if (Preferences.Theme == ThemeMode.System)
                 {
@@ -591,5 +608,27 @@ public class AppState : IDisposable
         {
             // Swallow handler exceptions to avoid crashing event pipeline
         }
+    }
+
+    /// <summary>
+    /// Get the current window title based on active document (T056-T060)
+    /// </summary>
+    public string GetWindowTitle()
+    {
+        const string appName = "Scrappy Text Editor";
+        
+        if (ActiveDocument == null)
+        {
+            return appName; // T060: No-file state
+        }
+        
+        var filename = !string.IsNullOrWhiteSpace(ActiveDocument.FilePath)
+            ? Path.GetFileName(ActiveDocument.FilePath)
+            : "Untitled";
+        
+        // T057: Add dirty indicator (bullet) before filename
+        var dirtyIndicator = ActiveDocument.IsDirty ? "● " : "";
+        
+        return $"{dirtyIndicator}{filename} - {appName}"; // T056: Format
     }
 }

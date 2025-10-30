@@ -216,6 +216,63 @@ public class IpcBridge
     }
 
     /// <summary>
+    /// Update the Electron window title (T056-T060).
+    /// </summary>
+    public virtual void SetWindowTitle(string title)
+    {
+        if (!HybridSupport.IsElectronActive)
+        {
+            return;
+        }
+
+        var window = Electron.WindowManager.BrowserWindows.FirstOrDefault();
+        if (window is null)
+        {
+            return;
+        }
+
+        try
+        {
+            window.SetTitle(title);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[IPC] Failed to set window title: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Open a URL in the system's default external browser.
+    /// </summary>
+    public virtual async Task OpenExternalAsync(string url)
+    {
+        if (!HybridSupport.IsElectronActive)
+        {
+            return;
+        }
+
+        try
+        {
+            Console.WriteLine($"[IpcBridge] Opening external URL: {url}");
+            // Use Process.Start as the most reliable cross-platform method
+            await Task.Run(() =>
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                };
+                System.Diagnostics.Process.Start(psi);
+            });
+            Console.WriteLine($"[IpcBridge] Successfully launched URL");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[IpcBridge] Failed to open external URL: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Info about a file that couldn't be opened (for IPC messages).
     /// </summary>
     public record CliInvalidFileInfo(string Path, string Reason);

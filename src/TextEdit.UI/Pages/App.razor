@@ -43,6 +43,10 @@
     Message="@DialogService.ConfirmMessage"
     OnResult="@DialogService.HandleConfirmResult" />
 
+<AboutDialog 
+    IsVisible="@DialogService.ShowAbout"
+    OnClose="@(() => DialogService.HideAboutDialog())" />
+
 @code {
     protected override void OnInitialized()
     {

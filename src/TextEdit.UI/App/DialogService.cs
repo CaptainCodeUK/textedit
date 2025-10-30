@@ -13,6 +13,8 @@ public class DialogService
     public string ConfirmTitle { get; private set; } = "Confirm";
     public string ConfirmMessage { get; private set; } = "";
     
+    public bool ShowAbout { get; private set; } // T054: About dialog state
+    
     private TaskCompletionSource<bool>? _confirmTcs;
 
     public event Action? Changed;
@@ -58,6 +60,24 @@ public class DialogService
         ShowConfirm = false;
         _confirmTcs?.SetResult(result);
         _confirmTcs = null;
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Show the About dialog (T054)
+    /// </summary>
+    public void ShowAboutDialog()
+    {
+        ShowAbout = true;
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Hide the About dialog
+    /// </summary>
+    public void HideAboutDialog()
+    {
+        ShowAbout = false;
         Changed?.Invoke();
     }
 }

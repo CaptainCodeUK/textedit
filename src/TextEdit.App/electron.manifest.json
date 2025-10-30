@@ -3,14 +3,14 @@
   "splashscreen": {
     "imageFile": ""
   },
-  "name": "TextEdit.App",
+  "name": "Scrappy Text Editor",
   "author": "",
   "singleInstance": false,
   "environment": "Production",
   "build": {
-    "appId": "com.TextEdit.App.app",
-    "productName": "TextEdit.App",
-    "copyright": "Copyright © 2020",
+    "appId": "com.scrappytexteditor.app",
+    "productName": "Scrappy Text Editor",
+    "copyright": "Copyright © 2025",
     "buildVersion": "1.0.0",
     "compression": "maximum",
     "directories": {

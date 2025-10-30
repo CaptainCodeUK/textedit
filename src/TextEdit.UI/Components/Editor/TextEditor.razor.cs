@@ -15,6 +15,7 @@ public partial class TextEditor : ComponentBase, IDisposable
     [Inject] protected IpcBridge Ipc { get; set; } = default!;
     [Inject] protected AppState AppState { get; set; } = default!;
     [Inject] protected IJSRuntime JSRuntime { get; set; } = default!;
+    [Inject] protected DialogService DialogService { get; set; } = default!; // For About dialog
 
     private ElementReference textareaElement;
     protected Document? CurrentDoc => AppState.ActiveDocument;
@@ -68,12 +69,12 @@ public partial class TextEditor : ComponentBase, IDisposable
         EditorCommandHub.NextTabRequested = HandleNextTab;
         EditorCommandHub.PrevTabRequested = HandlePrevTab;
         EditorCommandHub.CloseTabRequested = HandleCloseTab;
-    EditorCommandHub.CloseOthersRequested = HandleCloseOthers;
-    EditorCommandHub.CloseRightRequested = HandleCloseRight;
+        EditorCommandHub.CloseOthersRequested = HandleCloseOthers;
+        EditorCommandHub.CloseRightRequested = HandleCloseRight;
         EditorCommandHub.ToggleWordWrapRequested = HandleToggleWordWrap;
         EditorCommandHub.TogglePreviewRequested = HandleTogglePreview;
+        EditorCommandHub.AboutRequested = HandleAboutRequested; // T055
     }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -382,6 +383,13 @@ public partial class TextEditor : ComponentBase, IDisposable
         {
             // Ignore errors getting caret position
         }
+    }
+
+    protected Task HandleAboutRequested()
+    {
+        // Show About dialog via DialogService (T055)
+        DialogService.ShowAboutDialog();
+        return Task.CompletedTask;
     }
 
     public void Dispose()
