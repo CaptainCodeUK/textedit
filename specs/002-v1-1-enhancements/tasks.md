@@ -43,14 +43,12 @@ Project uses single desktop application structure:
 
 ### Core Layer - Preferences Domain
 
-- [ ] T004 Create src/TextEdit.Core/Preferences/ folder structure
-- [ ] T005 [P] Create ThemeMode enum in src/TextEdit.Core/Preferences/ThemeMode.cs
+- [ ] T005 [P] Define ThemeMode enum inside src/TextEdit.Core/Preferences/UserPreferences.cs (no separate file)
 - [ ] T006 [P] Create UserPreferences model in src/TextEdit.Core/Preferences/UserPreferences.cs with all fields per data-model.md
 - [ ] T007 [P] Create IPreferencesRepository interface in src/TextEdit.Core/Preferences/IPreferencesRepository.cs
 
 ### Infrastructure Layer - Persistence & IPC
 
-- [ ] T008 Create src/TextEdit.Infrastructure/Themes/ folder structure
 - [ ] T009 [P] Implement PreferencesRepository in src/TextEdit.Infrastructure/Persistence/PreferencesRepository.cs with JSON read/write
 - [ ] T010 [P] Implement atomic write pattern in PreferencesRepository per research.md
 - [ ] T011 [P] Add preferences JSON schema validation per contracts/preferences-schema.md
@@ -58,16 +56,16 @@ Project uses single desktop application structure:
 
 ### Infrastructure Layer - IPC Extensions
 
-- [ ] T013 Create CommandLineArgs model in src/TextEdit.App/Models/CommandLineArgs.cs per data-model.md
+- [ ] T013 Define private record CommandLineArgs in src/TextEdit.App/ElectronHost.cs (no separate model file)
 - [ ] T014 [P] Extend IpcBridge in src/TextEdit.Infrastructure/Ipc/IpcBridge.cs to handle CLI args per contracts/cli-file-args.md
 - [ ] T015 [P] Extend IpcBridge to handle theme change notifications per contracts/theme-changed.md
 
 ### UI Layer - State Management & Services
 
-- [ ] T016 Create src/TextEdit.UI/Services/ThemeColors.cs with WCAG AA compliant palettes per data-model.md
+- [ ] T016 Define CSS custom properties (theme tokens) for colors in src/TextEdit.App/wwwroot/css/app.css; do not create ThemeColors.cs
 - [ ] T017 [P] Create ThemeManager service in src/TextEdit.UI/Services/ThemeManager.cs for applying themes
 - [ ] T018 [P] Create ToolbarState class in src/TextEdit.UI/App/ToolbarState.cs per data-model.md
-- [ ] T019 [P] Create MarkdownFormat enum in src/TextEdit.UI/Services/MarkdownFormat.cs
+- [ ] T019 [P] Define MarkdownFormat enum inside src/TextEdit.UI/Services/MarkdownFormattingService.cs (no separate file)
 - [ ] T020 [P] Create MarkdownFormattingService in src/TextEdit.UI/Services/MarkdownFormattingService.cs with wrap/insert logic
 
 ### App Layer - DI Registration
@@ -130,7 +128,7 @@ Project uses single desktop application structure:
 - [ ] T047 [US2] Generate multi-resolution icon files (.ico, .icns, .png) using electron-icon-maker per research.md
 - [ ] T048 [US2] Place generated icons in src/TextEdit.App/wwwroot/icons/ folder
 - [ ] T049 [US2] Update electron.manifest.json to reference new icon path
-- [ ] T050 [US2] Create AboutDialogInfo class in src/TextEdit.UI/Components/AboutDialog.razor.cs with metadata per data-model.md
+- [ ] T050 [US2] Implement AboutDialog.razor using parameters only (no separate AboutDialogInfo class)
 - [ ] T051 [US2] Create AboutDialog.razor component in src/TextEdit.UI/Components/AboutDialog.razor
 - [ ] T052 [US2] Populate AboutDialog with app name, version (from assembly), build date, description, technologies array
 - [ ] T053 [US2] Add copyright and license info to AboutDialog per spec clarifications
@@ -157,8 +155,8 @@ Project uses single desktop application structure:
 - [ ] T061 [P] [US3] Create OptionsDialog.razor component in src/TextEdit.UI/Components/OptionsDialog.razor
 - [ ] T062 [P] [US3] Add theme selection radio buttons (Light, Dark, System) to OptionsDialog
 - [ ] T063 [US3] Bind theme selection to AppState.Preferences.Theme property
-- [ ] T064 [US3] Create light theme CSS file in src/TextEdit.UI/wwwroot/css/themes/light-theme.css with colors per data-model.md
-- [ ] T065 [US3] Create dark theme CSS file in src/TextEdit.UI/wwwroot/css/themes/dark-theme.css with colors per data-model.md
+- [ ] T064 [US3] In src/TextEdit.App/wwwroot/css/app.css, define [data-theme="light"] CSS variable set per data-model.md
+- [ ] T065 [US3] In src/TextEdit.App/wwwroot/css/app.css, define [data-theme="dark"] CSS variable set per data-model.md
 - [ ] T066 [US3] Implement ThemeManager.ApplyTheme method to switch CSS based on ThemeMode
 - [ ] T067 [US3] Add data-theme attribute to root HTML element in _Host.cshtml
 - [ ] T068 [US3] Implement CSS custom property updates for theme colors
@@ -214,9 +212,9 @@ Project uses single desktop application structure:
 ### Implementation for User Story 5
 
 - [ ] T094 [P] [US5] Create Toolbar.razor component in src/TextEdit.UI/Components/Toolbar.razor
-- [ ] T095 [P] [US5] Create ToolbarButton.razor subcomponent in src/TextEdit.UI/Components/ToolbarButton.razor
-- [ ] T096 [P] [US5] Create ToolbarDropdown.razor subcomponent in src/TextEdit.UI/Components/ToolbarDropdown.razor
-- [ ] T097 [P] [US5] Create ToolbarDivider.razor subcomponent in src/TextEdit.UI/Components/ToolbarDivider.razor
+- [ ] T095 [US5] Implement button markup inline in src/TextEdit.UI/Components/Toolbar.razor (no subcomponents)
+- [ ] T096 [US5] Implement dropdown markup inline in src/TextEdit.UI/Components/Toolbar.razor (no subcomponents)
+- [ ] T097 [US5] Add simple divider markup inline in src/TextEdit.UI/Components/Toolbar.razor (no subcomponents)
 - [ ] T098 [US5] Add Open button to Toolbar with folder icon, wire to AppState.OpenFileAsync
 - [ ] T099 [US5] Add Save button to Toolbar with floppy icon, wire to AppState.SaveActiveAsync
 - [ ] T100 [US5] Bind Save button disabled state to ToolbarState.CanSave
@@ -283,7 +281,7 @@ Project uses single desktop application structure:
 
 - [ ] T136 [P] [US7] Add Logging section to OptionsDialog.razor with toggle switch
 - [ ] T137 [P] [US7] Bind logging toggle to AppState.Preferences.LoggingEnabled
-- [ ] T138 [P] [US7] Create LogEntry class in src/TextEdit.Infrastructure/Logging/LogEntry.cs per data-model.md
+- [ ] T138 [P] [US7] Do not create LogEntry class; write JSON Lines directly in logger service per data-model.md
 - [ ] T139 [P] [US7] Implement logger service that checks LoggingEnabled preference
 - [ ] T140 [US7] Add detailed logging for file operations (open, save, close)
 - [ ] T141 [US7] Add detailed logging for user actions (edit, format, theme change)
@@ -308,8 +306,8 @@ Project uses single desktop application structure:
 
 ### Implementation for User Story 8
 
-- [ ] T150 [P] [US8] Update light-theme.css to use system accent colors for active elements per FR-060
-- [ ] T151 [P] [US8] Update dark-theme.css to use system accent colors for active elements
+- [ ] T150 [P] [US8] Update src/TextEdit.App/wwwroot/css/app.css [data-theme="light"] to use system accent colors for active elements per FR-060
+- [ ] T151 [P] [US8] Update src/TextEdit.App/wwwroot/css/app.css [data-theme="dark"] to use system accent colors for active elements
 - [ ] T152 [P] [US8] Verify all light theme color combinations meet WCAG AA 4.5:1 contrast using WebAIM checker
 - [ ] T153 [P] [US8] Verify all dark theme color combinations meet WCAG AA 4.5:1 contrast
 - [ ] T154 [US8] Add hover state styles for all interactive elements
@@ -394,7 +392,7 @@ Project uses single desktop application structure:
 ### Phase Dependencies
 
 - **Setup (Phase 1)**: No dependencies - can start immediately (T001-T003)
-- **Foundational (Phase 2)**: Depends on Setup completion - BLOCKS all user stories (T004-T030)
+- **Foundational (Phase 2)**: Depends on Setup completion - BLOCKS all user stories (T005-T030)
 - **User Stories (Phase 3-10)**: All depend on Foundational phase completion
   - **US1 (P1)** - Phase 3 (T031-T043): Can start after Phase 2
   - **US2 (P1)** - Phase 4 (T044-T060): Can start after Phase 2
@@ -421,7 +419,7 @@ Project uses single desktop application structure:
 ### Critical Path for MVP (User Story 1 + 2 Only)
 
 1. Phase 1: Setup (T001-T003) - 3 tasks
-2. Phase 2: Foundational (T004-T030) - 27 tasks
+2. Phase 2: Foundational (T005-T030) - 27 tasks
 3. Phase 3: User Story 1 (T031-T043) - 13 tasks
 4. Phase 4: User Story 2 (T044-T060) - 17 tasks
 5. Selected Quality tasks (T161-T169, T175-T176, T181-T190) - ~25 tasks
@@ -450,7 +448,7 @@ Project uses single desktop application structure:
 
 **Phase 5 (User Story 3)** - Can run in parallel:
 - T061, T062, T063 (OptionsDialog component)
-- T064, T065 (theme CSS files)
+- T064, T065 (theme CSS variables in app.css)
 - T071, T072, T073, T074 (OS theme detection)
 
 **User Stories** - Different team members can work on different stories simultaneously after Phase 2:
@@ -520,7 +518,7 @@ Task T020: "Create MarkdownFormattingService"
 
 ## Notes
 
-- Total Tasks: 200
+- Total Tasks: 198
 - MVP Tasks (US1 + US2 + Foundation): ~85
 - Full v1.1 Tasks: 200
 - [P] tasks = different files, no dependencies, can run in parallel
