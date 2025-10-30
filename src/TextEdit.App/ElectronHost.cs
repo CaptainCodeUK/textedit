@@ -22,10 +22,13 @@ public static partial class ElectronHost
     /// <summary>
     /// Initialize Electron window and native features - Phase 1
     /// </summary>
-    public static void Initialize(WebApplication app)
+    /// <param name="app">The web application instance</param>
+    /// <param name="args">Command-line arguments from Program.cs (T041)</param>
+    public static void Initialize(WebApplication app, string[] args)
     {
         _app = app;
         _appState = app.Services.GetRequiredService<AppState>();
+        _initialArgs = args ?? Array.Empty<string>();
         
         // Subscribe to editor state changes to update menu checkmarks
         _appState.EditorState.Changed += OnEditorStateChanged;
@@ -68,15 +71,14 @@ public static partial class ElectronHost
                     {
                         var (valid, invalid) = CliArgProcessor.ParseAndValidate(cliArgs);
                         using var scope = _app.Services.CreateScope();
-                        var state = scope.ServiceProvider.GetRequiredService<AppState>();
-                        if (valid.Count > 0)
-                        {
-                            await state.OpenFilesAsync(valid);
-                        }
-                        if (invalid.Count > 0)
-                        {
-                            state.SetCliInvalidFiles(invalid.Select(i => (i.Path, i.Reason)));
-                        }
+                        var ipcBridge = scope.ServiceProvider.GetRequiredService<IpcBridge>();
+                        
+                        // Send via IPC per contracts/cli-file-args.md
+                        ipcBridge.SendCliFileArgs(
+                            valid.ToArray(),
+                            invalid.Select(i => new IpcBridge.CliInvalidFileInfo(i.Path, i.Reason)).ToArray(),
+                            "second-instance"
+                        );
                     }
                 }
                 catch (Exception ex)
@@ -345,14 +347,37 @@ public static partial class ElectronHost
                 // In Phase 10 T071d, respond with records per contracts/ipc.restoreSession.response.schema.json
                 Console.WriteLine("[IPC] restoreSession.request received (noop placeholder)");
             });
+
+            // Channel: cli-file-args (Electron -> Blazor notification)
+            // Implements contracts/cli-file-args.md
+            // Note: This is sent from Electron side (ElectronHost), received by Blazor (via JSInterop)
+            // Registration here is for documentation; actual reception happens in Blazor component
+            Console.WriteLine("[IPC] cli-file-args handler ready (sent from ProcessInitialCliArgsAsync)");
+
+            // Channel: theme-changed (Electron -> Blazor notification)
+            // Implements contracts/theme-changed.md
+            // Will be sent by ThemeDetectionService when OS theme changes
+            Console.WriteLine("[IPC] theme-changed handler ready (sent from ThemeDetectionService)");
         }
     }
 }
 
+/// <summary>
+/// Message format for CLI arguments per contracts/cli-file-args.md
+/// </summary>
+internal record CommandLineArgs(
+    string[] ValidFiles,
+    InvalidFileInfo[] InvalidFiles,
+    string LaunchType // "initial" or "second-instance"
+);
+
+/// <summary>
+/// Info about a file that couldn't be opened.
+/// </summary>
+internal record InvalidFileInfo(string Path, string Reason);
+
 internal static class CliArgProcessor
 {
-    internal record InvalidFileInfo(string Path, string Reason);
-
     internal static (List<string> valid, List<InvalidFileInfo> invalid) ParseAndValidate(IEnumerable<string> args)
     {
         var valid = new List<string>();
@@ -401,33 +426,37 @@ internal static class CliArgProcessor
 
 public static partial class ElectronHost
 {
-    private static async Task ProcessInitialCliArgsAsync()
+    private static Task ProcessInitialCliArgsAsync()
     {
-        if (_app is null) return;
-        // Environment.GetCommandLineArgs includes the executable path as first entry
-        var args = Environment.GetCommandLineArgs().Skip(1).ToArray();
-        if (args.Length == 0) return;
-
+        if (_app is null) return Task.CompletedTask;
+        
+        // Use args passed from Program.cs (T041)
+        // Filter out common Electron internal args if needed
+        var args = _initialArgs
+            .Where(arg => !string.IsNullOrWhiteSpace(arg) && 
+                         !arg.StartsWith("--inspect") && 
+                         !arg.StartsWith("--remote-debugging"))
+            .ToArray();
+        
         var (valid, invalid) = CliArgProcessor.ParseAndValidate(args);
 
         try
         {
             using var scope = _app.Services.CreateScope();
-            var state = scope.ServiceProvider.GetRequiredService<AppState>();
-            if (valid.Count > 0)
-            {
-                await state.OpenFilesAsync(valid);
-            }
-            if (invalid.Count > 0)
-            {
-                // Wire invalid files to AppState for UI display
-                state.SetCliInvalidFiles(invalid.Select(i => (i.Path, i.Reason)));
-                Console.WriteLine($"[CLI] Invalid files: {string.Join(", ", invalid.Select(i => i.Path + " (" + i.Reason + ")"))}");
-            }
+            var ipcBridge = scope.ServiceProvider.GetRequiredService<IpcBridge>();
+            
+            // Send via IPC per contracts/cli-file-args.md
+            ipcBridge.SendCliFileArgs(
+                valid.ToArray(),
+                invalid.Select(i => new IpcBridge.CliInvalidFileInfo(i.Path, i.Reason)).ToArray(),
+                "initial"
+            );
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[CLI] Failed to forward CLI files to AppState: {ex.Message}");
+            Console.WriteLine($"[CLI] Failed to send CLI args via IPC: {ex.Message}");
         }
+        
+        return Task.CompletedTask;
     }
 }

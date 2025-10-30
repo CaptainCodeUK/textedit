@@ -3,6 +3,9 @@ using TextEdit.App;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Capture CLI args for passing to Electron (T041)
+var cliArgs = args;
+
 // Add Electron support
 builder.WebHost.UseElectron(args);
 
@@ -23,7 +26,7 @@ if (HybridSupport.IsElectronActive)
     {
         // Give ASP.NET Core a moment to start listening
         await Task.Delay(1000);
-        ElectronHost.Initialize(app);
+        ElectronHost.Initialize(app, cliArgs);
     });
 }
 

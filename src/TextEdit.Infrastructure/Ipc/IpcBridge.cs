@@ -145,4 +145,78 @@ public class IpcBridge
             _ => ExternalChangeDecision.Cancel
         };
     }
+
+    /// <summary>
+    /// Send CLI file arguments to Blazor via IPC (per contracts/cli-file-args.md).
+    /// </summary>
+    public virtual void SendCliFileArgs(string[] validFiles, CliInvalidFileInfo[] invalidFiles, string launchType)
+    {
+        if (!HybridSupport.IsElectronActive)
+        {
+            return;
+        }
+
+        var window = Electron.WindowManager.BrowserWindows.FirstOrDefault();
+        if (window is null)
+        {
+            Console.WriteLine("[IPC] No BrowserWindow available to send cli-file-args");
+            return;
+        }
+
+        var message = new
+        {
+            validFiles = validFiles ?? Array.Empty<string>(),
+            invalidFiles = invalidFiles ?? Array.Empty<CliInvalidFileInfo>(),
+            launchType = launchType
+        };
+
+        try
+        {
+            Electron.IpcMain.Send(window, "cli-file-args", message);
+            Console.WriteLine($"[IPC] Sent cli-file-args: {validFiles?.Length ?? 0} valid, {invalidFiles?.Length ?? 0} invalid, launch: {launchType}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[IPC] Failed to send cli-file-args: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Send theme change notification to Blazor via IPC (per contracts/theme-changed.md).
+    /// </summary>
+    public virtual void SendThemeChanged(string theme)
+    {
+        if (!HybridSupport.IsElectronActive)
+        {
+            return;
+        }
+
+        var window = Electron.WindowManager.BrowserWindows.FirstOrDefault();
+        if (window is null)
+        {
+            Console.WriteLine("[IPC] No BrowserWindow available to send theme-changed");
+            return;
+        }
+
+        var message = new
+        {
+            theme = theme, // "light" or "dark"
+            timestamp = DateTime.UtcNow.ToString("O") // ISO 8601
+        };
+
+        try
+        {
+            Electron.IpcMain.Send(window, "theme-changed", message);
+            Console.WriteLine($"[IPC] Sent theme-changed: {theme}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[IPC] Failed to send theme-changed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Info about a file that couldn't be opened (for IPC messages).
+    /// </summary>
+    public record CliInvalidFileInfo(string Path, string Reason);
 }

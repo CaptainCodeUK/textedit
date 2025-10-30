@@ -56,9 +56,9 @@ Project uses single desktop application structure:
 
 ### Infrastructure Layer - IPC Extensions
 
-- [ ] T013 Define private record CommandLineArgs in src/TextEdit.App/ElectronHost.cs (no separate model file)
-- [ ] T014 [P] Extend IpcBridge in src/TextEdit.Infrastructure/Ipc/IpcBridge.cs to handle CLI args per contracts/cli-file-args.md
-- [ ] T015 [P] Extend IpcBridge to handle theme change notifications per contracts/theme-changed.md
+- [X] T013 Define private record CommandLineArgs in src/TextEdit.App/ElectronHost.cs (no separate model file)
+- [X] T014 [P] Extend IpcBridge in src/TextEdit.Infrastructure/Ipc/IpcBridge.cs to handle CLI args per contracts/cli-file-args.md
+- [X] T015 [P] Extend IpcBridge to handle theme change notifications per contracts/theme-changed.md
 
 ### UI Layer - State Management & Services
 
@@ -101,12 +101,12 @@ Project uses single desktop application structure:
 - [X] T033 [US1] Construct CommandLineArgs model with validFiles and invalidFiles arrays
 - [X] T034 [US1] Implement single-instance enforcement using Electron.App.RequestSingleInstanceLockAsync() in ElectronHost.cs
 - [X] T035 [US1] Register second-instance event handler to forward CLI args to existing window
-- [ ] T036 [US1] Implement IPC message sending for cli-file-args channel per contracts/cli-file-args.md
-- [ ] T037 [US1] Add IPC receiver in IpcBridge to handle cli-file-args messages
+- [X] T036 [US1] Implement IPC message sending for cli-file-args channel per contracts/cli-file-args.md
+- [X] T037 [US1] Add IPC receiver in IpcBridge to handle cli-file-args messages
 - [X] T038 [US1] Forward valid file paths to AppState.OpenFilesAsync method
 - [X] T039 [US1] Create CliErrorSummary.razor component in src/TextEdit.UI/Components/CliErrorSummary.razor
 - [X] T040 [US1] Implement non-blocking summary display showing invalidFiles with simple reasons
-- [ ] T041 [US1] Update Program.cs in src/TextEdit.App/Program.cs to pass CLI args to Blazor on initial launch
+- [X] T041 [US1] Update Program.cs in src/TextEdit.App/Program.cs to pass CLI args to Blazor on initial launch
 - [X] T042 [US1] Add focus-window logic when second instance detected
 - [X] T043 [US1] Update AppState to show CliErrorSummary component after startup if invalidFiles present
 

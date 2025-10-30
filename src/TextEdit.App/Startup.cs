@@ -59,6 +59,7 @@ public class Startup
         services.AddSingleton<ThemeDetectionService>();
         services.AddSingleton<ThemeManager>();
         services.AddSingleton<MarkdownFormattingService>();
+        services.AddSingleton<ElectronIpcListener>();
         
         // UI state
         services.AddSingleton<AppState>();
