@@ -12,6 +12,10 @@
 - Q: When a user changes the font via the toolbar, should this change apply globally to all open and future documents, only to the currently active document, or globally but only for the current session? → A: Globally to all open and future documents (saved as user preference)
 - Q: Should the toolbar be always visible with option to hide, always visible with no option to hide, or hidden by default with option to show? → A: Always visible with option to hide via View menu (preference persists)
 - Q: For the About dialog copyright and license information, what should be displayed? → A: Copyright year, author/organization name, and license type (e.g., "MIT License")
+- Q: How should the app handle invalid command-line file paths at launch? → A: Ignore nonexistent or unreadable paths and, after startup, present a non-blocking summary listing skipped files with simple reason phrases (e.g., "File not found", "Permission denied")
+- Q: What should markdown formatting buttons do when no text is selected? → A: Insert paired empty markers at the caret (e.g., `**|**`) and place the caret between them; when text is selected, wrap the selection
+- Q: What are the default font family and size for the editor toolbar controls, and when do defaults apply? → A: Font family defaults to the system monospace font; font size defaults to 12pt. Defaults are applied when no user preference exists in the settings file. The allowed size range is 8–72pt.
+- Q: Where should user preferences be stored and in what format? → A: Preferences are stored in the OS application data directory (Windows: `%AppData%\Scrappy`, macOS: `~/Library/Application Support/Scrappy`, Linux: `~/.config/Scrappy`) using JSON format for human readability and structured validation.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -27,10 +31,11 @@ Users need to quickly open files from their terminal or file manager by passing 
 
 1. **Given** the application is not running, **When** user launches with a single file path argument (e.g., `scrappy-text-editor /path/to/file.txt`), **Then** the application opens with that file loaded in a tab
 2. **Given** the application is not running, **When** user launches with multiple file path arguments, **Then** the application opens with each file in its own tab, ordered as provided
-3. **Given** the application is not running, **When** user launches with a non-existent file path, **Then** the application opens with an error message indicating the file was not found and offering to create it or cancel
-4. **Given** the application is not running, **When** user launches with a file path that lacks read permissions, **Then** the application opens with a clear error message about insufficient permissions
+3. **Given** the application is not running, **When** user launches with a non-existent file path, **Then** the application opens normally and, after startup, presents a non-blocking summary indicating the file was skipped with a simple reason (e.g., "File not found")
+4. **Given** the application is not running, **When** user launches with a file path that lacks read permissions, **Then** the application opens normally and, after startup, presents a non-blocking summary indicating the file was skipped with a simple reason (e.g., "Permission denied")
 5. **Given** the application is already running, **When** user launches with file path arguments, **Then** the files open in the existing window as new tabs (single-instance behavior)
 6. **Given** user double-clicks a text file in file manager with Scrappy associated, **When** the file opens, **Then** it loads in the application with proper content display
+7. **Given** the application is not running, **When** user launches with a mix of valid and invalid file path arguments, **Then** all valid files open in tabs in the provided order and a non-blocking summary lists each skipped file with its simple reason
 
 ---
 
@@ -107,8 +112,9 @@ Users need quick access to frequently used editing operations without navigating
 4. **Given** user has selected text, **When** user clicks Cut/Copy/Paste toolbar buttons, **Then** they behave identically to Edit menu commands
 5. **Given** user clicks a font name dropdown in toolbar, **When** user selects a different font, **Then** the editor's text font changes immediately for all open documents and persists as a user preference
 6. **Given** user clicks a font size dropdown in toolbar, **When** user selects a different size, **Then** the editor's text size changes immediately for all open documents and persists as a user preference
-7. **Given** user has text selected or cursor positioned, **When** user clicks markdown formatting buttons (H1, H2, Bold, Italic), **Then** the appropriate markdown syntax is inserted or wraps the selection
+7. **Given** user has text selected, **When** user clicks markdown formatting buttons (H1, H2, Bold, Italic), **Then** the appropriate markdown syntax wraps the selection (e.g., `**selected**`)
 8. **Given** user has no document open, **When** user views toolbar, **Then** relevant buttons (Save, Cut, Copy, formatting) are disabled
+9. **Given** no text is selected and the caret is positioned within the editor, **When** user clicks a markdown formatting button (e.g., Bold), **Then** paired empty markers are inserted at the caret with the caret placed between them (e.g., `**|**`)
 
 ---
 
@@ -192,6 +198,7 @@ Users need a more visually appealing and modern interface that uses system color
 - **FR-002**: System MUST open each valid file path provided as an argument in a separate tab
 - **FR-003**: System MUST maintain argument order when creating tabs (first argument = first tab)
 - **FR-004**: System MUST display clear error messages for file paths that cannot be opened (not found, no permissions, unsupported format)
+- **FR-004a**: Invalid or unreadable command-line paths MUST NOT block startup; after the main window is interactive, the system MUST present a non-blocking summary that lists each skipped path with a simple, non-technical reason (e.g., "File not found", "Permission denied", "Unreadable"). Valid paths MUST open unaffected.
 - **FR-005**: System MUST support both absolute and relative file paths in command-line arguments
 - **FR-006**: System MUST enforce single-instance behavior: if application is already running, new file arguments open in existing window
 - **FR-007**: System MUST handle file paths with spaces and special characters correctly when passed as arguments
@@ -256,13 +263,15 @@ Users need a more visually appealing and modern interface that uses system color
 - **FR-046**: Toolbar MUST include file operation buttons: Open, Save
 - **FR-047**: Toolbar MUST include clipboard operation buttons: Cut, Copy, Paste
 - **FR-048**: Toolbar MUST include font selection dropdown showing available system fonts
+- **FR-048a**: Default font family MUST be the system monospace font when no user preference exists in the settings file; once set by the user, the preference MUST persist across sessions
 - **FR-049**: Toolbar MUST include font size selection dropdown or spinner (range: 8pt to 72pt)
+- **FR-049a**: Default font size MUST be 12pt when no user preference exists in the settings file; any out-of-range size MUST be clamped to the allowed range (min 8pt, max 72pt)
 - **FR-050**: Toolbar MUST include markdown formatting buttons: H1, H2, Bold, Italic, Code, Bulleted List, Numbered List
 - **FR-051**: Toolbar buttons MUST execute same commands as their menu equivalents
 - **FR-052**: Toolbar buttons MUST show tooltips on hover explaining their function
 - **FR-053**: Toolbar buttons that don't apply to current state MUST be visually disabled (e.g., Save when no changes, Cut/Copy with no selection)
 - **FR-054**: Font and size changes via toolbar MUST apply globally to all open and future documents as a saved user preference
-- **FR-055**: Markdown formatting buttons MUST insert appropriate syntax: wrap selection or insert at cursor position
+- **FR-055**: Markdown formatting buttons MUST insert appropriate syntax: when text is selected, wrap the selection; when no text is selected, insert paired markers at the caret and place the caret between them (e.g., `**|**`)
 
 **Menu Icons:**
 
@@ -302,18 +311,25 @@ Users need a more visually appealing and modern interface that uses system color
 - **SC-007**: Users can enable logging and verify log file creation within 10 seconds of performing any action
 - **SC-008**: All toolbar operations (file, clipboard, formatting) execute within 200 milliseconds of button click
 - **SC-009**: Font changes via toolbar apply globally and persist across sessions, with visual update completing under 100ms
-- **SC-010**: Markdown formatting buttons correctly insert syntax wrapping selected text or at cursor position 100% of the time
+- **SC-010**: Markdown formatting buttons correctly wrap selected text; when no text is selected, they insert paired empty markers and place the caret between them 100% of the time
 - **SC-011**: All text-on-background combinations achieve minimum 4.5:1 contrast ratio verified by automated accessibility tools
 - **SC-012**: Application icon displays clearly at all sizes (16x16 to 512x512) with puppy character recognizable at smallest size
 - **SC-013**: Title bar updates filename and dirty indicator within 100ms of file change or save action
 - **SC-014**: Menu icons are visible and appropriately styled in both light and dark themes with no color clipping or visibility issues
 - **SC-015**: 95% of users can complete primary new workflows (open via command line, change theme, format markdown via toolbar) on first attempt without documentation
 
+- **SC-016**: When invalid command-line paths are provided, a non-blocking summary appears within 2 seconds of the main window becoming interactive, lists each skipped file with a simple, non-technical reason, and does not prevent interaction with already opened tabs
+- **SC-017**: On first launch (or when no font preferences exist in the settings file), the editor uses the system monospace font at 12pt; selecting out-of-range sizes is clamped to 8–72pt
+
 ### Testing & Quality Requirements
 
 - Unit test coverage MUST maintain minimum 65% line coverage across all new code components
 - Integration tests MUST verify command-line argument parsing with various path formats (absolute, relative, with spaces, invalid)
+- Integration tests MUST verify that invalid command-line paths are ignored and a non-blocking post-startup summary lists skipped files with simple reasons while valid files open unaffected
 - Integration tests MUST verify theme switching updates all UI components correctly
+- Integration tests MUST verify default font behavior when no settings file exists (system monospace at 12pt), and that sizes are clamped at 8pt and 72pt boundaries
+- Integration tests MUST verify preferences persist across application sessions: theme, font family/size, toolbar visibility, file extensions, logging toggle
+- Integration tests MUST validate JSON preference file structure and ensure graceful fallback to defaults when JSON is missing or malformed
 - Accessibility tests MUST verify WCAG AA compliance for all theme combinations using automated tools
 - Visual regression tests SHOULD capture screenshots of toolbar, themed UI, and about dialog for comparison
 - Performance tests MUST verify theme switching completes within 500ms threshold with 10+ tabs open
@@ -328,7 +344,7 @@ Users need a more visually appealing and modern interface that uses system color
 - Theme colors MUST support users with color vision deficiencies (avoid red/green only indicators)
 - About dialog MUST be keyboard navigable and dismissible via Escape key
 - File extension management UI MUST provide clear error messages for invalid input with suggested corrections
-- Command-line error messages MUST be specific and actionable (not just "File not found")
+- Command-line summary messages MUST be simple and clear (e.g., "File not found", "Permission denied") and MUST NOT block normal UI interaction
 
 ### Documentation Requirements
 
@@ -337,6 +353,7 @@ Users need a more visually appealing and modern interface that uses system color
 - README MUST be updated with new application name "Scrappy Text Editor"
 - Build documentation MUST include instructions for creating multi-resolution app icons
 - Changelog MUST document all v1.1 features with clear descriptions for end users
+- Documentation MUST state font defaults and range: system monospace font, default size 12pt, size range 8–72pt, and that defaults apply when no preferences exist
 
 ### Performance Requirements
 
@@ -357,7 +374,7 @@ Users need a more visually appealing and modern interface that uses system color
 - Markdown formatting buttons will use standard syntax (e.g., `**bold**`, `_italic_`, `# H1`) compatible with CommonMark/GFM
 - File extension validation will be case-insensitive (e.g., .TXT and .txt treated identically)
 - Options dialog will be modal and accessed via Edit > Options (Windows/Linux) or Application > Preferences (macOS)
-- Theme preference, file extensions, and logging toggle will be stored in existing application settings persistence mechanism
+- User preferences (theme, font, extensions, logging, toolbar visibility) will be stored as JSON in OS application data directories: Windows (`%AppData%\Scrappy`), macOS (`~/Library/Application Support/Scrappy`), Linux (`~/.config/Scrappy`). JSON format provides human readability and structured validation.
 - About dialog will include a "Close" button and be dismissible via Escape key or clicking outside (if non-modal)
 - Toolbar will be dockable or fixed below menu bar (not customizable in v1.1)
 - Contrast ratios will target WCAG AA (4.5:1) rather than AAA (7:1) as reasonable baseline for v1.1
