@@ -49,7 +49,7 @@ public static partial class ElectronHost
 
         var gotLock = await Electron.App.RequestSingleInstanceLockAsync((args, workingDirectory) =>
         {
-            Console.WriteLine("[ElectronHost] Second instance launch detected, focusing window...");
+            
             _ = Task.Run(async () =>
             {
                 try
@@ -91,7 +91,7 @@ public static partial class ElectronHost
         if (!gotLock)
         {
             // This is a second instance - it will exit automatically
-            Console.WriteLine("[ElectronHost] Second instance detected, exiting...");
+            
             Electron.App.Exit();
             return;
         }
@@ -131,7 +131,7 @@ public static partial class ElectronHost
         ConfigureMenus();
 
         swStartup.Stop();
-        Console.WriteLine($"[Perf] Startup: main window created and menus configured in {swStartup.ElapsedMilliseconds} ms");
+        
 
         // IPC handlers will be registered here in Phase 2
         // RegisterIpcHandlers();
@@ -187,6 +187,8 @@ public static partial class ElectronHost
                 new MenuItem { Role = MenuRole.cut },
                 new MenuItem { Role = MenuRole.copy },
                 new MenuItem { Role = MenuRole.paste },
+                new MenuItem { Type = MenuType.separator },
+                new MenuItem { Label = OperatingSystem.IsMacOS() ? "Preferences…" : "Options…", Accelerator = OperatingSystem.IsMacOS() ? "Cmd+," : "Ctrl+,", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.OptionsRequested); } },
             }
         };
 
@@ -255,7 +257,7 @@ public static partial class ElectronHost
             }
         }
         swQuit.Stop();
-        Console.WriteLine($"[Perf] Quit: session persisted in {swQuit.ElapsedMilliseconds} ms");
+        
         Electron.App.Quit();
     }
 
@@ -275,7 +277,7 @@ public static partial class ElectronHost
                 {
                     if (_app is null)
                     {
-                        Console.WriteLine("[IPC] openFileDialog.request received before app initialized");
+                        
                         return;
                     }
 
@@ -286,7 +288,7 @@ public static partial class ElectronHost
                     var window = Electron.WindowManager.BrowserWindows.FirstOrDefault();
                     if (window is null)
                     {
-                        Console.WriteLine("[IPC] No BrowserWindow available to send openFileDialog.response");
+                        
                         return;
                     }
 
@@ -313,7 +315,7 @@ public static partial class ElectronHost
                 {
                     if (_app is null)
                     {
-                        Console.WriteLine("[IPC] saveFileDialog.request received before app initialized");
+                        
                         return;
                     }
 
@@ -324,7 +326,7 @@ public static partial class ElectronHost
                     var window = Electron.WindowManager.BrowserWindows.FirstOrDefault();
                     if (window is null)
                     {
-                        Console.WriteLine("[IPC] No BrowserWindow available to send saveFileDialog.response");
+                        
                         return;
                     }
 
@@ -361,12 +363,12 @@ public static partial class ElectronHost
             // Implements contracts/cli-file-args.md
             // Note: This is sent from Electron side (ElectronHost), received by Blazor (via JSInterop)
             // Registration here is for documentation; actual reception happens in Blazor component
-            Console.WriteLine("[IPC] cli-file-args handler ready (sent from ProcessInitialCliArgsAsync)");
+            
 
             // Channel: theme-changed (Electron -> Blazor notification)
             // Implements contracts/theme-changed.md
             // Will be sent by ThemeDetectionService when OS theme changes
-            Console.WriteLine("[IPC] theme-changed handler ready (sent from ThemeDetectionService)");
+            
 
             // Channel: shell:openExternal - Open URL in default browser
             Electron.IpcMain.RemoveAllListeners("shell:openExternal");
@@ -376,7 +378,7 @@ public static partial class ElectronHost
                 {
                     if (args is string url && !string.IsNullOrWhiteSpace(url))
                     {
-                        Console.WriteLine($"[IPC] Opening external URL in default browser: {url}");
+                        
                         
                         // Try using Process.Start as a workaround for Electron.NET shell issues
                         // This should work cross-platform
@@ -388,11 +390,11 @@ public static partial class ElectronHost
                                 UseShellExecute = true
                             };
                             Process.Start(psi);
-                            Console.WriteLine($"[IPC] Successfully launched URL via Process.Start");
+                            
                         }
-                        catch (Exception processEx)
+                        catch (Exception)
                         {
-                            Console.WriteLine($"[IPC] Process.Start failed: {processEx.Message}, trying Electron.Shell");
+                            
                             // Fallback to Electron.NET API
                             var options = new OpenExternalOptions { Activate = true };
                             await Electron.Shell.OpenExternalAsync(url, options);
@@ -402,6 +404,42 @@ public static partial class ElectronHost
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[IPC] Failed to open external URL: {ex.Message}");
+                }
+            });
+
+            // Channel: theme:setThemeSource (Renderer -> Main)
+            // Sets Electron nativeTheme.themeSource to align native menus with app theme
+            Electron.IpcMain.RemoveAllListeners("theme:setThemeSource");
+            Electron.IpcMain.On("theme:setThemeSource", async (args) =>
+            {
+                try
+                {
+                    if (args is string source && !string.IsNullOrWhiteSpace(source))
+                    {
+                        var s = source.Trim().ToLowerInvariant(); // "light" | "dark" | "system"
+                        // Prefer explicit light/dark to avoid host inversion bugs; 'system' is accepted
+                        var mode = s switch
+                        {
+                            "dark" => ThemeSourceMode.Dark,
+                            "light" => ThemeSourceMode.Light,
+                            _ => ThemeSourceMode.System
+                        };
+                        // Workaround: some Linux environments report inverted native theme; flip mapping for shell only on Linux
+                        if (OperatingSystem.IsLinux())
+                        {
+                            mode = mode switch
+                            {
+                                ThemeSourceMode.Dark => ThemeSourceMode.Light,
+                                ThemeSourceMode.Light => ThemeSourceMode.Dark,
+                                _ => mode
+                            };
+                        }
+                        Electron.NativeTheme.SetThemeSource(mode);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[IPC] Failed to set nativeTheme.themeSource: {ex.Message}");
                 }
             });
         }

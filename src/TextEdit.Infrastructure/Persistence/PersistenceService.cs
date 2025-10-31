@@ -71,12 +71,12 @@ public class PersistenceService
                 }
             }
 
-            Console.WriteLine($"[PersistenceService] Persisted {persistedCount} document(s) to '{_sessionDir}'.");
+            // Suppress non-theme debug output
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Log but don't throw - persistence failures shouldn't block app close
-            Console.WriteLine($"[PersistenceService] Failed to persist session: {ex.Message}");
+            // Suppressed
         }
     }
 
@@ -93,7 +93,6 @@ public class PersistenceService
             }
 
             var sessionFiles = Directory.GetFiles(_sessionDir, "*.json");
-            Console.WriteLine($"[PersistenceService] Found {sessionFiles.Length} session file(s) in '{_sessionDir}'.");
             
             foreach (var file in sessionFiles)
             {
@@ -107,7 +106,6 @@ public class PersistenceService
                         // Skip documents with empty GUID (corruption)
                         if (metadata.Id == Guid.Empty)
                         {
-                            Console.WriteLine($"[PersistenceService] Skipping document with empty GUID: {file}");
                             try { File.Delete(file); } catch { /* ignore cleanup failures */ }
                             continue;
                         }
@@ -140,9 +138,8 @@ public class PersistenceService
                                         doc.SetContentInternal(content);
                                         doc.MarkSaved(metadata.FilePath);
                                     }
-                                    catch (Exception ex)
+                                    catch (Exception)
                                     {
-                                        Console.WriteLine($"[PersistenceService] Failed to reload saved file {metadata.FilePath}: {ex.Message}");
                                         // Skip this document if we can't read it
                                         continue;
                                     }
@@ -153,7 +150,7 @@ public class PersistenceService
                                     doc.SetContentInternal(content);
                                     doc.MarkSaved(metadata.FilePath);
                                     doc.MarkDirtyInternal();
-                                    Console.WriteLine($"[PersistenceService] Restored dirty file: {metadata.FilePath}");
+                                    // Suppressed
                                 }
                             }
                             else
@@ -163,7 +160,7 @@ public class PersistenceService
                                 {
                                     doc.SetContentInternal(content);
                                     doc.MarkDirtyInternal();
-                                    Console.WriteLine($"[PersistenceService] Original file not found, restoring as untitled: {metadata.FilePath}");
+                                    // Suppressed
                                 }
                                 else
                                 {
@@ -181,15 +178,13 @@ public class PersistenceService
                         
                         var order = metadata.Order ?? int.MaxValue;
                         entries.Add((doc, order, metadata.CreatedAt, metadata.UpdatedAt));
-                        Console.WriteLine($"[PersistenceService] Restored doc Id={doc.Id}, Path='{doc.FilePath ?? "<untitled>"}', Dirty={doc.IsDirty}, Order={order}.");
                     }
                     
                     // Delete the session file after successful restore
                     try { File.Delete(file); } catch { /* ignore cleanup failures */ }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    Console.WriteLine($"[PersistenceService] Failed to restore {file}: {ex.Message}");
                     // Continue with other files
                 }
             }
@@ -200,9 +195,9 @@ public class PersistenceService
                 restored.Add(e.Doc);
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[PersistenceService] Failed to restore session: {ex.Message}");
+            // Suppressed
         }
         
         return restored;
@@ -218,9 +213,9 @@ public class PersistenceService
                 File.Delete(sessionFile);
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[PersistenceService] Failed to delete session file for {documentId}: {ex.Message}");
+            // Suppressed
         }
     }
 
@@ -237,9 +232,9 @@ public class PersistenceService
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[PersistenceService] Failed to clear sessions: {ex.Message}");
+            // Suppressed
         }
     }
 
@@ -255,11 +250,10 @@ public class PersistenceService
             };
             var json = JsonSerializer.Serialize(prefs);
             File.WriteAllText(prefsFile, json);
-            Console.WriteLine($"[PersistenceService] Persisted editor preferences: WordWrap={wordWrap}, ShowPreview={showPreview} to '{prefsFile}'");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[PersistenceService] Failed to persist editor preferences: {ex.Message}");
+            // Suppressed
         }
     }
 
@@ -278,9 +272,9 @@ public class PersistenceService
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[PersistenceService] Failed to restore editor preferences: {ex.Message}");
+            // Suppressed
         }
         // Return defaults
         return (WordWrap: true, ShowPreview: false);

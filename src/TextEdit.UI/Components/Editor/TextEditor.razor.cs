@@ -74,6 +74,7 @@ public partial class TextEditor : ComponentBase, IDisposable
         EditorCommandHub.ToggleWordWrapRequested = HandleToggleWordWrap;
         EditorCommandHub.TogglePreviewRequested = HandleTogglePreview;
         EditorCommandHub.AboutRequested = HandleAboutRequested; // T055
+        EditorCommandHub.OptionsRequested = HandleOptionsRequested; // US3
     }
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -106,6 +107,12 @@ public partial class TextEditor : ComponentBase, IDisposable
             }
             await UpdateCaretPosition();
         }
+    }
+
+    private Task HandleOptionsRequested()
+    {
+        DialogService.ShowOptionsDialog();
+        return Task.CompletedTask;
     }
 
     private void OnAppStateChanged()

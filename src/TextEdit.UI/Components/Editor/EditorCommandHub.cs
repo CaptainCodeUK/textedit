@@ -20,6 +20,7 @@ public static class EditorCommandHub
     public static Func<Task>? ToggleWordWrapRequested { get; set; }
     public static Func<Task>? TogglePreviewRequested { get; set; }
     public static Func<Task>? AboutRequested { get; set; } // T055: About dialog
+    public static Func<Task>? OptionsRequested { get; set; } // US3: Options dialog
 
     public static Task InvokeSafe(Func<Task>? action)
         => action is null ? Task.CompletedTask : action();

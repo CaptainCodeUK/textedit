@@ -75,6 +75,16 @@ public class MarkdownRenderer
     }
 
     /// <summary>
+    /// Renders markdown text to HTML with an optional theme hint ("Light" or "Dark").
+    /// Currently forwards to default rendering; CSS variables control appearance.
+    /// </summary>
+    /// <param name="markdownText">The markdown or plain text content to render</param>
+    /// <param name="theme">Optional theme hint</param>
+    /// <returns>HTML string representation of the rendered content</returns>
+    public string RenderToHtml(string markdownText, string? theme)
+        => RenderToHtml(markdownText);
+
+    /// <summary>
     /// Clears the result cache. Useful for testing or memory management.
     /// </summary>
     public void ClearCache()

@@ -52,5 +52,23 @@ window.electronIpc = {
             delete this.listeners[channel];
             console.log(`[IPC] Unregistered listener for ${channel}`);
         }
+    },
+
+    /**
+     * Send an IPC message to Electron main process
+     * @param {string} channel - The IPC channel name
+     * @param {any} data - Serializable payload
+     */
+    send: function(channel, data) {
+        if (!window.ipcRenderer) {
+            console.warn('[IPC] Not in Electron environment, send ignored');
+            return;
+        }
+        try {
+            window.ipcRenderer.send(channel, data);
+            console.log(`[IPC] Sent ${channel}:`, data);
+        } catch (e) {
+            console.warn(`[IPC] Failed to send ${channel}:`, e);
+        }
     }
 };

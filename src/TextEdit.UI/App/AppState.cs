@@ -160,10 +160,9 @@ public class AppState : IDisposable
         await LoadPreferencesAsync();
         
         // Always restore editor preferences
-        var (wordWrap, showPreview) = _persistence.RestoreEditorPreferences();
-        EditorState.WordWrap = wordWrap;
-        EditorState.ShowPreview = showPreview;
-        Console.WriteLine($"[AppState] Restored editor preferences: WordWrap={wordWrap}, ShowPreview={showPreview}");
+    var (wordWrap, showPreview) = _persistence.RestoreEditorPreferences();
+    EditorState.WordWrap = wordWrap;
+    EditorState.ShowPreview = showPreview;
 
         // Idempotence: if we already have tabs/documents, assume we've been restored/initialized
         if (_tabs.Tabs.Count > 0 || _open.Count > 0)
@@ -213,51 +212,32 @@ public class AppState : IDisposable
     }
 
     /// <summary>
-    /// Apply current theme based on preferences (resolves System mode to Light/Dark)
+    /// Apply current theme. OS theme detection is deferred: System maps to Light.
     /// </summary>
     public async Task ApplyThemeAsync()
     {
-        string resolvedTheme;
-        
-        if (Preferences.Theme == ThemeMode.System)
+        var resolvedTheme = Preferences.Theme switch
         {
-            // Resolve system theme
-            resolvedTheme = await _themeDetection.GetCurrentOsThemeAsync();
-            
-            // Watch for OS theme changes if in System mode
-            _themeDetection.WatchThemeChanges((osTheme) =>
-            {
-                if (Preferences.Theme == ThemeMode.System)
-                {
-                    _themeManager.ApplyTheme(osTheme);
-                    NotifyChanged();
-                }
-            });
-        }
-        else
-        {
-            // Use explicit theme
-            resolvedTheme = Preferences.Theme == ThemeMode.Dark ? "Dark" : "Light";
-        }
-        
+            ThemeMode.Dark => "Dark",
+            ThemeMode.Light => "Light",
+            _ => "Dark" // System -> Dark (interim default; OS detection deferred)
+        };
         _themeManager.ApplyTheme(resolvedTheme);
         NotifyChanged();
+        await Task.CompletedTask;
     }
 
     private async Task HandleAutosaveAsync()
     {
         using var _ = _perfLogger.BeginOperation("Autosave");
-        
         // Autosave persists both session and editor preferences
         await PersistSessionAsync();
         PersistEditorPreferences();
         // Notify UI so StatusBar can update autosave indicator
         NotifyChanged();
     }
-
     public async Task PersistSessionAsync()
     {
-        Console.WriteLine($"[AppState] PersistSessionAsync: open={_open.Count}, tabs={_tabs.Tabs.Count}.");
         // Persist documents in current tab order for stable restore
         var order = _tabs.Tabs.Select(t => t.DocumentId).ToList();
         await _persistence.PersistAsync(_open.Values, order);
@@ -301,19 +281,16 @@ public class AppState : IDisposable
         }
         catch (FileNotFoundException ex)
         {
-            Console.WriteLine($"[AppState] File not found: {ex.FileName}");
             _dialogService?.ShowErrorDialog("File Not Found", $"The file '{ex.FileName}' could not be found.");
             return null;
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
-            Console.WriteLine($"[AppState] Access denied: {path} - {ex.Message}");
             _dialogService?.ShowErrorDialog("Access Denied", $"Permission denied when opening '{path}'. You may not have read access to this file.");
             return null;
         }
         catch (IOException ex)
         {
-            Console.WriteLine($"[AppState] IO error opening file: {path} - {ex.Message}");
             _dialogService?.ShowErrorDialog("I/O Error", $"An error occurred while opening '{path}': {ex.Message}");
             return null;
         }
@@ -326,29 +303,21 @@ public class AppState : IDisposable
         if (ActiveDocument is null) return;
         if (string.IsNullOrWhiteSpace(ActiveDocument.FilePath))
         {
-            await SaveAsActiveAsync();
-            return;
+            var saved = await SaveAsActiveAsync();
+            if (!saved) return;
         }
-        
         try
         {
-            _perfLogger.LogMetric("Document.Size", ActiveDocument.Content.Length, "chars");
             await _docs.SaveAsync(ActiveDocument);
-            // Clean up session file after successful save
-            DeleteSessionFile(ActiveDocument.Id);
             NotifyChanged();
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
-            Console.WriteLine($"[AppState] Permission denied saving file: {ActiveDocument.FilePath} - {ex.Message}");
-            _dialogService?.ShowErrorDialog("Permission Denied", $"Cannot save '{ActiveDocument.Name}'. The file may be read-only or you may not have write permission.");
-            // Optionally prompt user to Save As
-            await SaveAsActiveAsync();
+            _dialogService?.ShowErrorDialog("Permission Denied", $"Cannot save '{ActiveDocument?.Name}'. The file may be read-only or you may not have write permission.");
         }
         catch (IOException ex)
         {
-            Console.WriteLine($"[AppState] IO error saving file: {ActiveDocument.FilePath} - {ex.Message}");
-            _dialogService?.ShowErrorDialog("Save Error", $"An error occurred while saving '{ActiveDocument.Name}': {ex.Message}");
+            _dialogService?.ShowErrorDialog("Save Error", $"An error occurred while saving '{ActiveDocument?.Name}': {ex.Message}");
         }
     }
 
@@ -358,9 +327,8 @@ public class AppState : IDisposable
         var documentId = ActiveDocument.Id; // Capture ID before save
         var path = await _ipc.ShowSaveFileDialogAsync();
         if (string.IsNullOrWhiteSpace(path)) return false;
-        
-    // Trust the OS save dialog's overwrite confirmation. Do not prompt again here to avoid blocking.
-        
+
+        // Trust the OS save dialog's overwrite confirmation
         try
         {
             await _docs.SaveAsync(ActiveDocument, path);
@@ -372,15 +340,13 @@ public class AppState : IDisposable
             NotifyChanged();
             return true;
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
-            Console.WriteLine($"[AppState] Permission denied saving to: {path} - {ex.Message}");
             _dialogService?.ShowErrorDialog("Permission Denied", $"Cannot save to '{path}'. You may not have write permission to this location.");
             return false;
         }
         catch (IOException ex)
         {
-            Console.WriteLine($"[AppState] IO error saving to: {path} - {ex.Message}");
             _dialogService?.ShowErrorDialog("Save Error", $"An error occurred while saving to '{path}': {ex.Message}");
             return false;
         }
@@ -502,7 +468,7 @@ public class AppState : IDisposable
     {
         if (string.IsNullOrWhiteSpace(doc.FilePath)) return;
         if (_watchers.ContainsKey(doc.Id)) return;
-        
+
         var watcher = new FileWatcher();
         var docId = doc.Id;
         watcher.ChangedExternally += path =>
@@ -516,7 +482,7 @@ public class AppState : IDisposable
             _lastExternalChange[docId] = now;
             _ = HandleExternalFileChangeAsync(docId, path);
         };
-        watcher.Watch(doc.FilePath);
+        watcher.Watch(doc.FilePath!);
         _watchers[doc.Id] = watcher;
     }
 
@@ -551,24 +517,15 @@ public class AppState : IDisposable
                 return;
             }
 
-            Console.WriteLine($"[AppState] External modification detected: {path}");
-
             // If document has no unsaved edits, auto-reload from disk
             if (!doc.IsDirty)
             {
-                try
+                if (!string.IsNullOrWhiteSpace(doc.FilePath) && File.Exists(doc.FilePath))
                 {
-                    if (!string.IsNullOrWhiteSpace(doc.FilePath) && File.Exists(doc.FilePath))
-                    {
-                        var content = await File.ReadAllTextAsync(doc.FilePath, doc.Encoding);
-                        doc.SetContentInternal(content);
-                        doc.MarkSaved(doc.FilePath);
-                        NotifyChanged();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[AppState] Failed to auto-reload '{doc.Name}': {ex.Message}");
+                    var content = await File.ReadAllTextAsync(doc.FilePath, doc.Encoding);
+                    doc.SetContentInternal(content);
+                    doc.MarkSaved(doc.FilePath);
+                    NotifyChanged();
                 }
                 return;
             }
@@ -580,21 +537,13 @@ public class AppState : IDisposable
             var decision = await _ipc.ConfirmReloadExternalAsync(doc.Name);
             if (decision == IpcBridge.ExternalChangeDecision.Reload)
             {
-                try
+                if (!string.IsNullOrWhiteSpace(doc.FilePath) && File.Exists(doc.FilePath))
                 {
-                    if (!string.IsNullOrWhiteSpace(doc.FilePath) && File.Exists(doc.FilePath))
-                    {
-                        var content = await File.ReadAllTextAsync(doc.FilePath, doc.Encoding);
-                        doc.SetContentInternal(content);
-                        // Discard unsaved changes, mark as saved to clear flags
-                        doc.MarkSaved(doc.FilePath);
-                        doc.MarkExternalModification(false);
-                        NotifyChanged();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[AppState] Failed to reload after external change: {ex.Message}");
+                    var content = await File.ReadAllTextAsync(doc.FilePath, doc.Encoding);
+                    doc.SetContentInternal(content);
+                    doc.MarkSaved(doc.FilePath);
+                    doc.MarkExternalModification(false);
+                    NotifyChanged();
                 }
             }
             else

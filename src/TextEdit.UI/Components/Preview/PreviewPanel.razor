@@ -7,22 +7,22 @@
 <aside class="preview-panel h-full min-h-0 flex flex-col overflow-auto" 
        role="region" 
        aria-label="Markdown preview"
-       style="height:100%;min-height:0;flex:1 1 auto;padding:16px;background:#ffffff;">
+       style="height:100%;min-height:0;flex:1 1 auto;padding:16px;background:var(--bg);">
     @if (_isLarge && !_manualRefresh)
     {
-        <div class="preview-warning" style="padding:12px;background:#fef3c7;border:1px solid #f59e0b;border-radius:4px;margin-bottom:16px;">
-            <p style="margin:0;font-size:14px;color:#92400e;">
+        <div class="preview-warning" style="padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:4px;margin-bottom:16px;">
+            <p style="margin:0;font-size:14px;color:var(--fg);">
                 <strong>Large document detected.</strong> Preview updates are disabled for performance.
             </p>
             <button @onclick="RefreshPreview" 
                     aria-label="Manually refresh markdown preview"
-                    style="margin-top:8px;padding:6px 12px;background:#f59e0b;color:white;border:none;border-radius:4px;cursor:pointer;font-size:13px;">
+                    style="margin-top:8px;padding:6px 12px;background:var(--link);color:white;border:none;border-radius:4px;cursor:pointer;font-size:13px;">
                 Refresh Preview
             </button>
         </div>
     }
     
-    <div class="markdown-content" style="max-width:800px;line-height:1.6;color:#1f2937;">
+    <div class="markdown-content" style="max-width:800px;line-height:1.6;color:var(--fg);">
         @((MarkupString)_renderedHtml)
     </div>
 </aside>
@@ -97,13 +97,11 @@
         if (!_isLarge || _manualRefresh)
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            _renderedHtml = Renderer.RenderToHtml(content);
+            // Pass current theme hint; CSS variables drive actual styling
+            var theme = AppState.Preferences.Theme == TextEdit.Core.Preferences.ThemeMode.Dark ? "Dark" : (AppState.Preferences.Theme == TextEdit.Core.Preferences.ThemeMode.Light ? "Light" : null);
+            _renderedHtml = Renderer.RenderToHtml(content, theme);
             sw.Stop();
-            try
-            {
-                Console.WriteLine($"[Perf] Preview render: length={content.Length} chars in {sw.ElapsedMilliseconds} ms");
-            }
-            catch { /* no-op for non-interactive environments */ }
+            // Suppress non-theme debug output
             _manualRefresh = false; // Reset after manual refresh
         }
     }

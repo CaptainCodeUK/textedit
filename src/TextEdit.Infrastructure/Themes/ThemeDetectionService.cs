@@ -12,8 +12,7 @@ public class ThemeDetectionService
 {
     private Action<string>? _themeChangedCallback;
     private bool _isWatching;
-    private DateTime _lastThemeChange = DateTime.MinValue;
-    private const int DebounceDurationMs = 100;
+    private const int PollIntervalMs = 30000; // 30s polling to minimize noise
 
     /// <summary>
     /// Get current OS theme preference.
@@ -38,11 +37,10 @@ public class ThemeDetectionService
     }
 
     /// <summary>
-    /// Start watching OS theme changes. Polls every 2 seconds for changes.
-    /// TODO: Replace with event-based approach when Electron.NET API supports NativeTheme.updated event
+    /// Start watching OS theme changes with low-frequency polling (30s) to minimize nativeTheme logs.
     /// </summary>
     /// <param name="callback">Callback invoked with "Light" or "Dark" when OS theme changes</param>
-    public async void WatchThemeChanges(Action<string> callback)
+    public void WatchThemeChanges(Action<string> callback)
     {
         if (_isWatching)
         {
@@ -57,19 +55,13 @@ public class ThemeDetectionService
             return; // No-op in non-Electron context
         }
 
-        // Poll for theme changes every 2 seconds
-        var lastTheme = await GetCurrentOsThemeAsync();
         _ = Task.Run(async () =>
         {
             while (_isWatching)
             {
-                await Task.Delay(2000);
-                var currentTheme = await GetCurrentOsThemeAsync();
-                if (currentTheme != lastTheme)
-                {
-                    lastTheme = currentTheme;
-                    _themeChangedCallback?.Invoke(currentTheme);
-                }
+                await Task.Delay(PollIntervalMs);
+                var osTheme = await GetCurrentOsThemeAsync();
+                _themeChangedCallback?.Invoke(osTheme);
             }
         });
     }

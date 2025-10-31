@@ -22,20 +22,12 @@ public class PerformanceLogger
     {
         var stats = _stats.GetOrAdd(operationName, _ => new OperationStats(operationName));
         stats.RecordOperation(durationMs, success);
-
-        // Log to console in structured format
-        lock (_consoleLock)
-        {
-            Console.WriteLine($"[PERF] {operationName}: {durationMs}ms (success={success})");
-        }
+        // Suppressed console output to reduce non-theme debug noise
     }
 
     public void LogMetric(string metricName, long value, string? unit = null)
     {
-        lock (_consoleLock)
-        {
-            Console.WriteLine($"[METRIC] {metricName}: {value}{(unit != null ? $" {unit}" : "")}");
-        }
+        // Suppressed console output to reduce non-theme debug noise
     }
 
     public OperationStats? GetStats(string operationName)
@@ -45,19 +37,7 @@ public class PerformanceLogger
 
     public void PrintAllStats()
     {
-        lock (_consoleLock)
-        {
-            Console.WriteLine("\n=== Performance Statistics ===");
-            foreach (var kvp in _stats.OrderBy(x => x.Key))
-            {
-                var stats = kvp.Value;
-                Console.WriteLine($"{stats.OperationName}:");
-                Console.WriteLine($"  Count: {stats.Count}");
-                Console.WriteLine($"  Success: {stats.SuccessCount}/{stats.Count} ({stats.SuccessRate:P1})");
-                Console.WriteLine($"  Duration: avg={stats.AverageDurationMs:F1}ms, min={stats.MinDurationMs}ms, max={stats.MaxDurationMs}ms");
-            }
-            Console.WriteLine("==============================\n");
-        }
+        // Suppressed console output to reduce non-theme debug noise
     }
 
     private class OperationScope : IDisposable

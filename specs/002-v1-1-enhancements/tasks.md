@@ -162,10 +162,10 @@ Project uses single desktop application structure:
 - [ ] T068 [US3] Implement CSS custom property updates for theme colors
 - [ ] T069 [US3] Update MarkdownRenderer.cs in src/TextEdit.Markdown/MarkdownRenderer.cs to support theme parameter
 - [ ] T070 [US3] Add theme-aware markdown preview rendering
-- [ ] T071 [US3] Implement OS theme detection in ThemeDetectionService.GetCurrentOsTheme()
-- [ ] T072 [US3] Implement theme change watching in ThemeDetectionService.WatchThemeChanges()
-- [ ] T073 [US3] Register theme change event handler in AppState to apply theme when OS changes (System mode only)
-- [ ] T074 [US3] Implement 100ms debouncing for OS theme change events per research.md
+- [ ] T071 [US3] Implement OS theme detection in ThemeDetectionService.GetCurrentOsTheme() — DEFERRED
+- [ ] T072 [US3] Implement theme change watching in ThemeDetectionService.WatchThemeChanges() — DEFERRED
+- [ ] T073 [US3] Register theme change event handler in AppState to apply theme when OS changes (System mode only) — DEFERRED
+- [ ] T074 [US3] Implement 100ms debouncing for OS theme change events per research.md — DEFERRED
 - [ ] T075 [US3] Add theme persistence via PreferencesRepository when user changes theme
 - [ ] T076 [US3] Load theme on app startup from preferences and apply
 - [ ] T077 [US3] Add "Options" menu item to Edit menu (Windows/Linux) in ElectronHost.cs
@@ -174,6 +174,8 @@ Project uses single desktop application structure:
 - [ ] T080 [US3] Verify theme switch completes within 500ms per performance spec
 
 **Checkpoint**: Theme customization complete with persistence and OS following
+ 
+Note: OS theme change detection (T071–T074) is deferred for a later pass. Current behavior for Theme = System maps to Light without OS listening.
 
 ---
 

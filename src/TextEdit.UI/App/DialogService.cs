@@ -14,6 +14,7 @@ public class DialogService
     public string ConfirmMessage { get; private set; } = "";
     
     public bool ShowAbout { get; private set; } // T054: About dialog state
+    public bool ShowOptions { get; private set; } // T079: Options dialog state
     
     private TaskCompletionSource<bool>? _confirmTcs;
 
@@ -78,6 +79,24 @@ public class DialogService
     public void HideAboutDialog()
     {
         ShowAbout = false;
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Show the Options dialog (US3)
+    /// </summary>
+    public void ShowOptionsDialog()
+    {
+        ShowOptions = true;
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Hide the Options dialog
+    /// </summary>
+    public void HideOptionsDialog()
+    {
+        ShowOptions = false;
         Changed?.Invoke();
     }
 }

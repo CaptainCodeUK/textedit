@@ -33,7 +33,6 @@ public class ElectronIpcListener : IAsyncDisposable
             
             // Register listeners for Electron IPC channels
             await _js.InvokeVoidAsync("electronIpc.register", _objRef, "cli-file-args");
-            await _js.InvokeVoidAsync("electronIpc.register", _objRef, "theme-changed");
             
             _initialized = true;
             Console.WriteLine("[IPC] ElectronIpcListener initialized");
@@ -75,33 +74,7 @@ public class ElectronIpcListener : IAsyncDisposable
         }
     }
 
-    /// <summary>
-    /// Called from JavaScript when theme-changed IPC message is received.
-    /// Per contracts/theme-changed.md
-    /// </summary>
-    [JSInvokable]
-    public Task OnThemeChanged(ThemeChangedMessage message)
-    {
-        try
-        {
-            Console.WriteLine($"[IPC] Received theme-changed: {message.Theme} at {message.Timestamp}");
-
-            // Only apply if user preference is System
-            if (_appState.Preferences.Theme == TextEdit.Core.Preferences.ThemeMode.System)
-            {
-                // Apply the theme directly via ThemeManager
-                // Note: We access ThemeManager through AppState's internal state
-                // For now, we'll trigger a re-apply which will check system theme
-                _ = _appState.ApplyThemeAsync();
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[IPC] Error processing theme-changed: {ex.Message}");
-        }
-        
-        return Task.CompletedTask;
-    }
+    // OS theme change detection deferred – no theme-changed IPC handling
 
     public async ValueTask DisposeAsync()
     {
@@ -110,7 +83,7 @@ public class ElectronIpcListener : IAsyncDisposable
             try
             {
                 await _js.InvokeVoidAsync("electronIpc.unregister", "cli-file-args");
-                await _js.InvokeVoidAsync("electronIpc.unregister", "theme-changed");
+                // No theme-changed listener registered
             }
             catch
             {
@@ -137,12 +110,5 @@ public class ElectronIpcListener : IAsyncDisposable
         public string Reason { get; set; } = "";
     }
 
-    /// <summary>
-    /// Message structure per contracts/theme-changed.md
-    /// </summary>
-    public class ThemeChangedMessage
-    {
-        public string Theme { get; set; } = "light";
-        public string Timestamp { get; set; } = "";
-    }
+    // ThemeChangedMessage deferred – no longer used
 }

@@ -24,7 +24,7 @@
           aria-label="Character count: @AppState.EditorState.CharacterCount characters">
         @AppState.EditorState.CharacterCount @(AppState.EditorState.CharacterCount == 1 ? "character" : "characters")
     </span>
-    <span class="status-item" style="font-size: 0.875rem; color: #64748b;">
+    <span class="status-item" style="font-size: 0.875rem; color: var(--muted);">
         @if (AppState.AutosaveService.LastAutosave != DateTime.MinValue)
         {
             var timeSinceAutosave = DateTime.UtcNow - AppState.AutosaveService.LastAutosave;
@@ -43,7 +43,7 @@
         }
     </span>
     <span class="status-item" 
-          style="margin-left: auto; font-style: italic; color: #64748b;">
+          style="margin-left: auto; font-style: italic; color: var(--muted);">
         @if (AppState.ActiveDocument != null && !string.IsNullOrEmpty(AppState.ActiveDocument.FilePath))
         {
             <text>@System.IO.Path.GetFileName(AppState.ActiveDocument.FilePath)</text>
