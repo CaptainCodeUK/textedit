@@ -78,6 +78,8 @@ public class SaveAsTests : IDisposable
         public string? OpenPath { get; set; }
         public string? SavePath { get; set; }
 
+        public TestIpcBridge() : base(new TextEdit.Infrastructure.Persistence.PreferencesRepository()) { }
+
         public override Task<string?> ShowOpenFileDialogAsync() => Task.FromResult(OpenPath);
         public override Task<string?> ShowSaveFileDialogAsync() => Task.FromResult(SavePath);
     }

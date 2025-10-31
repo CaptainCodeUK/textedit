@@ -17,6 +17,35 @@
             </div>
             <div style="padding: 24px;">
                 <section style="margin-bottom: 20px;">
+                    <h3 style="font-size: 13px; font-weight: 600; margin: 0 0 8px 0; color: var(--fg);">Recognized File Extensions</h3>
+                    <p style="font-size:12px; color:var(--muted); margin:0 0 8px 0;">Files with these extensions are treated as text and can be opened. .txt and .md cannot be removed.</p>
+                    <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+                        <input placeholder=".conf" value="@_newExtension" @oninput="e => _newExtension = e.Value?.ToString() ?? string.Empty" style="flex:1; padding:6px 8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); border-radius:6px;" />
+                        <button @onclick="AddExtension" style="padding:6px 12px; background: var(--surface); color: var(--fg); border:1px solid var(--border); border-radius:6px; cursor:pointer;">Add</button>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(_extError))
+                    {
+                        <div style="color: var(--danger, #d14343); font-size:12px; margin-bottom:8px;">@_extError</div>
+                    }
+                    <div style="max-height: 104px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 8px; background: var(--surface);">
+                        <ul style="list-style:none; padding:0; margin:0; display:flex; flex-wrap:wrap; gap:8px;">
+                            @foreach (var ext in AppState.Preferences.FileExtensions.OrderBy(e => e))
+                            {
+                                var isRequired = string.Equals(ext, ".txt", StringComparison.OrdinalIgnoreCase) || string.Equals(ext, ".md", StringComparison.OrdinalIgnoreCase);
+                                <li style="display:flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--border); background:var(--bg); color:var(--fg); border-radius:999px;">
+                                    <span>@ext</span>
+                                    <button @onclick="() => RemoveExtension(ext)"
+                                            disabled="@isRequired"
+                                            title="@(isRequired ? "Required extension" : "Remove")"
+                                            style="padding:2px 8px; background: transparent; color: var(--muted); border:1px solid var(--border); border-radius:999px; cursor:@(isRequired ? "not-allowed" : "pointer");">
+                                        ×
+                                    </button>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </section>
+                <section style="margin-bottom: 20px;">
                     <h3 style="font-size: 13px; font-weight: 600; margin: 0 0 8px 0; color: var(--fg);">Theme</h3>
                     <div style="display:flex; gap:16px; align-items:center;">
                         <label style="display:flex; gap:6px; align-items:center; cursor:pointer; color: var(--fg);" @onclick="() => SetTheme(ThemeMode.Light)">
@@ -73,6 +102,9 @@
     [Parameter]
     public EventCallback OnClose { get; set; }
 
+    private string _newExtension = string.Empty;
+    private string? _extError;
+
     private async Task SetTheme(ThemeMode mode)
     {
         if (mode == ThemeMode.System)
@@ -90,6 +122,52 @@
     private async Task ToggleLogging(ChangeEventArgs e)
     {
         AppState.Preferences.LoggingEnabled = (bool)(e.Value ?? false);
+        await AppState.SavePreferencesAsync();
+    }
+
+    private async Task AddExtension()
+    {
+        _extError = null;
+        var input = (_newExtension ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            _extError = "Enter an extension like .conf";
+            return;
+        }
+        if (!input.StartsWith('.')) input = "." + input;
+        input = input.ToLowerInvariant();
+
+        // Validate format
+        var rx = new System.Text.RegularExpressions.Regex("^\\.[a-zA-Z0-9-]+$");
+        if (!rx.IsMatch(input))
+        {
+            _extError = "Invalid format. Use letters, numbers or hyphen, e.g. .conf";
+            return;
+        }
+
+        // Duplicate check (case-insensitive)
+        if (AppState.Preferences.FileExtensions.Any(e => string.Equals(e, input, StringComparison.OrdinalIgnoreCase)))
+        {
+            _extError = "Extension already exists";
+            return;
+        }
+
+        AppState.Preferences.FileExtensions.Add(input);
+        AppState.Preferences.NormalizeExtensions();
+        await AppState.SavePreferencesAsync();
+        _newExtension = string.Empty;
+    }
+
+    private async Task RemoveExtension(string ext)
+    {
+        _extError = null;
+        if (string.Equals(ext, ".txt", StringComparison.OrdinalIgnoreCase) || string.Equals(ext, ".md", StringComparison.OrdinalIgnoreCase))
+        {
+            _extError = $"Cannot remove required extension: {ext}";
+            return;
+        }
+        AppState.Preferences.FileExtensions.RemoveAll(e => string.Equals(e, ext, StringComparison.OrdinalIgnoreCase));
+        AppState.Preferences.NormalizeExtensions();
         await AppState.SavePreferencesAsync();
     }
 

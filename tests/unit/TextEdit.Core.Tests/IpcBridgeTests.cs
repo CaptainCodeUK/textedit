@@ -1,5 +1,7 @@
 using FluentAssertions;
 using TextEdit.Infrastructure.Ipc;
+using TextEdit.Core.Preferences;
+using TextEdit.Infrastructure.Persistence;
 
 namespace TextEdit.Core.Tests;
 
@@ -14,7 +16,8 @@ public class IpcBridgeTests
 
     public IpcBridgeTests()
     {
-        _bridge = new IpcBridge();
+        var prefsRepo = new PreferencesRepository();
+        _bridge = new IpcBridge(prefsRepo);
     }
 
     [Fact]

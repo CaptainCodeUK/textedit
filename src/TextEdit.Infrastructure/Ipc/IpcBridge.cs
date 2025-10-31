@@ -1,5 +1,6 @@
 using ElectronNET.API;
 using ElectronNET.API.Entities;
+using TextEdit.Core.Preferences;
 
 namespace TextEdit.Infrastructure.Ipc;
 
@@ -8,6 +9,13 @@ namespace TextEdit.Infrastructure.Ipc;
 /// </summary>
 public class IpcBridge
 {
+    private readonly IPreferencesRepository _prefsRepo;
+
+    public IpcBridge(IPreferencesRepository prefsRepo)
+    {
+        _prefsRepo = prefsRepo;
+    }
+
     public enum CloseDecision
     {
         Save,
@@ -62,17 +70,24 @@ public class IpcBridge
             return null;
         }
 
+        // Get file extensions from preferences
+        var prefs = await _prefsRepo.LoadAsync();
+        var extensions = prefs.FileExtensions
+            .Select(ext => ext.TrimStart('.')) // Remove leading dot for Electron filter
+            .Where(ext => !string.IsNullOrWhiteSpace(ext))
+            .ToArray();
+
         var options = new OpenDialogOptions
         {
             Properties = new[] { OpenDialogProperty.openFile },
             Filters = new[]
             {
-                new FileFilter { Name = "Text Files", Extensions = new[] { "txt", "md", "log", "csv" } },
+                new FileFilter { Name = "Text Files", Extensions = extensions.Length > 0 ? extensions : new[] { "txt", "md" } },
                 new FileFilter { Name = "All Files", Extensions = new[] { "*" } }
             }
         };
 
-    var window = Electron.WindowManager.BrowserWindows.FirstOrDefault();
+        var window = Electron.WindowManager.BrowserWindows.FirstOrDefault();
         var result = await Electron.Dialog.ShowOpenDialogAsync(window, options);
         if (result is null || result.Length == 0)
         {
@@ -88,16 +103,23 @@ public class IpcBridge
             return null;
         }
 
+        // Get file extensions from preferences
+        var prefs = await _prefsRepo.LoadAsync();
+        var extensions = prefs.FileExtensions
+            .Select(ext => ext.TrimStart('.')) // Remove leading dot for Electron filter
+            .Where(ext => !string.IsNullOrWhiteSpace(ext))
+            .ToArray();
+
         var options = new SaveDialogOptions
         {
             Filters = new[]
             {
-                new FileFilter { Name = "Text Files", Extensions = new[] { "txt" } },
+                new FileFilter { Name = "Text Files", Extensions = extensions.Length > 0 ? extensions : new[] { "txt" } },
                 new FileFilter { Name = "All Files", Extensions = new[] { "*" } }
             }
         };
 
-    var window = Electron.WindowManager.BrowserWindows.FirstOrDefault();
+        var window = Electron.WindowManager.BrowserWindows.FirstOrDefault();
         var result = await Electron.Dialog.ShowSaveDialogAsync(window, options);
         if (string.IsNullOrWhiteSpace(result))
         {

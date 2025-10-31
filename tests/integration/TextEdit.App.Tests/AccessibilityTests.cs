@@ -386,6 +386,8 @@ public class AccessibilityTests
     
     private class TestIpcBridge : IpcBridge
     {
+        public TestIpcBridge() : base(new TextEdit.Infrastructure.Persistence.PreferencesRepository()) { }
+        
         public override Task<string?> ShowOpenFileDialogAsync() => Task.FromResult<string?>(null);
         public override Task<string?> ShowSaveFileDialogAsync() => Task.FromResult<string?>(null);
     }

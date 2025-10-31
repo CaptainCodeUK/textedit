@@ -11,6 +11,7 @@ using TextEdit.Infrastructure.Logging;
 using TextEdit.Core.Preferences;
 using TextEdit.Infrastructure.Themes;
 using TextEdit.UI.Services;
+using System.IO;
 
 namespace TextEdit.UI.App;
 
@@ -116,11 +117,20 @@ public class AppState : IDisposable
     {
         if (absolutePaths is null) return Array.Empty<string>();
         var opened = new List<string>();
+        var invalid = new List<(string Path, string Reason)>();
         foreach (var path in absolutePaths)
         {
             if (string.IsNullOrWhiteSpace(path)) continue;
             try
             {
+                // Check recognized extension list
+                var ext = Path.GetExtension(path)?.ToLowerInvariant() ?? string.Empty;
+                if (!Preferences.FileExtensions.Any(e => string.Equals(e, ext, StringComparison.OrdinalIgnoreCase)))
+                {
+                    invalid.Add((path, $"Unsupported extension: {ext}"));
+                    _logger?.LogWarning("Rejected unsupported file type from CLI: {Path}", path);
+                    continue;
+                }
                 var doc = await _docs.OpenAsync(path);
                 _open[doc.Id] = doc;
                 _tabs.AddTab(doc);
@@ -135,6 +145,10 @@ public class AppState : IDisposable
         if (opened.Count > 0)
         {
             NotifyChanged();
+        }
+        if (invalid.Count > 0)
+        {
+            SetCliInvalidFiles(invalid);
         }
         return opened;
     }
@@ -280,6 +294,14 @@ public class AppState : IDisposable
         }
         
         _logger?.LogInformation("Opening file from dialog: {Path}", path);
+        // Enforce recognized extensions for manual open as well
+        var extSel = Path.GetExtension(path)?.ToLowerInvariant() ?? string.Empty;
+        if (!Preferences.FileExtensions.Any(e => string.Equals(e, extSel, StringComparison.OrdinalIgnoreCase)))
+        {
+            _logger?.LogWarning("User attempted to open unsupported file type: {Path}", path);
+            _dialogService?.ShowErrorDialog("Unsupported File Type", $"Files of type '{extSel}' are not currently recognized. Add it in Options → Recognized File Extensions.");
+            return null;
+        }
         
         try
         {

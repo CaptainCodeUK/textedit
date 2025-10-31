@@ -1,18 +1,24 @@
 using FluentAssertions;
 using TextEdit.Infrastructure.Ipc;
+using TextEdit.Infrastructure.Persistence;
 
 namespace TextEdit.IPC.Tests;
 
 public class IpcBridgeTests
 {
+    private readonly IpcBridge _bridge;
+
+    public IpcBridgeTests()
+    {
+        var prefsRepo = new PreferencesRepository();
+        _bridge = new IpcBridge(prefsRepo);
+    }
+
     [Fact]
     public async Task ShowOpenFileDialogAsync_WhenElectronNotActive_ReturnsNull()
     {
-        // Arrange
-        var bridge = new IpcBridge();
-
         // Act
-        var result = await bridge.ShowOpenFileDialogAsync();
+        var result = await _bridge.ShowOpenFileDialogAsync();
 
         // Assert
         result.Should().BeNull();
@@ -21,11 +27,8 @@ public class IpcBridgeTests
     [Fact]
     public async Task ShowSaveFileDialogAsync_WhenElectronNotActive_ReturnsNull()
     {
-        // Arrange
-        var bridge = new IpcBridge();
-
         // Act
-        var result = await bridge.ShowSaveFileDialogAsync();
+        var result = await _bridge.ShowSaveFileDialogAsync();
 
         // Assert
         result.Should().BeNull();
@@ -34,11 +37,8 @@ public class IpcBridgeTests
     [Fact]
     public async Task ConfirmCloseDirtyAsync_WhenElectronNotActive_ReturnsCancel()
     {
-        // Arrange
-        var bridge = new IpcBridge();
-
         // Act
-        var result = await bridge.ConfirmCloseDirtyAsync("test.txt");
+        var result = await _bridge.ConfirmCloseDirtyAsync("test.txt");
 
         // Assert
         result.Should().Be(IpcBridge.CloseDecision.Cancel);
@@ -47,11 +47,8 @@ public class IpcBridgeTests
     [Fact]
     public async Task ConfirmCloseDirtyAsync_WithNullName_WhenElectronNotActive_ReturnsCancel()
     {
-        // Arrange
-        var bridge = new IpcBridge();
-
         // Act
-        var result = await bridge.ConfirmCloseDirtyAsync(null);
+        var result = await _bridge.ConfirmCloseDirtyAsync(null);
 
         // Assert
         result.Should().Be(IpcBridge.CloseDecision.Cancel);
@@ -60,11 +57,8 @@ public class IpcBridgeTests
     [Fact]
     public async Task ConfirmCloseDirtyAsync_WithEmptyName_WhenElectronNotActive_ReturnsCancel()
     {
-        // Arrange
-        var bridge = new IpcBridge();
-
         // Act
-        var result = await bridge.ConfirmCloseDirtyAsync("");
+        var result = await _bridge.ConfirmCloseDirtyAsync("");
 
         // Assert
         result.Should().Be(IpcBridge.CloseDecision.Cancel);

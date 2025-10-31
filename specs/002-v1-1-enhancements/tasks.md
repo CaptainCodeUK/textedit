@@ -187,19 +187,21 @@ Note: OS theme change detection (T071–T074) is deferred for a later pass. Curr
 
 ### Implementation for User Story 4
 
-- [ ] T081 [P] [US4] Add File Extensions section to OptionsDialog.razor with list display
-- [ ] T082 [P] [US4] Display current extensions from AppState.Preferences.FileExtensions array
-- [ ] T083 [US4] Add "Add Extension" button and text input to OptionsDialog
-- [ ] T084 [US4] Implement extension format validation regex `^\.[a-zA-Z0-9-]+$` per contracts/preferences-schema.md
-- [ ] T085 [US4] Show validation error message if format invalid
-- [ ] T086 [US4] Add extension to FileExtensions list on valid input
-- [ ] T087 [US4] Add "Remove" button for each extension in list
-- [ ] T088 [US4] Prevent removal of .txt and .md (required extensions) per data-model.md
-- [ ] T089 [US4] Show error message when trying to remove required extensions
-- [ ] T090 [US4] Implement duplicate detection (case-insensitive) per data-model.md validation rules
-- [ ] T091 [US4] Update file open logic in AppState to check FileExtensions list
-- [ ] T092 [US4] Persist FileExtensions changes via PreferencesRepository when saving Options
-- [ ] T093 [US4] Load FileExtensions from preferences on app startup
+- [X] T081 [P] [US4] Add File Extensions section to OptionsDialog.razor with list display
+- [X] T082 [P] [US4] Display current extensions from AppState.Preferences.FileExtensions array
+- [X] T083 [US4] Add "Add Extension" button and text input to OptionsDialog
+- [X] T084 [US4] Implement extension format validation regex `^\.[a-zA-Z0-9-]+$` per contracts/preferences-schema.md
+- [X] T085 [US4] Show validation error message if format invalid
+- [X] T086 [US4] Add extension to FileExtensions list on valid input
+- [X] T087 [US4] Add "Remove" button for each extension in list
+- [X] T088 [US4] Prevent removal of .txt and .md (required extensions) per data-model.md
+- [X] T089 [US4] Show error message when trying to remove required extensions
+- [X] T090 [US4] Implement duplicate detection (case-insensitive) per data-model.md validation rules
+- [X] T091 [US4] Update file open logic in AppState to check FileExtensions list
+- [X] T092 [US4] Persist FileExtensions changes via PreferencesRepository when saving Options
+- [X] T093 [US4] Load FileExtensions from preferences on app startup
+- [X] T094 [BONUS] Make extension chips scrollable (2 rows, max-height 80px) in OptionsDialog
+- [X] T095 [BONUS] Update IpcBridge to use FileExtensions from preferences for Open/Save dialog filters
 
 **Checkpoint**: File extension management complete with validation and persistence
 
