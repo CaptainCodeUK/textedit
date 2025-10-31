@@ -328,7 +328,7 @@ public class AccessibilityTests
         var prefsRepo = new PreferencesRepository();
         var themeDetection = new ThemeDetectionService();
         var themeManager = new ThemeManager();
-        var app = new AppState(docs, tabs, ipc, persistence, autosave, perfLogger, prefsRepo, themeDetection, themeManager, dialog);
+        var app = new AppState(docs, tabs, ipc, persistence, autosave, perfLogger, prefsRepo, themeDetection, themeManager, null, dialog);
         
         // Create multiple documents
         var doc1 = app.CreateNew();

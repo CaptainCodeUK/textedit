@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Components;
 using TextEdit.Core.Documents;
 using TextEdit.Core.Editing;
+using TextEdit.Core.Abstractions;
 using TextEdit.Infrastructure.Ipc;
 using TextEdit.Infrastructure.Persistence;
 using TextEdit.Infrastructure.FileSystem;
 using TextEdit.Infrastructure.Autosave;
 using TextEdit.Infrastructure.Telemetry;
+using TextEdit.Infrastructure.Logging;
 using TextEdit.Core.Preferences;
 using TextEdit.Infrastructure.Themes;
 using TextEdit.UI.Services;
@@ -27,6 +29,7 @@ public class AppState : IDisposable
     private readonly IPreferencesRepository _prefsRepo;
     private readonly ThemeDetectionService _themeDetection;
     private readonly ThemeManager _themeManager;
+    private readonly IAppLogger? _logger;
     private readonly Dictionary<Guid, FileWatcher> _watchers = new();
     private readonly Dictionary<Guid, DateTimeOffset> _lastExternalChange = new();
 
@@ -43,6 +46,7 @@ public class AppState : IDisposable
         IPreferencesRepository prefsRepo,
         ThemeDetectionService themeDetection,
         ThemeManager themeManager,
+        IAppLoggerFactory? loggerFactory = null,
         DialogService? dialogService = null)
     {
         _docs = docs;
@@ -55,6 +59,7 @@ public class AppState : IDisposable
         _prefsRepo = prefsRepo;
         _themeDetection = themeDetection;
         _themeManager = themeManager;
+        _logger = loggerFactory?.CreateLogger<AppState>();
         
         EditorState = new EditorState();
         ToolbarState = new ToolbarState();
@@ -265,9 +270,16 @@ public class AppState : IDisposable
     public async Task<Document?> OpenAsync()
     {
         using var _ = _perfLogger.BeginOperation("Document.Open");
+        _logger?.LogDebug("Opening file dialog");
         
         var path = await _ipc.ShowOpenFileDialogAsync();
-        if (string.IsNullOrWhiteSpace(path)) return null;
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            _logger?.LogDebug("File dialog cancelled");
+            return null;
+        }
+        
+        _logger?.LogInformation("Opening file from dialog: {Path}", path);
         
         try
         {
@@ -277,20 +289,24 @@ public class AppState : IDisposable
             _tabs.AddTab(doc);
             StartWatchingFile(doc);
             NotifyChanged();
+            _logger?.LogInformation("File opened and tab created: {Path}", path);
             return doc;
         }
         catch (FileNotFoundException ex)
         {
+            _logger?.LogError(ex, "File not found: {Path}", ex.FileName ?? path);
             _dialogService?.ShowErrorDialog("File Not Found", $"The file '{ex.FileName}' could not be found.");
             return null;
         }
-        catch (UnauthorizedAccessException)
+        catch (UnauthorizedAccessException ex)
         {
+            _logger?.LogError(ex, "Access denied when opening: {Path}", path);
             _dialogService?.ShowErrorDialog("Access Denied", $"Permission denied when opening '{path}'. You may not have read access to this file.");
             return null;
         }
         catch (IOException ex)
         {
+            _logger?.LogError(ex, "I/O error when opening: {Path}", path);
             _dialogService?.ShowErrorDialog("I/O Error", $"An error occurred while opening '{path}': {ex.Message}");
             return null;
         }
@@ -300,23 +316,35 @@ public class AppState : IDisposable
     {
         using var _ = _perfLogger.BeginOperation("Document.Save");
         
-        if (ActiveDocument is null) return;
+        if (ActiveDocument is null)
+        {
+            _logger?.LogWarning("SaveActiveAsync called with no active document");
+            return;
+        }
+        
         if (string.IsNullOrWhiteSpace(ActiveDocument.FilePath))
         {
+            _logger?.LogDebug("No file path, showing save dialog for: {Name}", ActiveDocument.Name);
             var saved = await SaveAsActiveAsync();
             if (!saved) return;
         }
+        
+        _logger?.LogInformation("Saving document: {Path}", ActiveDocument.FilePath ?? "(unknown)");
+        
         try
         {
             await _docs.SaveAsync(ActiveDocument);
             NotifyChanged();
+            _logger?.LogInformation("Document saved successfully: {Path}", ActiveDocument.FilePath ?? "(unknown)");
         }
-        catch (UnauthorizedAccessException)
+        catch (UnauthorizedAccessException ex)
         {
+            _logger?.LogError(ex, "Permission denied saving: {Path}", ActiveDocument?.FilePath ?? "(unknown)");
             _dialogService?.ShowErrorDialog("Permission Denied", $"Cannot save '{ActiveDocument?.Name}'. The file may be read-only or you may not have write permission.");
         }
         catch (IOException ex)
         {
+            _logger?.LogError(ex, "I/O error saving: {Path}", ActiveDocument?.FilePath ?? "(unknown)");
             _dialogService?.ShowErrorDialog("Save Error", $"An error occurred while saving '{ActiveDocument?.Name}': {ex.Message}");
         }
     }

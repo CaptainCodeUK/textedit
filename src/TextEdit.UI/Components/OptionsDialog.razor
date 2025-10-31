@@ -1,6 +1,8 @@
 @using TextEdit.Core.Preferences
 @using TextEdit.UI.App
+@using TextEdit.Infrastructure.Ipc
 @inject AppState AppState
+@inject IpcBridge IpcBridge
 
 @if (IsVisible)
 {
@@ -31,6 +33,31 @@
                         </label>
                     </div>
                 </section>
+                
+                <section style="margin-bottom: 20px;">
+                    <h3 style="font-size: 13px; font-weight: 600; margin: 0 0 8px 0; color: var(--fg);">Logging</h3>
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <label style="display:flex; gap:8px; align-items:center; cursor:pointer; color: var(--fg);">
+                            <input type="checkbox" 
+                                   checked="@AppState.Preferences.LoggingEnabled" 
+                                   @onchange="ToggleLogging" />
+                            <span>Enable detailed logging</span>
+                        </label>
+                        @if (AppState.Preferences.LoggingEnabled)
+                        {
+                            <div style="padding-left:24px;">
+                                <p style="font-size:12px; color:var(--muted); margin:0 0 8px 0;">
+                                    Logs are saved to your application data folder. Useful for troubleshooting.
+                                </p>
+                                <button @onclick="OpenLogFolder" 
+                                        style="padding:4px 12px; background: var(--surface); color: var(--fg); border:1px solid var(--border); border-radius:4px; cursor:pointer; font-size:12px;">
+                                    Open Log Folder
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </section>
+                
                 <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
                     <button @onclick="OnClose" style="padding:6px 12px; background: var(--surface); color: var(--fg); border:1px solid var(--border); border-radius:6px; cursor:pointer;">Close</button>
                 </div>
@@ -58,5 +85,32 @@
         await AppState.SavePreferencesAsync();
         await AppState.ApplyThemeAsync();
         
+    }
+
+    private async Task ToggleLogging(ChangeEventArgs e)
+    {
+        AppState.Preferences.LoggingEnabled = (bool)(e.Value ?? false);
+        await AppState.SavePreferencesAsync();
+    }
+
+    private void OpenLogFolder()
+    {
+        var appDataDir = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var logDir = Path.Combine(appDataDir, "Scrappy", "Logs");
+        
+        // Open folder in system file explorer
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = logDir,
+                UseShellExecute = true
+            };
+            System.Diagnostics.Process.Start(psi);
+        }
+        catch
+        {
+            // Silently fail if folder can't be opened
+        }
     }
 }

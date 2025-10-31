@@ -3,6 +3,7 @@ using ElectronNET.API.Entities;
 using TextEdit.UI.App;
 using TextEdit.UI.Components.Editor;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using TextEdit.Infrastructure.Ipc;
 
@@ -17,6 +18,7 @@ public static partial class ElectronHost
 {
     private static WebApplication? _app;
     private static AppState? _appState;
+    private static ILogger? _logger;
     private static string[] _initialArgs = Array.Empty<string>();
 
     /// <summary>
@@ -28,7 +30,11 @@ public static partial class ElectronHost
     {
         _app = app;
         _appState = app.Services.GetRequiredService<AppState>();
+        _logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("ElectronHost");
         _initialArgs = args ?? Array.Empty<string>();
+        
+        // Setup global error handlers for Electron/JavaScript errors
+        SetupGlobalErrorHandlers();
         
         // Subscribe to editor state changes to update menu checkmarks
         _appState.EditorState.Changed += OnEditorStateChanged;
@@ -54,6 +60,8 @@ public static partial class ElectronHost
             {
                 try
                 {
+                    _logger?.LogInformation("Second instance detected, focusing existing window");
+                    
                     var window = Electron.WindowManager.BrowserWindows.FirstOrDefault();
                     if (window != null)
                     {
@@ -69,6 +77,8 @@ public static partial class ElectronHost
                     var cliArgs = args.Skip(1).ToArray(); // Skip executable path
                     if (_app != null && cliArgs.Length > 0)
                     {
+                        _logger?.LogInformation("Processing {Count} CLI arguments from second instance", cliArgs.Length);
+                        
                         var (valid, invalid) = CliArgProcessor.ParseAndValidate(cliArgs);
                         using var scope = _app.Services.CreateScope();
                         var ipcBridge = scope.ServiceProvider.GetRequiredService<IpcBridge>();
@@ -81,9 +91,10 @@ public static partial class ElectronHost
                         );
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // ignore second-instance processing errors to avoid console noise
+                    // Log but don't crash on second-instance processing errors
+                    _logger?.LogError(ex, "Error processing second instance");
                 }
             });
         });
@@ -91,7 +102,7 @@ public static partial class ElectronHost
         if (!gotLock)
         {
             // This is a second instance - it will exit automatically
-            
+            _logger?.LogInformation("Second instance detected, exiting");
             Electron.App.Exit();
             return;
         }
@@ -103,51 +114,90 @@ public static partial class ElectronHost
     }
 
     /// <summary>
+    /// Setup global error handlers to catch and log unhandled JavaScript and Electron errors
+    /// </summary>
+    private static void SetupGlobalErrorHandlers()
+    {
+        if (!HybridSupport.IsElectronActive) return;
+
+        try
+        {
+            // Handle uncaught JavaScript errors from renderer process
+            AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
+            {
+                var exception = e.ExceptionObject as Exception;
+                _logger?.LogCritical(exception, "Unhandled exception in AppDomain: {IsTerminating}", e.IsTerminating);
+            };
+
+            // Handle unobserved task exceptions
+            TaskScheduler.UnobservedTaskException += (sender, e) =>
+            {
+                _logger?.LogError(e.Exception, "Unobserved task exception");
+                e.SetObserved(); // Prevent process termination
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to setup global error handlers");
+        }
+    }
+
+    /// <summary>
     /// Create the main BrowserWindow and configure lifecycle hooks.
     /// </summary>
     private static async Task CreateMainWindowAsync()
     {
-        var swStartup = Stopwatch.StartNew();
-        var window = await Electron.WindowManager.CreateWindowAsync(new BrowserWindowOptions
+        try
         {
-            Width = 1200,
-            Height = 800,
-            MinWidth = 800,
-            MinHeight = 600,
-            Title = "Scrappy Text Editor",
-            WebPreferences = new WebPreferences
+            var swStartup = Stopwatch.StartNew();
+            _logger?.LogInformation("Creating main Electron window");
+            
+            var window = await Electron.WindowManager.CreateWindowAsync(new BrowserWindowOptions
             {
-                NodeIntegration = false,
-                ContextIsolation = true
-            }
-        });
+                Width = 1200,
+                Height = 800,
+                MinWidth = 800,
+                MinHeight = 600,
+                Title = "Scrappy Text Editor",
+                WebPreferences = new WebPreferences
+                {
+                    NodeIntegration = false,
+                    ContextIsolation = true
+                }
+            });
 
-        // Window lifecycle events
-        // Persist on both Close (before) and Closed (after) to be safe on all platforms
-        window.OnClose += () => PersistAndQuit();
-        window.OnClosed += () => PersistAndQuit();
+            // Window lifecycle events
+            // Persist on both Close (before) and Closed (after) to be safe on all platforms
+            window.OnClose += () => PersistAndQuit();
+            window.OnClosed += () => PersistAndQuit();
 
-        // Application menu will be configured in Phase 6 (US3)
-        ConfigureMenus();
+            // Application menu will be configured in Phase 6 (US3)
+            ConfigureMenus();
 
             swStartup.Stop();
-            
+            _logger?.LogInformation("Main window created in {ElapsedMs}ms", swStartup.ElapsedMilliseconds);
 
-        // IPC handlers will be registered here in Phase 2
-        // RegisterIpcHandlers();
+            // IPC handlers will be registered here in Phase 2
+            // RegisterIpcHandlers();
 
-        // Phase 3: Process initial CLI file arguments (non-blocking)
-        _ = Task.Run(async () =>
+            // Phase 3: Process initial CLI file arguments (non-blocking)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await ElectronHost.ProcessInitialCliArgsAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "Failed to process initial CLI arguments");
+                }
+            });
+        }
+        catch (Exception ex)
         {
-            try
-            {
-                await ElectronHost.ProcessInitialCliArgsAsync();
-            }
-            catch
-            {
-                // ignore
-            }
-        });
+            _logger?.LogCritical(ex, "Failed to create main Electron window");
+            throw;
+        }
     }
 
     /// <summary>
@@ -242,6 +292,8 @@ public static partial class ElectronHost
         {
             try
             {
+                _logger?.LogInformation("Persisting session before quit");
+                
                 using var scope = _app.Services.CreateScope();
                 var appState = scope.ServiceProvider.GetService<AppState>();
                 if (appState != null)
@@ -250,13 +302,15 @@ public static partial class ElectronHost
                     appState.PersistSessionAsync().GetAwaiter().GetResult();
                     appState.PersistEditorPreferences();
                 }
+                
+                swQuit.Stop();
+                _logger?.LogInformation("Session persisted in {ElapsedMs}ms, shutting down", swQuit.ElapsedMilliseconds);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ElectronHost] Failed to persist session on quit: {ex.Message}");
+                _logger?.LogError(ex, "Failed to persist session on quit");
             }
         }
-        swQuit.Stop();
         
         Electron.App.Quit();
     }
@@ -266,6 +320,8 @@ public static partial class ElectronHost
     /// </summary>
     private static void RegisterIpcHandlers()
     {
+        _logger?.LogInformation("Registering IPC handlers");
+        
         // Channel: openFileDialog.request -> openFileDialog.response
         // Implements contracts/ipc.openFileDialog.* schemas
         if (HybridSupport.IsElectronActive)
@@ -277,7 +333,7 @@ public static partial class ElectronHost
                 {
                     if (_app is null)
                     {
-                        
+                        _logger?.LogWarning("openFileDialog.request received but app is null");
                         return;
                     }
 
@@ -288,7 +344,7 @@ public static partial class ElectronHost
                     var window = Electron.WindowManager.BrowserWindows.FirstOrDefault();
                     if (window is null)
                     {
-                        
+                        _logger?.LogWarning("openFileDialog.request: No browser window found");
                         return;
                     }
 
@@ -300,9 +356,9 @@ public static partial class ElectronHost
 
                     Electron.IpcMain.Send(window, "openFileDialog.response", response);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // ignore
+                    _logger?.LogError(ex, "Error handling openFileDialog.request");
                 }
             });
 
@@ -315,7 +371,7 @@ public static partial class ElectronHost
                 {
                     if (_app is null)
                     {
-                        
+                        _logger?.LogWarning("saveFileDialog.request received but app is null");
                         return;
                     }
 
@@ -326,7 +382,7 @@ public static partial class ElectronHost
                     var window = Electron.WindowManager.BrowserWindows.FirstOrDefault();
                     if (window is null)
                     {
-                        
+                        _logger?.LogWarning("saveFileDialog.request: No browser window found");
                         return;
                     }
 
@@ -338,9 +394,9 @@ public static partial class ElectronHost
 
                     Electron.IpcMain.Send(window, "saveFileDialog.response", response);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // ignore
+                    _logger?.LogError(ex, "Error handling saveFileDialog.request");
                 }
             });
 
@@ -376,7 +432,7 @@ public static partial class ElectronHost
                 {
                     if (args is string url && !string.IsNullOrWhiteSpace(url))
                     {
-                        
+                        _logger?.LogInformation("Opening external URL: {Url}", url);
                         
                         // Try using Process.Start as a workaround for Electron.NET shell issues
                         // This should work cross-platform
@@ -388,20 +444,20 @@ public static partial class ElectronHost
                                 UseShellExecute = true
                             };
                             Process.Start(psi);
-                            
+                            _logger?.LogDebug("Opened URL using Process.Start");
                         }
-                        catch (Exception)
+                        catch (Exception ex)
                         {
-                            
+                            _logger?.LogWarning(ex, "Process.Start failed, trying Electron.Shell.OpenExternalAsync");
                             // Fallback to Electron.NET API
                             var options = new OpenExternalOptions { Activate = true };
                             await Electron.Shell.OpenExternalAsync(url, options);
                         }
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // ignore
+                    _logger?.LogError(ex, "Failed to open external URL");
                 }
             });
 
@@ -414,6 +470,8 @@ public static partial class ElectronHost
                 {
                     if (args is string source && !string.IsNullOrWhiteSpace(source))
                     {
+                        _logger?.LogInformation("Setting theme source to: {Source}", source);
+                        
                         var s = source.Trim().ToLowerInvariant(); // "light" | "dark" | "system"
                         // Prefer explicit light/dark to avoid host inversion bugs; 'system' is accepted
                         var mode = s switch
@@ -431,13 +489,14 @@ public static partial class ElectronHost
                                 ThemeSourceMode.Light => ThemeSourceMode.Dark,
                                 _ => mode
                             };
+                            _logger?.LogDebug("Linux platform detected, flipped theme mode to: {Mode}", mode);
                         }
                         Electron.NativeTheme.SetThemeSource(mode);
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // ignore
+                    _logger?.LogError(ex, "Failed to set theme source");
                 }
             });
         }
@@ -524,6 +583,9 @@ public static partial class ElectronHost
 
         try
         {
+            _logger?.LogInformation("Processing {ValidCount} valid and {InvalidCount} invalid CLI arguments", 
+                valid.Count, invalid.Count);
+                
             using var scope = _app.Services.CreateScope();
             var ipcBridge = scope.ServiceProvider.GetRequiredService<IpcBridge>();
             
@@ -536,7 +598,7 @@ public static partial class ElectronHost
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[CLI] Failed to send CLI args via IPC: {ex.Message}");
+            _logger?.LogError(ex, "Failed to send CLI args via IPC");
         }
         
         return Task.CompletedTask;

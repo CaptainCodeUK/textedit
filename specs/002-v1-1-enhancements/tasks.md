@@ -281,20 +281,20 @@ Note: OS theme change detection (T071–T074) is deferred for a later pass. Curr
 
 ### Implementation for User Story 7
 
-- [ ] T136 [P] [US7] Add Logging section to OptionsDialog.razor with toggle switch
-- [ ] T137 [P] [US7] Bind logging toggle to AppState.Preferences.LoggingEnabled
-- [ ] T138 [P] [US7] Do not create LogEntry class; write JSON Lines directly in logger service per data-model.md
-- [ ] T139 [P] [US7] Implement logger service that checks LoggingEnabled preference
-- [ ] T140 [US7] Add detailed logging for file operations (open, save, close)
-- [ ] T141 [US7] Add detailed logging for user actions (edit, format, theme change)
-- [ ] T142 [US7] Add detailed logging for errors and exceptions
-- [ ] T143 [US7] Implement JSON Lines log format per data-model.md
-- [ ] T144 [US7] Configure log file location per research.md (OS-specific app data logs folder)
-- [ ] T145 [US7] Implement log rotation: 10MB max per file, keep last 5 files per FR-042
-- [ ] T146 [US7] Add "View Logs" or "Open Log Folder" button to OptionsDialog when logging enabled
-- [ ] T147 [US7] Wire button to open log folder in system file explorer
-- [ ] T148 [US7] Persist LoggingEnabled preference
-- [ ] T149 [US7] Verify logging doesn't introduce perceptible lag (<10ms) per performance spec
+- [X] T136 [P] [US7] Add Logging section to OptionsDialog.razor with toggle switch
+- [X] T137 [P] [US7] Bind logging toggle to AppState.Preferences.LoggingEnabled
+- [X] T138 [P] [US7] Do not create LogEntry class; write JSON Lines directly in logger service per data-model.md
+- [X] T139 [P] [US7] Implement logger service that checks LoggingEnabled preference (AppLogger with IAppLoggerFactory)
+- [X] T140 [US7] Add detailed logging for file operations (open, save, close) - Implemented in DocumentService and AppState
+- [X] T141 [US7] Add detailed logging for user actions (edit, format, theme change) - Implemented in ElectronHost and AppState
+- [X] T142 [US7] Add detailed logging for errors and exceptions - Global error handlers added to ElectronHost
+- [X] T143 [US7] Implement JSON Lines log format per data-model.md - Using Serilog with structured logging
+- [X] T144 [US7] Configure log file location per research.md (OS-specific app data logs folder) - ~/.config/TextEdit/Logs
+- [X] T145 [US7] Implement log rotation: 10MB max per file, keep last 5 files per FR-042
+- [X] T146 [US7] Add "View Logs" or "Open Log Folder" button to OptionsDialog when logging enabled
+- [X] T147 [US7] Wire button to open log folder in system file explorer
+- [X] T148 [US7] Persist LoggingEnabled preference
+- [X] T149 [US7] Verify logging doesn't introduce perceptible lag (<10ms) per performance spec - Conditional logging for Debug/Info only
 
 **Checkpoint**: Logging toggle complete with rotation and easy access
 

@@ -16,6 +16,7 @@ using TextEdit.Core.Preferences;
 using TextEdit.Markdown;
 using TextEdit.UI.App;
 using TextEdit.UI.Services;
+using TextEdit.Infrastructure.Logging;
 
 namespace TextEdit.App;
 
@@ -43,7 +44,29 @@ public class Startup
         // Phase 2: Register core/infrastructure services
         services.AddSingleton<IUndoRedoService, UndoRedoService>();
         services.AddSingleton<IFileSystem, FileSystemService>();
-        services.AddSingleton<DocumentService>();
+        
+        // Logging infrastructure - factory that checks LoggingEnabled preference
+        services.AddSingleton<IAppLoggerFactory>(sp => 
+        {
+            var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+            // Get AppState lazily to avoid circular dependency
+            return new AppLoggerFactory(loggerFactory, () => 
+            {
+                var appState = sp.GetService<AppState>();
+                return appState?.Preferences.LoggingEnabled ?? false;
+            });
+        });
+        
+        // DocumentService with logger
+        services.AddSingleton<DocumentService>(sp => 
+        {
+            var fs = sp.GetRequiredService<IFileSystem>();
+            var undo = sp.GetRequiredService<IUndoRedoService>();
+            var loggerFactory = sp.GetRequiredService<IAppLoggerFactory>();
+            var logger = loggerFactory.CreateLogger<DocumentService>();
+            return new DocumentService(fs, undo, logger);
+        });
+        
         services.AddSingleton<TabService>();
         services.AddSingleton<FileWatcher>();
         services.AddSingleton<PersistenceService>();

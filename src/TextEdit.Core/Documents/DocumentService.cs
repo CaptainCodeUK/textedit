@@ -13,12 +13,14 @@ public class DocumentService
 {
     private readonly IFileSystem _fs;
     private readonly IUndoRedoService _undo;
+    private readonly IAppLogger? _logger;
     private const long LargeFileThreshold = 10 * 1024 * 1024; // 10MB
 
-    public DocumentService(IFileSystem fs, IUndoRedoService undo)
+    public DocumentService(IFileSystem fs, IUndoRedoService undo, IAppLogger? logger = null)
     {
         _fs = fs;
         _undo = undo;
+        _logger = logger;
     }
 
     public Document NewDocument()
@@ -30,10 +32,18 @@ public class DocumentService
 
     public async Task<Document> OpenAsync(string path, Encoding? encoding = null, IProgress<int>? progress = null, CancellationToken cancellationToken = default)
     {
-        if (!_fs.FileExists(path)) throw new FileNotFoundException("File not found", path);
+        _logger?.LogInformation("Opening file: {Path}", path);
+        
+        if (!_fs.FileExists(path))
+        {
+            _logger?.LogError("File not found: {Path}", path);
+            throw new FileNotFoundException("File not found", path);
+        }
         
         var fileSize = _fs.GetFileSize(path);
         bool isLargeFile = fileSize >= LargeFileThreshold;
+        
+        _logger?.LogDebug("File size: {Size} bytes, IsLarge: {IsLarge}", fileSize, isLargeFile);
         
         var doc = new Document();
         var enc = encoding ?? doc.Encoding;
@@ -42,6 +52,7 @@ public class DocumentService
         string text;
         if (isLargeFile)
         {
+            _logger?.LogInformation("Using streaming read for large file: {Path}", path);
             text = await _fs.ReadLargeFileAsync(path, enc, progress, cancellationToken);
         }
         else
@@ -58,12 +69,15 @@ public class DocumentService
         
         if (isLargeFile)
         {
+            _logger?.LogInformation("File marked as read-only due to size: {Path}", path);
             doc.MarkReadOnly(true);
         }
         
         _undo.Attach(doc, doc.Content);
         // Opening should not mark dirty
         doc.MarkSaved(path);
+        
+        _logger?.LogInformation("File opened successfully: {Path}", path);
         return doc;
     }
 
@@ -77,7 +91,13 @@ public class DocumentService
     public async Task SaveAsync(Document doc, string? path = null, IProgress<int>? progress = null, CancellationToken cancellationToken = default)
     {
         var targetPath = path ?? doc.FilePath;
-        if (string.IsNullOrWhiteSpace(targetPath)) throw new InvalidOperationException("No path specified for save.");
+        if (string.IsNullOrWhiteSpace(targetPath))
+        {
+            _logger?.LogError("No path specified for save");
+            throw new InvalidOperationException("No path specified for save.");
+        }
+        
+        _logger?.LogInformation("Saving document to: {Path}", targetPath);
         
         // T057: Detect conflicts - check if file was modified externally since last load
         if (!string.IsNullOrWhiteSpace(doc.FilePath) && _fs.FileExists(doc.FilePath))
@@ -93,15 +113,18 @@ public class DocumentService
                 // For now, just log it. Full conflict resolution requires UI prompting.
                 if (currentDiskContent != doc.Content && !doc.IsDirty)
                 {
+                    _logger?.LogWarning("External modification detected for: {Path}", doc.FilePath);
                     // External modification detected; UI will surface conflicts when needed
                 }
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException ex)
             {
+                _logger?.LogWarning(ex, "Cannot read file for conflict detection: {Path}", doc.FilePath);
                 // Can't read for comparison - proceed with save attempt
             }
-            catch (IOException)
+            catch (IOException ex)
             {
+                _logger?.LogWarning(ex, "Cannot read file for conflict detection: {Path}", doc.FilePath);
                 // Can't read for comparison - proceed with save attempt  
             }
         }
@@ -117,6 +140,7 @@ public class DocumentService
         var contentSize = text.Length * doc.Encoding.GetByteCount("a"); // Approximate byte size
         if (contentSize >= LargeFileThreshold)
         {
+            _logger?.LogInformation("Using streaming write for large file: {Path}", targetPath);
             await _fs.WriteLargeFileAsync(targetPath!, text, doc.Encoding, progress, cancellationToken);
         }
         else
@@ -127,5 +151,6 @@ public class DocumentService
         }
         
         doc.MarkSaved(targetPath);
+        _logger?.LogInformation("Document saved successfully: {Path}", targetPath);
     }
 }
