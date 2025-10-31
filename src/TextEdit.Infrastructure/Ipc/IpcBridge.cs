@@ -1,6 +1,7 @@
 using ElectronNET.API;
 using ElectronNET.API.Entities;
 using TextEdit.Core.Preferences;
+using TextEdit.Infrastructure.Lifecycle;
 
 namespace TextEdit.Infrastructure.Ipc;
 
@@ -32,6 +33,11 @@ public class IpcBridge
 
     public virtual async Task<CloseDecision> ConfirmCloseDirtyAsync(string? name)
     {
+        if (AppShutdown.IsShuttingDown)
+        {
+            // During shutdown, avoid dialogs; indicate cancel to prevent disruptive flows
+            return CloseDecision.Cancel;
+        }
         if (!HybridSupport.IsElectronActive)
         {
             return CloseDecision.Cancel;
@@ -137,6 +143,11 @@ public class IpcBridge
 
     public virtual async Task<ExternalChangeDecision> ConfirmReloadExternalAsync(string? name)
     {
+        if (AppShutdown.IsShuttingDown)
+        {
+            // During shutdown, avoid dialogs; keep current in-memory content
+            return ExternalChangeDecision.Keep;
+        }
         if (!HybridSupport.IsElectronActive)
         {
             return ExternalChangeDecision.Cancel;
@@ -173,6 +184,10 @@ public class IpcBridge
     /// </summary>
     public virtual void SendCliFileArgs(string[] validFiles, CliInvalidFileInfo[] invalidFiles, string launchType)
     {
+        if (AppShutdown.IsShuttingDown)
+        {
+            return;
+        }
         if (!HybridSupport.IsElectronActive)
         {
             return;
@@ -207,6 +222,10 @@ public class IpcBridge
     /// </summary>
     public virtual void SendThemeChanged(string theme)
     {
+        if (AppShutdown.IsShuttingDown)
+        {
+            return;
+        }
         if (!HybridSupport.IsElectronActive)
         {
             return;
@@ -240,6 +259,10 @@ public class IpcBridge
     /// </summary>
     public virtual void SetWindowTitle(string title)
     {
+        if (AppShutdown.IsShuttingDown)
+        {
+            return;
+        }
         if (!HybridSupport.IsElectronActive)
         {
             return;
@@ -266,6 +289,10 @@ public class IpcBridge
     /// </summary>
     public virtual async Task OpenExternalAsync(string url)
     {
+        if (AppShutdown.IsShuttingDown)
+        {
+            return;
+        }
         if (!HybridSupport.IsElectronActive)
         {
             return;

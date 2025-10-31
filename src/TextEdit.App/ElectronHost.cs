@@ -20,6 +20,7 @@ public static partial class ElectronHost
     private static AppState? _appState;
     private static ILogger? _logger;
     private static string[] _initialArgs = Array.Empty<string>();
+    private static BrowserWindow? _mainWindow;
 
     /// <summary>
     /// Initialize Electron window and native features - Phase 1
@@ -166,10 +167,58 @@ public static partial class ElectronHost
                 }
             });
 
-            // Window lifecycle events
-            // Persist on both Close (before) and Closed (after) to be safe on all platforms
-            window.OnClose += () => PersistAndQuit();
-            window.OnClosed += () => PersistAndQuit();
+            // Store window reference for shutdown
+            _mainWindow = window;
+
+            // Track if we're in a shutdown sequence to prevent recursive closes
+            var isShuttingDown = false;
+
+            // Handle window close (Alt+F4, X button) - trigger clean async shutdown
+            window.OnClose += () =>
+            {
+                if (isShuttingDown) return;
+                isShuttingDown = true;
+                
+                _logger?.LogInformation("Window close requested - starting async shutdown");
+                
+                // Don't return from OnClose—let window think it can close
+                // But we'll exit the process before that happens
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        // Signal shutdown to suppress dialogs and background work
+                        TextEdit.Infrastructure.Lifecycle.AppShutdown.Begin();
+                        
+                        // Always persist session
+                        PersistSession();
+                        
+                        // Check how long window has been open
+                        var startupTime = swStartup.Elapsed;
+                        
+                        if (startupTime.TotalSeconds < 2)
+                        {
+                            // Very early close - SignalR not fully connected yet
+                            // Exit immediately after persistence to avoid socket errors
+                            _logger?.LogInformation("Early close detected (<2s), exiting immediately after persistence");
+                            Electron.App.Exit(0);
+                            return;
+                        }
+                        
+                        // Normal close - give SignalR brief time to disconnect gracefully
+                        _logger?.LogInformation("Normal close, waiting for SignalR disconnect");
+                        await Task.Delay(150);
+                        
+                        // Exit cleanly
+                        Electron.App.Exit(0);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogError(ex, "Error during shutdown sequence");
+                        Electron.App.Exit(1);
+                    }
+                });
+            };
 
             // Application menu will be configured in Phase 6 (US3)
             ConfigureMenus();
@@ -285,34 +334,77 @@ public static partial class ElectronHost
         Electron.Menu.SetApplicationMenu(new[] { fileMenu, editMenu, viewMenu, windowMenu, helpMenu });
     }
 
-    private static void PersistAndQuit()
+    /// <summary>
+    /// Persist session - called by BeforeQuit event for all quit methods
+    /// </summary>
+    private static void PersistSession()
     {
         var swQuit = Stopwatch.StartNew();
         if (_app != null)
         {
             try
             {
-                _logger?.LogInformation("Persisting session before quit");
+                _logger?.LogInformation("Persisting session on application quit");
                 
                 using var scope = _app.Services.CreateScope();
                 var appState = scope.ServiceProvider.GetService<AppState>();
                 if (appState != null)
                 {
-                    // Synchronous wait - we're shutting down anyway
-                    appState.PersistSessionAsync().GetAwaiter().GetResult();
-                    appState.PersistEditorPreferences();
+                    try
+                    {
+                        appState.PersistSessionAsync().GetAwaiter().GetResult();
+                        appState.PersistEditorPreferences();
+                        // Stop background activities to avoid late events during shutdown
+                        _logger?.LogInformation("Disposing AppState to stop autosave and file watchers");
+                        appState.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogError(ex, "Error during session persistence");
+                    }
+                }
+                
+                // Remove IPC listeners to prevent sends to a closing window
+                try
+                {
+                    Electron.IpcMain.RemoveAllListeners("openFileDialog.request");
+                    Electron.IpcMain.RemoveAllListeners("saveFileDialog.request");
+                    Electron.IpcMain.RemoveAllListeners("persistUnsaved.request");
+                    Electron.IpcMain.RemoveAllListeners("restoreSession.request");
+                    Electron.IpcMain.RemoveAllListeners("shell:openExternal");
+                    Electron.IpcMain.RemoveAllListeners("theme:setThemeSource");
+                    _logger?.LogInformation("IPC listeners removed during shutdown");
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogWarning(ex, "Failed to remove one or more IPC listeners during shutdown");
                 }
                 
                 swQuit.Stop();
-                _logger?.LogInformation("Session persisted in {ElapsedMs}ms, shutting down", swQuit.ElapsedMilliseconds);
+                _logger?.LogInformation("Session persisted in {ElapsedMs}ms", swQuit.ElapsedMilliseconds);
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Failed to persist session on quit");
+                _logger?.LogError(ex, "Failed to persist session");
             }
         }
-        
-        Electron.App.Quit();
+    }
+
+    /// <summary>
+    /// Explicitly quit application - used by menu items only.
+    /// Session persistence handled by BeforeQuit event.
+    /// </summary>
+    private static void PersistAndQuit()
+    {
+        try
+        {
+            _logger?.LogInformation("Quitting application via menu/keyboard command");
+            Electron.App.Quit();
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error calling Electron.App.Quit()");
+        }
     }
 
     /// <summary>
