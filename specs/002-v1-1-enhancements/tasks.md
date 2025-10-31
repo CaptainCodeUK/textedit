@@ -542,3 +542,27 @@ Task T020: "Create MarkdownFormattingService"
 - Stop at any checkpoint to validate story independently
 - All tasks include exact file paths for clarity
 - Constitution compliance verified in Phase 11
+
+---
+
+## Known issues
+
+Documenting current runtime issues to guide QA and future fixes. These are not limited to markdown files.
+
+- Large-file UI freezes and occasional reconnects (≈ ≥30KB documents)
+  - Symptom: With larger documents, certain interactions can briefly stall the UI and, at times, trigger a renderer reconnect (SignalR). If the markdown preview is open, it may visibly reload. This behavior can occur even when the preview is closed.
+  - Example triggers: Fast scrolling, rapid continuous edits, toggling the markdown preview (if open), switching tabs during active edits.
+  - Reproduction steps:
+    1. Open a text/markdown file around 30KB or larger.
+    2. Scroll rapidly or type continuously for several seconds (optionally toggle preview on/off).
+    3. Observe a brief UI stutter; in some runs the renderer reconnects and the preview (if open) reloads.
+  - Platforms observed: Linux (dev). Intermittent reports on Windows; macOS to be verified.
+  - Likely cause: High-volume state updates and DOM work for large documents combined with Blazor Server over SignalR. Large payloads and rapid update cadence can cause backpressure and short reconnects; preview rendering adds additional load when enabled.
+  - Workarounds:
+    - Enable manual-refresh mode for preview and avoid live preview for large files.
+    - Pace rapid interactions (typing/scrolling) when working with very large documents.
+  - Proposed fixes:
+    1. Size-aware throttling/debouncing of AppState updates and preview refreshes.
+    2. Chunked/diff-based markdown updates with background rendering.
+    3. Strengthen ShouldRender/StateVersion guards and reduce per-change payload sizes.
+    4. Consider virtualized rendering strategies for very large documents.
