@@ -4,9 +4,8 @@ window.theme = {
     try {
       var m = (mode || 'light').toString().toLowerCase();
       document.documentElement.setAttribute('data-theme', m);
-      console.log('[theme] data-theme set to', m);
     } catch (e) {
-      console.warn('[theme] failed to set data-theme', e);
+      // Silently ignore failures to modify DOM theme attribute in production
     }
   }
 };

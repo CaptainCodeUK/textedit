@@ -35,11 +35,10 @@ public class ElectronIpcListener : IAsyncDisposable
             await _js.InvokeVoidAsync("electronIpc.register", _objRef, "cli-file-args");
             
             _initialized = true;
-            Console.WriteLine("[IPC] ElectronIpcListener initialized");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[IPC] Failed to initialize ElectronIpcListener: {ex.Message}");
+            // Initialization failed - intentionally silent to avoid noisy console output
         }
     }
 
@@ -52,7 +51,7 @@ public class ElectronIpcListener : IAsyncDisposable
     {
         try
         {
-            Console.WriteLine($"[IPC] Received cli-file-args: {message.ValidFiles?.Length ?? 0} valid, {message.InvalidFiles?.Length ?? 0} invalid, launch: {message.LaunchType}");
+            // Received CLI file args
 
             // Open valid files
             if (message.ValidFiles?.Length > 0)
@@ -68,9 +67,9 @@ public class ElectronIpcListener : IAsyncDisposable
                 );
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[IPC] Error processing cli-file-args: {ex.Message}");
+            // Swallow errors; avoid console noise
         }
     }
 

@@ -159,7 +159,7 @@ public class IpcBridge
         var window = Electron.WindowManager.BrowserWindows.FirstOrDefault();
         if (window is null)
         {
-            Console.WriteLine("[IPC] No BrowserWindow available to send cli-file-args");
+            // No BrowserWindow available - silently ignore
             return;
         }
 
@@ -173,11 +173,10 @@ public class IpcBridge
         try
         {
             Electron.IpcMain.Send(window, "cli-file-args", message);
-            Console.WriteLine($"[IPC] Sent cli-file-args: {validFiles?.Length ?? 0} valid, {invalidFiles?.Length ?? 0} invalid, launch: {launchType}");
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"[IPC] Failed to send cli-file-args: {ex.Message}");
+            // Ignore IPC send failures to avoid console spam
         }
     }
 
@@ -194,7 +193,7 @@ public class IpcBridge
         var window = Electron.WindowManager.BrowserWindows.FirstOrDefault();
         if (window is null)
         {
-            Console.WriteLine("[IPC] No BrowserWindow available to send theme-changed");
+            // No BrowserWindow available - silently ignore
             return;
         }
 
@@ -207,11 +206,10 @@ public class IpcBridge
         try
         {
             Electron.IpcMain.Send(window, "theme-changed", message);
-            Console.WriteLine($"[IPC] Sent theme-changed: {theme}");
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"[IPC] Failed to send theme-changed: {ex.Message}");
+            // ignore
         }
     }
 
@@ -235,9 +233,9 @@ public class IpcBridge
         {
             window.SetTitle(title);
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"[IPC] Failed to set window title: {ex.Message}");
+            // ignore
         }
     }
 
@@ -253,7 +251,6 @@ public class IpcBridge
 
         try
         {
-            Console.WriteLine($"[IpcBridge] Opening external URL: {url}");
             // Use Process.Start as the most reliable cross-platform method
             await Task.Run(() =>
             {
@@ -264,11 +261,10 @@ public class IpcBridge
                 };
                 System.Diagnostics.Process.Start(psi);
             });
-            Console.WriteLine($"[IpcBridge] Successfully launched URL");
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"[IpcBridge] Failed to open external URL: {ex.Message}");
+            // ignore
         }
     }
 

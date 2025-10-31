@@ -152,30 +152,30 @@ Project uses single desktop application structure:
 
 ### Implementation for User Story 3
 
-- [ ] T061 [P] [US3] Create OptionsDialog.razor component in src/TextEdit.UI/Components/OptionsDialog.razor
-- [ ] T062 [P] [US3] Add theme selection radio buttons (Light, Dark, System) to OptionsDialog
-- [ ] T063 [US3] Bind theme selection to AppState.Preferences.Theme property
-- [ ] T064 [US3] In src/TextEdit.App/wwwroot/css/app.css, define [data-theme="light"] CSS variable set per data-model.md
-- [ ] T065 [US3] In src/TextEdit.App/wwwroot/css/app.css, define [data-theme="dark"] CSS variable set per data-model.md
-- [ ] T066 [US3] Implement ThemeManager.ApplyTheme method to switch CSS based on ThemeMode
-- [ ] T067 [US3] Add data-theme attribute to root HTML element in _Host.cshtml
-- [ ] T068 [US3] Implement CSS custom property updates for theme colors
-- [ ] T069 [US3] Update MarkdownRenderer.cs in src/TextEdit.Markdown/MarkdownRenderer.cs to support theme parameter
-- [ ] T070 [US3] Add theme-aware markdown preview rendering
+- [X] T061 [P] [US3] Create OptionsDialog.razor component in src/TextEdit.UI/Components/OptionsDialog.razor
+- [X] T062 [P] [US3] Add theme selection radio buttons (Light, Dark, System) to OptionsDialog
+- [X] T063 [US3] Bind theme selection to AppState.Preferences.Theme property
+- [X] T064 [US3] In src/TextEdit.App/wwwroot/css/app.css, define [data-theme="light"] CSS variable set per data-model.md
+- [X] T065 [US3] In src/TextEdit.App/wwwroot/css/app.css, define [data-theme="dark"] CSS variable set per data-model.md
+- [X] T066 [US3] Implement ThemeManager.ApplyTheme method to switch CSS based on ThemeMode
+- [X] T067 [US3] Add data-theme attribute to root HTML element in _Host.cshtml
+- [X] T068 [US3] Implement CSS custom property updates for theme colors
+- [X] T069 [US3] Update MarkdownRenderer.cs in src/TextEdit.Markdown/MarkdownRenderer.cs to support theme parameter
+- [X] T070 [US3] Add theme-aware markdown preview rendering
 - [ ] T071 [US3] Implement OS theme detection in ThemeDetectionService.GetCurrentOsTheme() — DEFERRED
 - [ ] T072 [US3] Implement theme change watching in ThemeDetectionService.WatchThemeChanges() — DEFERRED
 - [ ] T073 [US3] Register theme change event handler in AppState to apply theme when OS changes (System mode only) — DEFERRED
 - [ ] T074 [US3] Implement 100ms debouncing for OS theme change events per research.md — DEFERRED
-- [ ] T075 [US3] Add theme persistence via PreferencesRepository when user changes theme
-- [ ] T076 [US3] Load theme on app startup from preferences and apply
-- [ ] T077 [US3] Add "Options" menu item to Edit menu (Windows/Linux) in ElectronHost.cs
-- [ ] T078 [US3] Add "Preferences" menu item to Application menu (macOS) in ElectronHost.cs
-- [ ] T079 [US3] Wire Options menu to show OptionsDialog via EditorCommandHub
-- [ ] T080 [US3] Verify theme switch completes within 500ms per performance spec
+- [X] T075 [US3] Add theme persistence via PreferencesRepository when user changes theme
+- [X] T076 [US3] Load theme on app startup from preferences and apply
+- [X] T077 [US3] Add "Options" menu item to Edit menu (Windows/Linux) in ElectronHost.cs
+- [X] T078 [US3] Add "Preferences" menu item to Application menu (macOS) in ElectronHost.cs
+- [X] T079 [US3] Wire Options menu to show OptionsDialog via EditorCommandHub
+- [X] T080 [US3] Verify theme switch completes within 500ms per performance spec
 
 **Checkpoint**: Theme customization complete with persistence and OS following
  
-Note: OS theme change detection (T071–T074) is deferred for a later pass. Current behavior for Theme = System maps to Light without OS listening.
+Note: OS theme change detection (T071–T074) is deferred for a later pass. Current behavior for Theme = System maps to Dark (interim default) without OS listening. System radio button disabled in Options dialog. Console/debug output removed from all source files (OptionsDialog, theme.js, electron-ipc.js, ElectronIpcListener, IpcBridge, ElectronHost, DocumentService, PreferencesRepository, AboutDialog, AppState).
 
 ---
 

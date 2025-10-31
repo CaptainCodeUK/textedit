@@ -81,9 +81,9 @@ public static partial class ElectronHost
                         );
                     }
                 }
-                catch (Exception ex)
+                catch
                 {
-                    Console.WriteLine($"[ElectronHost] Second-instance handling failed: {ex.Message}");
+                    // ignore second-instance processing errors to avoid console noise
                 }
             });
         });
@@ -130,8 +130,8 @@ public static partial class ElectronHost
         // Application menu will be configured in Phase 6 (US3)
         ConfigureMenus();
 
-        swStartup.Stop();
-        
+            swStartup.Stop();
+            
 
         // IPC handlers will be registered here in Phase 2
         // RegisterIpcHandlers();
@@ -143,9 +143,9 @@ public static partial class ElectronHost
             {
                 await ElectronHost.ProcessInitialCliArgsAsync();
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"[CLI] Processing initial args failed: {ex.Message}");
+                // ignore
             }
         });
     }
@@ -300,9 +300,9 @@ public static partial class ElectronHost
 
                     Electron.IpcMain.Send(window, "openFileDialog.response", response);
                 }
-                catch (Exception ex)
+                catch
                 {
-                    Console.WriteLine($"[IPC] openFileDialog.request failed: {ex.Message}");
+                    // ignore
                 }
             });
 
@@ -338,9 +338,9 @@ public static partial class ElectronHost
 
                     Electron.IpcMain.Send(window, "saveFileDialog.response", response);
                 }
-                catch (Exception ex)
+                catch
                 {
-                    Console.WriteLine($"[IPC] saveFileDialog.request failed: {ex.Message}");
+                    // ignore
                 }
             });
 
@@ -349,14 +349,12 @@ public static partial class ElectronHost
             Electron.IpcMain.On("persistUnsaved.request", _ =>
             {
                 // For now, AppState handles autosave/session; this channel can be wired in T071c.
-                Console.WriteLine("[IPC] persistUnsaved.request received (noop placeholder)");
             });
 
             Electron.IpcMain.RemoveAllListeners("restoreSession.request");
             Electron.IpcMain.On("restoreSession.request", _ =>
             {
                 // In Phase 10 T071d, respond with records per contracts/ipc.restoreSession.response.schema.json
-                Console.WriteLine("[IPC] restoreSession.request received (noop placeholder)");
             });
 
             // Channel: cli-file-args (Electron -> Blazor notification)
@@ -401,9 +399,9 @@ public static partial class ElectronHost
                         }
                     }
                 }
-                catch (Exception ex)
+                catch
                 {
-                    Console.WriteLine($"[IPC] Failed to open external URL: {ex.Message}");
+                    // ignore
                 }
             });
 
@@ -437,9 +435,9 @@ public static partial class ElectronHost
                         Electron.NativeTheme.SetThemeSource(mode);
                     }
                 }
-                catch (Exception ex)
+                catch
                 {
-                    Console.WriteLine($"[IPC] Failed to set nativeTheme.themeSource: {ex.Message}");
+                    // ignore
                 }
             });
         }

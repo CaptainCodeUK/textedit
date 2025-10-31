@@ -15,13 +15,13 @@ window.electronIpc = {
         
         // Check if we're in Electron environment
         if (!window.ipcRenderer) {
-            console.warn('[IPC] Not in Electron environment, IPC disabled');
+            // Not running in Electron environment; silently no-op
             return;
         }
 
         // Set up listener for this channel
         const listener = (event, data) => {
-            console.log(`[IPC] Received ${channel}:`, data);
+            // Received IPC message for channel
             
             try {
                 if (channel === 'cli-file-args') {
@@ -30,13 +30,12 @@ window.electronIpc = {
                     dotNetRef.invokeMethodAsync('OnThemeChanged', data);
                 }
             } catch (error) {
-                console.error(`[IPC] Error processing ${channel}:`, error);
+                // Swallow errors from JS -> .NET invocations to avoid noisy console output
             }
         };
 
-        this.listeners[channel] = listener;
-        window.ipcRenderer.on(channel, listener);
-        console.log(`[IPC] Registered listener for ${channel}`);
+    this.listeners[channel] = listener;
+    window.ipcRenderer.on(channel, listener);
     },
 
     /**
@@ -44,13 +43,12 @@ window.electronIpc = {
      * @param {string} channel - The IPC channel name
      */
     unregister: function (channel) {
-        if (!window.ipcRenderer) return;
+    if (!window.ipcRenderer) return;
 
         const listener = this.listeners[channel];
         if (listener) {
             window.ipcRenderer.removeListener(channel, listener);
             delete this.listeners[channel];
-            console.log(`[IPC] Unregistered listener for ${channel}`);
         }
     },
 
@@ -61,14 +59,13 @@ window.electronIpc = {
      */
     send: function(channel, data) {
         if (!window.ipcRenderer) {
-            console.warn('[IPC] Not in Electron environment, send ignored');
+            // Not in Electron - ignore send
             return;
         }
         try {
             window.ipcRenderer.send(channel, data);
-            console.log(`[IPC] Sent ${channel}:`, data);
         } catch (e) {
-            console.warn(`[IPC] Failed to send ${channel}:`, e);
+            // ignore send errors
         }
     }
 };

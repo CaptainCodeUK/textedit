@@ -53,20 +53,10 @@
             // OS follow deferred; ignore selection of System for now
             return;
         }
-        Console.WriteLine($"[OptionsDialog] ========== SetTheme START ==========");
-        Console.WriteLine($"[OptionsDialog] Current theme: {AppState.Preferences.Theme}");
-        Console.WriteLine($"[OptionsDialog] Requested theme: {mode}");
-        
-        if (AppState.Preferences.Theme == mode)
-        {
-            Console.WriteLine($"[OptionsDialog] Theme unchanged, but will re-apply anyway");
-        }
-        
+        // Apply requested theme and persist preferences
         AppState.Preferences.Theme = mode;
-        Console.WriteLine($"[OptionsDialog] Calling SavePreferencesAsync");
         await AppState.SavePreferencesAsync();
-        Console.WriteLine($"[OptionsDialog] Calling ApplyThemeAsync");
         await AppState.ApplyThemeAsync();
-        Console.WriteLine($"[OptionsDialog] ========== SetTheme END ==========");
+        
     }
 }

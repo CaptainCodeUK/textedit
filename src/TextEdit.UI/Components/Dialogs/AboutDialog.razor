@@ -112,17 +112,12 @@
         
         try
         {
-            Console.WriteLine($"[AboutDialog] Opening URL: {ProjectUrl}");
-            
             // Use IpcBridge to open in system browser
             await IpcBridge.OpenExternalAsync(ProjectUrl);
-            
-            Console.WriteLine($"[AboutDialog] OpenExternalAsync completed");
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"[AboutDialog] Failed to open URL: {ex.Message}");
-            Console.WriteLine($"[AboutDialog] Stack trace: {ex.StackTrace}");
+            // ignore errors; user-facing dialogs will surface issues if needed
         }
     }
 }

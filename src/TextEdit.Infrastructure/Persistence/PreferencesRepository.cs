@@ -59,8 +59,7 @@ public class PreferencesRepository : IPreferencesRepository
             var (isValid, invalidEntry) = prefs.ValidateExtensions();
             if (!isValid)
             {
-                // Log warning but continue with normalized extensions
-                Console.WriteLine($"Warning: Invalid extension '{invalidEntry}' found, using defaults");
+                // Invalid extension found; proceed with defaults silently
             }
 
             return prefs;

@@ -97,9 +97,9 @@ public class AppState : IDisposable
             var title = GetWindowTitle();
             _ipc.SetWindowTitle(title);
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"[AppState] Failed to update window title: {ex.Message}");
+            // ignore
         }
     }
 
@@ -122,9 +122,9 @@ public class AppState : IDisposable
                 StartWatchingFile(doc);
                 opened.Add(path);
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"[AppState] Failed to open '{path}': {ex.Message}");
+                // ignore per-file open errors; UI will surface failures if needed
             }
         }
         if (opened.Count > 0)

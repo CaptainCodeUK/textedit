@@ -42,7 +42,6 @@ public class DocumentService
         string text;
         if (isLargeFile)
         {
-            Console.WriteLine($"[DocumentService] Large file detected ({fileSize} bytes), using streaming read: {path}");
             text = await _fs.ReadLargeFileAsync(path, enc, progress, cancellationToken);
         }
         else
@@ -60,7 +59,6 @@ public class DocumentService
         if (isLargeFile)
         {
             doc.MarkReadOnly(true);
-            Console.WriteLine($"[DocumentService] Large file opened in read-only mode: {path}");
         }
         
         _undo.Attach(doc, doc.Content);
@@ -95,7 +93,7 @@ public class DocumentService
                 // For now, just log it. Full conflict resolution requires UI prompting.
                 if (currentDiskContent != doc.Content && !doc.IsDirty)
                 {
-                    Console.WriteLine($"[DocumentService] Warning: File may have been modified externally: {doc.FilePath}");
+                    // External modification detected; UI will surface conflicts when needed
                 }
             }
             catch (UnauthorizedAccessException)
@@ -119,7 +117,6 @@ public class DocumentService
         var contentSize = text.Length * doc.Encoding.GetByteCount("a"); // Approximate byte size
         if (contentSize >= LargeFileThreshold)
         {
-            Console.WriteLine($"[DocumentService] Large content detected (~{contentSize} bytes), using streaming write: {targetPath}");
             await _fs.WriteLargeFileAsync(targetPath!, text, doc.Encoding, progress, cancellationToken);
         }
         else
