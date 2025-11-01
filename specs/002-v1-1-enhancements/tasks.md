@@ -569,3 +569,50 @@ Documenting current runtime issues to guide QA and future fixes. These are not l
     2. Chunked/diff-based markdown updates with background rendering.
     3. Strengthen ShouldRender/StateVersion guards and reduce per-change payload sizes.
     4. Consider virtualized rendering strategies for very large documents.
+
+- Dirty marker persists after undoing to saved state
+  - Symptom: When document changes are undone to the point that the document content matches what was last saved (or as it was when opened), the dirty marker (●) still shows in the tab, indicating unsaved changes even though the content is identical to the saved version.
+  - Reproduction steps:
+    1. Open a document and make several edits.
+    2. Press Ctrl+Z (or use Edit → Undo) repeatedly until all changes are undone and the document matches its saved state.
+    3. Observe that the dirty marker (●) remains visible in the tab title.
+  - Impact: Users may attempt to save when no actual changes exist, or be confused about document state. Closing the tab may prompt unnecessary "save changes" warnings.
+  - Likely cause: IsDirty flag is set on any content change but not cleared when undo/redo returns content to the original saved state. No comparison between current content and last-saved content hash/version.
+  - Proposed fixes:
+    1. Store a hash or snapshot of the saved content and compare current content against it after each undo/redo operation.
+    2. Clear IsDirty when content matches the saved state.
+    3. Consider adding a "clean state" marker in the undo/redo stack.
+
+- Undo/redo behavior inconsistencies
+  - Symptom: Undo/redo operations sometimes behave unpredictably. In some cases, pressing Ctrl+Z multiple times does nothing for several keypresses, then suddenly removes all changes at once, reverting to the original text. The undo stack may not be capturing intermediate states correctly or may be batching changes inappropriately.
+  - Reproduction steps:
+    1. Open a document and type several words or sentences with pauses between them.
+    2. Press Ctrl+Z repeatedly.
+    3. Observe that some undo operations have no visible effect, then a single undo removes multiple changes at once.
+  - Impact: Users cannot reliably step through their editing history. This makes undo/redo unreliable for recovering from mistakes or exploring alternate edits.
+  - Likely cause: Debounced undo snapshots (400ms delay) may be causing issues where rapid edits are batched, but the batching logic or timing may not align with user expectations. The suppressUndoPush flag and ScheduleUndoPush logic may have race conditions or edge cases.
+  - Needs investigation: Review the undo/redo implementation in TextEditor.razor.cs, particularly the debouncing logic, FlushPendingUndoPush, and ScheduleUndoPush methods. Consider re-specifying undo/redo behavior with clearer rules about when snapshots are taken.
+  - Proposed fixes:
+    1. Re-evaluate the 400ms debounce window - may be too long or should use different triggers.
+    2. Add more granular undo points for discrete user actions (e.g., after space, newline, punctuation).
+    3. Ensure FlushPendingUndoPush is called consistently before undo/redo operations.
+    4. Add debugging/logging to track undo stack state and snapshot timing.
+    5. Consider alternative undo/redo patterns (e.g., command pattern, explicit transaction boundaries).
+
+- External modification dialog appears after saving session-restored file
+  - Symptom: When a file is restored as part of the session on app startup (from previous session), making changes to that file and then saving triggers the external modification dialog, incorrectly warning that the file has been modified externally.
+  - Reproduction steps:
+    1. Open one or more files in the editor.
+    2. Close the application (files remain open in session).
+    3. Restart the application - files are restored from session.
+    4. Edit one of the restored files.
+    5. Press Ctrl+S to save.
+    6. Observe the external modification dialog appears, asking whether to reload, keep your changes, or save as.
+  - Impact: Users are presented with a confusing dialog after saving their own changes. This disrupts the workflow and may cause users to lose confidence in the save operation. The dialog implies external changes when none exist.
+  - Likely cause: FileWatcher may be detecting the save operation itself as an external change, or the file watcher is not properly synchronized with the save operation. Alternatively, session restoration may not be properly initializing file modification timestamps or FileWatcher state for restored documents.
+  - Proposed fixes:
+    1. Temporarily disable FileWatcher notifications during save operations (suppress own writes).
+    2. Update the last-known modification timestamp after successful save to match the file system.
+    3. Ensure session restoration properly initializes FileWatcher with current file timestamps.
+    4. Add a short debounce/cooldown period after save operations before processing file change events.
+    5. Review FileWatcher registration timing - ensure it's not registered before initial file state is captured.
