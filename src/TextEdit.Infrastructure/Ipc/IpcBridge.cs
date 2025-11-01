@@ -12,6 +12,10 @@ public class IpcBridge
 {
     private readonly IPreferencesRepository _prefsRepo;
 
+    /// <summary>
+    /// Create a new IPC bridge using the provided preferences repository.
+    /// </summary>
+    /// <param name="prefsRepo">Preferences repository to read file filters from.</param>
     public IpcBridge(IPreferencesRepository prefsRepo)
     {
         _prefsRepo = prefsRepo;
@@ -31,6 +35,11 @@ public class IpcBridge
         Cancel
     }
 
+    /// <summary>
+    /// Show a native confirmation dialog for closing a dirty document.
+    /// </summary>
+    /// <param name="name">Document display name or null/empty for Untitled.</param>
+    /// <returns>User decision for Save/Don't Save/Cancel.</returns>
     public virtual async Task<CloseDecision> ConfirmCloseDirtyAsync(string? name)
     {
         if (AppShutdown.IsShuttingDown)
@@ -69,6 +78,9 @@ public class IpcBridge
             _ => CloseDecision.Cancel
         };
     }
+    /// <summary>
+    /// Show the native Open File dialog and return the selected file path or null when cancelled.
+    /// </summary>
     public virtual async Task<string?> ShowOpenFileDialogAsync()
     {
         if (!HybridSupport.IsElectronActive)
@@ -102,6 +114,10 @@ public class IpcBridge
         return result[0];
     }
 
+    /// <summary>
+    /// Show the native Save File dialog and return the chosen path or null when cancelled.
+    /// Appends a default extension when missing.
+    /// </summary>
     public virtual async Task<string?> ShowSaveFileDialogAsync()
     {
         if (!HybridSupport.IsElectronActive)
@@ -141,6 +157,10 @@ public class IpcBridge
         return result;
     }
 
+    /// <summary>
+    /// Ask the user what to do when a file is changed externally (Reload/Keep/Cancel).
+    /// </summary>
+    /// <param name="name">Document display name or null/empty for Untitled.</param>
     public virtual async Task<ExternalChangeDecision> ConfirmReloadExternalAsync(string? name)
     {
         if (AppShutdown.IsShuttingDown)

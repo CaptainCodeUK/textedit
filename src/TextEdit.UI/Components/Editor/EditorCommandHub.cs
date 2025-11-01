@@ -32,6 +32,10 @@ public static class EditorCommandHub
     public static Func<Task>? FormatBulletListRequested { get; set; }
     public static Func<Task>? FormatNumberedListRequested { get; set; }
 
+    /// <summary>
+    /// Safely invokes an asynchronous delegate when non-null; otherwise returns a completed task.
+    /// </summary>
+    /// <param name="action">Delegate to invoke.</param>
     public static Task InvokeSafe(Func<Task>? action)
         => action is null ? Task.CompletedTask : action();
 }

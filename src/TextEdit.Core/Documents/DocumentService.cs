@@ -9,6 +9,10 @@ using TextEdit.Core.Editing;
 /// Handles creation, loading, saving, and updating of documents.
 /// Optimized for large file handling (>10MB) with streaming.
 /// </summary>
+/// <summary>
+/// Service responsible for creating, opening, updating, and saving <see cref="Document"/> instances.
+/// Uses streaming I/O for large files and normalizes in-memory line endings to <c>\n</c>.
+/// </summary>
 public class DocumentService
 {
     private readonly IFileSystem _fs;
@@ -16,6 +20,12 @@ public class DocumentService
     private readonly IAppLogger? _logger;
     private const long LargeFileThreshold = 10 * 1024 * 1024; // 10MB
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="DocumentService"/>.
+    /// </summary>
+    /// <param name="fs">File system abstraction for I/O operations.</param>
+    /// <param name="undo">Undo/redo service to attach to documents.</param>
+    /// <param name="logger">Optional logger for diagnostic output.</param>
     public DocumentService(IFileSystem fs, IUndoRedoService undo, IAppLogger? logger = null)
     {
         _fs = fs;
@@ -23,6 +33,10 @@ public class DocumentService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Creates a new unsaved document and attaches it to the undo/redo stack.
+    /// </summary>
+    /// <returns>The new document instance.</returns>
     public Document NewDocument()
     {
         var doc = new Document();
@@ -30,6 +44,15 @@ public class DocumentService
         return doc;
     }
 
+    /// <summary>
+    /// Opens a document from disk. Large files (>= 10MB) are read using streaming and marked read-only.
+    /// </summary>
+    /// <param name="path">Absolute path to the file.</param>
+    /// <param name="encoding">Optional text encoding. Defaults to UTF-8 without BOM.</param>
+    /// <param name="progress">Optional progress reporter (0-100) for large reads.</param>
+    /// <param name="cancellationToken">Cancellation token for I/O operations.</param>
+    /// <returns>The loaded <see cref="Document"/>.</returns>
+    /// <exception cref="FileNotFoundException">Thrown when the path does not exist.</exception>
     public async Task<Document> OpenAsync(string path, Encoding? encoding = null, IProgress<int>? progress = null, CancellationToken cancellationToken = default)
     {
         _logger?.LogInformation("Opening file: {Path}", path);
@@ -81,6 +104,11 @@ public class DocumentService
         return doc;
     }
 
+    /// <summary>
+    /// Updates the content of a document and records an undo checkpoint when the content changes.
+    /// </summary>
+    /// <param name="doc">Target document.</param>
+    /// <param name="content">New content to set.</param>
     public void UpdateContent(Document doc, string content)
     {
         if (doc.Content == content) return;
@@ -88,6 +116,14 @@ public class DocumentService
         _undo.Push(doc, content);
     }
 
+    /// <summary>
+    /// Saves a document to disk. Uses streaming for large content and applies the document's preferred EOL.
+    /// </summary>
+    /// <param name="doc">Document to save.</param>
+    /// <param name="path">Optional override path. When null, uses <see cref="Document.FilePath"/>.</param>
+    /// <param name="progress">Optional progress reporter (0-100) for large writes.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="InvalidOperationException">Thrown when no path is available.</exception>
     public async Task SaveAsync(Document doc, string? path = null, IProgress<int>? progress = null, CancellationToken cancellationToken = default)
     {
         var targetPath = path ?? doc.FilePath;

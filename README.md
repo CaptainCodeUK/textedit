@@ -119,7 +119,7 @@ See individual project README files for detailed documentation:
 # Run all tests
 dotnet test
 
-# Run with coverage
+# Run with coverage reporting
 dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura
 
 # Run unit tests only
@@ -129,7 +129,11 @@ dotnet test tests/unit/TextEdit.Core.Tests/
 dotnet run -c Release --project tests/benchmarks/TextEdit.Benchmarks/
 ```
 
-**Test Coverage:** 85%+ line coverage, 80%+ branch coverage
+**Test Coverage:** Per-project thresholds enforce quality gates:
+- **Core.Tests**: 45% line coverage (covers Core 78% + Infrastructure 35.7%)
+- Additional test projects have independent coverage thresholds as appropriate
+
+The coverage task (`./scripts/dev.fish test:coverage`) enforces thresholds per test project. Each test project's `.csproj` defines its own `<Threshold>` target based on current coverage levels to prevent regression.
 
 ### Accessibility: Contrast checks
 
@@ -226,7 +230,7 @@ Session and preference files are stored in the OS application data directory und
 
 Contributions are welcome! Please ensure:
 - All tests pass (`dotnet test`)
-- Code coverage remains ≥85% line / ≥80% branch
+- Code coverage meets per-project thresholds (enforced automatically when running `dotnet test` with coverage enabled)
 - Follow existing code style and naming conventions
 
 ## 📄 License

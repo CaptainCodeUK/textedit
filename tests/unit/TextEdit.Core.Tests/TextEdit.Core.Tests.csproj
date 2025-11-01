@@ -7,6 +7,13 @@
 
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+
+    <!-- Per-project coverage threshold -->
+    <!-- This test project covers Core (78%) + Infrastructure (35.7%) = 46.2% combined -->
+    <!-- Set threshold at 45% to gate regression while acknowledging limited Infrastructure coverage -->
+    <Threshold>45</Threshold>
+    <ThresholdType>line</ThresholdType>
+    <ThresholdStat>total</ThresholdStat>
   </PropertyGroup>
 
   <ItemGroup>

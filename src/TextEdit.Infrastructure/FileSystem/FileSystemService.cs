@@ -10,7 +10,10 @@ using TextEdit.Core.Abstractions;
 public class FileSystemService : IFileSystem
 {
     private const int ChunkSize = 4096 * 16; // 64KB chunks for streaming
-    
+
+    /// <summary>
+    /// Check whether a file exists at the specified path.
+    /// </summary>
     public bool FileExists(string path) => System.IO.File.Exists(path);
 
     public long GetFileSize(string path)
@@ -19,9 +22,15 @@ public class FileSystemService : IFileSystem
         return info.Exists ? info.Length : 0;
     }
 
+    /// <summary>
+    /// Read the entire file contents into memory using the provided encoding.
+    /// </summary>
     public Task<string> ReadAllTextAsync(string path, Encoding encoding)
         => System.IO.File.ReadAllTextAsync(path, encoding);
 
+    /// <summary>
+    /// Write the entire text to the file using the provided encoding, replacing existing contents.
+    /// </summary>
     public Task WriteAllTextAsync(string path, string contents, Encoding encoding)
         => System.IO.File.WriteAllTextAsync(path, contents, encoding);
 

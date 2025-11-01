@@ -10,6 +10,9 @@ public class PersistenceService
 {
     private readonly string _sessionDir;
 
+    /// <summary>
+    /// Initializes the persistence service and ensures the session directory exists.
+    /// </summary>
     public PersistenceService()
     {
         // Use user-scoped application data folder for durability (instead of /tmp)
@@ -18,6 +21,11 @@ public class PersistenceService
         Directory.CreateDirectory(_sessionDir);
     }
 
+    /// <summary>
+    /// Persist session metadata and, when necessary, unsaved document content to session files.
+    /// </summary>
+    /// <param name="documents">All open documents to consider for persistence.</param>
+    /// <param name="tabOrder">Optional tab order for stable UI restoration.</param>
     public async Task PersistAsync(IEnumerable<Document> documents, IList<Guid>? tabOrder = null)
     {
         try
@@ -80,6 +88,10 @@ public class PersistenceService
         }
     }
 
+    /// <summary>
+    /// Restore documents from previous session files, deleting session files upon successful load.
+    /// </summary>
+    /// <returns>Restored documents in a stable order.</returns>
     public async Task<IEnumerable<Document>> RestoreAsync()
     {
         var restored = new List<Document>();
@@ -203,6 +215,10 @@ public class PersistenceService
         return restored;
     }
 
+    /// <summary>
+    /// Delete the session file associated with a specific document.
+    /// </summary>
+    /// <param name="documentId">Document identifier.</param>
     public void DeleteSessionFile(Guid documentId)
     {
         try
@@ -219,6 +235,9 @@ public class PersistenceService
         }
     }
 
+    /// <summary>
+    /// Remove all session files from the session directory.
+    /// </summary>
     public void ClearAllSessions()
     {
         try
@@ -238,6 +257,9 @@ public class PersistenceService
         }
     }
 
+    /// <summary>
+    /// Persist editor UI preferences to disk (word wrap and preview visibility).
+    /// </summary>
     public void PersistEditorPreferences(bool wordWrap, bool showPreview)
     {
         try
@@ -257,6 +279,10 @@ public class PersistenceService
         }
     }
 
+    /// <summary>
+    /// Restore editor UI preferences from disk, providing sane defaults when absent.
+    /// </summary>
+    /// <returns>Tuple of word-wrap and preview visibility.</returns>
     public (bool WordWrap, bool ShowPreview) RestoreEditorPreferences()
     {
         try

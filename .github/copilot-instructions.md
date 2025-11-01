@@ -35,7 +35,7 @@ A cross-platform desktop text editor built with .NET 8, Blazor Server hosted in 
 - **`src/TextEdit.Markdown/`** - Markdown rendering with SHA256-based result caching (`MarkdownRenderer`). 165-330x speedup on cache hits. Uses Markdig for GitHub Flavored Markdown.
 - **`src/TextEdit.UI/`** - Blazor components, `AppState` orchestrator, `DialogService`, `EditorCommandHub`. Components use `@key` directives and `ShouldRender` optimizations.
 - **`src/TextEdit.App/`** - ASP.NET Core host, Electron window/menu setup, IPC handlers. Entry point: `Program.cs` → `Startup.cs` (DI) → `ElectronHost.cs` (native shell).
-- **`tests/unit/`** - xUnit tests with Moq. Core domain: 92%+ coverage. Infrastructure: 52%+ coverage. **Overall target: 65% line coverage** (see `Directory.Build.props`).
+- **`tests/unit/`** - xUnit tests with NSubstitute/FluentAssertions. **Per-project coverage thresholds**: Core.Tests enforces 45% (covers Core 78% + Infrastructure 35.7%). See individual `.csproj` files for threshold configuration.
 - **`tests/integration/`** - Accessibility tests, end-to-end scenarios.
 - **`tests/contract/`** - IPC message validation against JSON schemas in `specs/001-text-editor/contracts/`.
 - **`tests/benchmarks/`** - BenchmarkDotNet for DocumentService, MarkdownRenderer. See `BenchmarkDotNet.Artifacts/results/`.
@@ -58,10 +58,10 @@ A cross-platform desktop text editor built with .NET 8, Blazor Server hosted in 
 ```bash
 ./scripts/dev.fish test          # All tests
 ./scripts/dev.fish test:unit     # Unit tests only
-./scripts/dev.fish test:coverage # With coverage report (65% threshold)
+./scripts/dev.fish test:coverage # With coverage report and per-project threshold enforcement
 ```
 
-**Coverage Enforcement**: `dotnet test` with Coverlet enforces 65% line coverage (see `Directory.Build.props`). Fails build if below threshold.
+**Coverage Enforcement**: Per-project thresholds defined in individual test `.csproj` files (e.g., Core.Tests: 45% line coverage). No global threshold in `Directory.Build.props`. Prevents coverage regression on a per-project basis.
 
 ### Building for Distribution
 ```bash

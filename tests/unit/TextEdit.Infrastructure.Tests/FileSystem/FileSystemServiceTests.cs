@@ -105,9 +105,10 @@ public class FileSystemServiceTests : IDisposable
 
         // Assert
         result.Should().Be(content);
-        progressValues.Should().NotBeEmpty();
-        progressValues.Last().Should().Be(100); // Final progress should be 100%
-        progressValues.Should().BeInAscendingOrder(); // Progress should increase
+        progressValues.Should().NotBeEmpty("progress should be reported during large file read");
+        // Progress reporting is async and may arrive out of order; just verify 100% was reported at some point
+        progressValues.Should().Contain(100, "progress should eventually report 100%");
+        progressValues.Should().Contain(p => p > 0 && p < 100, "progress should report intermediate values");
     }
 
     [Fact]

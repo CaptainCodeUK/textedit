@@ -9,6 +9,10 @@ public class FileWatcher : IDisposable
 {
     private readonly FileSystemWatcher _watcher;
 
+    /// <summary>
+    /// Raised when the watched file changes, is renamed, or deleted externally.
+    /// Provides the full path to the affected file.
+    /// </summary>
     public event Action<string>? ChangedExternally;
 
     public FileWatcher()
@@ -25,6 +29,10 @@ public class FileWatcher : IDisposable
         _watcher.Deleted += OnDeleted;
     }
 
+    /// <summary>
+    /// Begin watching the specified file for changes.
+    /// </summary>
+    /// <param name="path">Absolute file path to watch.</param>
     public void Watch(string path)
     {
         var dir = Path.GetDirectoryName(path);
@@ -35,11 +43,17 @@ public class FileWatcher : IDisposable
         _watcher.EnableRaisingEvents = true;
     }
 
+    /// <summary>
+    /// Stop raising change events for the current file.
+    /// </summary>
     public void Stop() => _watcher.EnableRaisingEvents = false;
 
     private void OnChanged(object sender, FileSystemEventArgs e) => ChangedExternally?.Invoke(e.FullPath);
     private void OnRenamed(object sender, RenamedEventArgs e) => ChangedExternally?.Invoke(e.FullPath);
     private void OnDeleted(object sender, FileSystemEventArgs e) => ChangedExternally?.Invoke(e.FullPath);
 
+    /// <summary>
+    /// Dispose the underlying <see cref="FileSystemWatcher"/>.
+    /// </summary>
     public void Dispose() => _watcher.Dispose();
 }

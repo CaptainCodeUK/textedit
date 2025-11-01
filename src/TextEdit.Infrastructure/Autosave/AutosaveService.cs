@@ -4,27 +4,45 @@ using System;
 using System.Timers;
 
 /// <summary>
-/// Periodically triggers autosave operations every 30 seconds.
+/// Periodically triggers autosave operations at a configurable interval.
 /// </summary>
 public class AutosaveService : IDisposable
 {
     private readonly Timer _timer;
     private DateTime _lastAutosave = DateTime.MinValue;
 
+    /// <summary>
+    /// Raised when an autosave tick occurs. Subscribers should perform persistence.
+    /// Exceptions are swallowed in the timer callback to avoid process termination.
+    /// </summary>
     public event Func<Task>? AutosaveRequested;
+
+    /// <summary>
+    /// Timestamp of the last successful autosave (UTC).
+    /// </summary>
     public DateTime LastAutosave => _lastAutosave;
 
+    /// <summary>
+    /// Create a new autosave service.
+    /// </summary>
+    /// <param name="intervalMs">Timer interval in milliseconds. Default is 30 seconds.</param>
     public AutosaveService(int intervalMs = 30000)
     {
         _timer = new Timer(intervalMs) { AutoReset = true, Enabled = false };
         _timer.Elapsed += OnTimerElapsed;
     }
 
+    /// <summary>
+    /// Start the autosave timer.
+    /// </summary>
     public void Start()
     {
         _timer.Start();
     }
 
+    /// <summary>
+    /// Stop the autosave timer.
+    /// </summary>
     public void Stop()
     {
         _timer.Stop();
@@ -46,6 +64,9 @@ public class AutosaveService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Dispose the underlying timer resources.
+    /// </summary>
     public void Dispose()
     {
         _timer.Dispose();

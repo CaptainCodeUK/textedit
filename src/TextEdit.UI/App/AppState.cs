@@ -18,6 +18,10 @@ namespace TextEdit.UI.App;
 /// <summary>
 /// UI application state: manages open documents and tabs and exposes active selection.
 /// </summary>
+/// <summary>
+/// Central UI state container coordinating documents, tabs, persistence, IPC and theme.
+/// Components subscribe to <see cref="Changed"/> and use <see cref="StateVersion"/> to optimize re-renders.
+/// </summary>
 public class AppState : IDisposable
 {
     private readonly DocumentService _docs;
@@ -71,17 +75,59 @@ public class AppState : IDisposable
         _autosave.Start();
     }
 
+    /// <summary>
+    /// Current set of tabs in display order.
+    /// </summary>
     public IReadOnlyList<Tab> Tabs => _tabs.Tabs;
+
+    /// <summary>
+    /// Currently active tab, if any.
+    /// </summary>
     public Tab? ActiveTab => _tabs.Tabs.FirstOrDefault(t => t.IsActive);
+
+    /// <summary>
+    /// Document associated with the active tab, or null when none.
+    /// </summary>
     public Document? ActiveDocument => ActiveTab != null && _open.TryGetValue(ActiveTab.DocumentId, out var d) ? d : null;
+
+    /// <summary>
+    /// All open documents keyed internally by <see cref="Document.Id"/>.
+    /// </summary>
     public IEnumerable<Document> AllDocuments => _open.Values;
+
+    /// <summary>
+    /// Editor configuration and UI flags.
+    /// </summary>
     public EditorState EditorState { get; }
+
+    /// <summary>
+    /// Toolbar visibility and state.
+    /// </summary>
     public ToolbarState ToolbarState { get; }
+
+    /// <summary>
+    /// User preferences loaded from disk.
+    /// </summary>
     public UserPreferences Preferences { get; private set; }
+
+    /// <summary>
+    /// CLI validation errors to present in the UI.
+    /// </summary>
     public List<(string Path, string Reason)> CliInvalidFiles { get; private set; } = new();
+
+    /// <summary>
+    /// Provides timers and events for autosave functionality.
+    /// </summary>
     public AutosaveService AutosaveService => _autosave;
+
+    /// <summary>
+    /// Monotonic counter incremented on state changes to optimize re-rendering.
+    /// </summary>
     public int StateVersion => _stateVersion;
 
+    /// <summary>
+    /// Raised when state changes and components should re-render.
+    /// </summary>
     public event Action? Changed;
     private void NotifyChanged()
     {
@@ -171,6 +217,10 @@ public class AppState : IDisposable
         NotifyChanged();
     }
 
+    /// <summary>
+    /// Restore previous session documents and tab order from persistence, or create a new document when none.
+    /// Loads user and editor preferences prior to restoration.
+    /// </summary>
     public async Task RestoreSessionAsync()
     {
         using var _ = _perfLogger.BeginOperation("Session.Restore");
@@ -255,6 +305,9 @@ public class AppState : IDisposable
         // Notify UI so StatusBar can update autosave indicator
         NotifyChanged();
     }
+    /// <summary>
+    /// Persist current session state (documents and tab order) for crash recovery and next launch.
+    /// </summary>
     public async Task PersistSessionAsync()
     {
         // Persist documents in current tab order for stable restore
@@ -262,16 +315,27 @@ public class AppState : IDisposable
         await _persistence.PersistAsync(_open.Values, order);
     }
 
+    /// <summary>
+    /// Persist current editor UI preferences (word-wrap and preview) to disk.
+    /// </summary>
     public void PersistEditorPreferences()
     {
         _persistence.PersistEditorPreferences(EditorState.WordWrap, EditorState.ShowPreview);
     }
 
+    /// <summary>
+    /// Remove a specific document's session file after successful save or discard.
+    /// </summary>
+    /// <param name="documentId">Document identifier.</param>
     public void DeleteSessionFile(Guid documentId)
     {
         _persistence.DeleteSessionFile(documentId);
     }
 
+    /// <summary>
+    /// Create a new unsaved document and activate its tab.
+    /// </summary>
+    /// <returns>The created document.</returns>
     public Document CreateNew()
     {
         var doc = _docs.NewDocument();
@@ -281,6 +345,10 @@ public class AppState : IDisposable
         return doc;
     }
 
+    /// <summary>
+    /// Show the open file dialog and open the selected document when valid.
+    /// Returns null if the dialog is cancelled or open fails.
+    /// </summary>
     public async Task<Document?> OpenAsync()
     {
         using var _ = _perfLogger.BeginOperation("Document.Open");
@@ -334,6 +402,9 @@ public class AppState : IDisposable
         }
     }
 
+    /// <summary>
+    /// Save the active document, prompting for a location if it has not been saved before.
+    /// </summary>
     public async Task SaveActiveAsync()
     {
         using var _ = _perfLogger.BeginOperation("Document.Save");
@@ -371,6 +442,10 @@ public class AppState : IDisposable
         }
     }
 
+    /// <summary>
+    /// Save the active document to a new path selected by the user.
+    /// </summary>
+    /// <returns>True if the document was saved; otherwise false.</returns>
     public async Task<bool> SaveAsActiveAsync()
     {
         if (ActiveDocument is null) return false;
@@ -402,12 +477,19 @@ public class AppState : IDisposable
         }
     }
 
+    /// <summary>
+    /// Activate a tab by its identifier.
+    /// </summary>
     public void ActivateTab(Guid tabId)
     {
         _tabs.ActivateTab(tabId);
         NotifyChanged();
     }
 
+    /// <summary>
+    /// Close a tab, prompting to save when the associated document has unsaved changes.
+    /// </summary>
+    /// <returns>True when the tab was closed; false when cancelled.</returns>
     public async Task<bool> CloseTabAsync(Guid tabId)
     {
         var tab = _tabs.Tabs.FirstOrDefault(t => t.Id == tabId);
@@ -459,6 +541,9 @@ public class AppState : IDisposable
         return true;
     }
 
+    /// <summary>
+    /// Close all tabs except the specified one, stopping on the first cancellation.
+    /// </summary>
     public async Task CloseOthersAsync(Guid keepTabId)
     {
         // Snapshot current order to avoid index shifting while closing
@@ -471,6 +556,9 @@ public class AppState : IDisposable
         }
     }
 
+    /// <summary>
+    /// Close all tabs to the right of the specified tab, stopping on the first cancellation.
+    /// </summary>
     public async Task CloseRightAsync(Guid fromTabId)
     {
         var list = _tabs.Tabs.ToList();
@@ -485,9 +573,15 @@ public class AppState : IDisposable
         }
     }
 
+    /// <summary>
+    /// Get a document by identifier or null if it's not open.
+    /// </summary>
     public Document? GetDocument(Guid id)
         => _open.TryGetValue(id, out var d) ? d : null;
 
+    /// <summary>
+    /// Activate the next tab in order (wraps to the first tab).
+    /// </summary>
     public void ActivateNextTab()
     {
         if (_tabs.Tabs.Count == 0) return;
@@ -501,6 +595,9 @@ public class AppState : IDisposable
         NotifyChanged();
     }
 
+    /// <summary>
+    /// Activate the previous tab in order (wraps to the last tab).
+    /// </summary>
     public void ActivatePreviousTab()
     {
         if (_tabs.Tabs.Count == 0) return;
