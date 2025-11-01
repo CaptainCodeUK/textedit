@@ -8,7 +8,7 @@
     <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" 
          @onclick="HandleBackdropClick"
          @onkeydown="HandleKeyDown">
-        <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4" 
+        <div class="rounded-lg shadow-xl p-6 max-w-md w-full mx-4" 
              role="dialog" 
              aria-labelledby="confirm-dialog-title" 
              aria-describedby="confirm-dialog-message"
@@ -21,8 +21,8 @@
                     </svg>
                 </div>
                 <div class="ml-3 flex-1">
-                    <h3 id="confirm-dialog-title" class="text-lg font-medium text-gray-900">@Title</h3>
-                    <div id="confirm-dialog-message" class="mt-2 text-sm text-gray-700">
+                    <h3 id="confirm-dialog-title" class="text-lg font-medium">@Title</h3>
+                    <div id="confirm-dialog-message" class="mt-2 text-sm">
                         @Message
                     </div>
                 </div>

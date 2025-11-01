@@ -131,6 +131,18 @@ dotnet run -c Release --project tests/benchmarks/TextEdit.Benchmarks/
 
 **Test Coverage:** 85%+ line coverage, 80%+ branch coverage
 
+### Accessibility: Contrast checks
+
+We track WCAG 2.1 AA contrast for key UI pairs (light/dark themes, tabs, dialogs).
+
+Run the local check:
+
+```bash
+python3 scripts/contrast_check.py
+```
+
+The script prints contrast ratios (e.g., 11.78:1). Our CI runs the same check and will fail if any tested pair drops below 4.5:1.
+
 ## ⌨️ Keyboard Shortcuts
 
 | Shortcut | Action |

@@ -7,11 +7,10 @@
 @implements System.IDisposable
 
 <nav class="tab-strip" 
-     role="tablist" 
-     aria-label="Open documents"
-     style="display:flex;gap:6px;align-items:flex-end;overflow-x:auto;" 
-     @onclick="OnTabStripClick"
-     @onkeydown="OnTabStripKeyDown">
+    role="tablist" 
+    aria-label="Open documents"
+    @onclick="OnTabStripClick"
+    @onkeydown="OnTabStripKeyDown">
     @foreach (var t in State.Tabs)
     {
         var currentTab = t;
@@ -27,14 +26,13 @@
                     aria-selected="@currentTab.IsActive.ToString().ToLower()"
                     aria-controls="editor-panel"
                     tabindex="@(currentTab.IsActive ? "0" : "-1")"
-                    style="border:none;border-bottom:2px solid @(currentTab.IsActive ? "var(--link)" : "transparent");padding:6px 10px;background:transparent;cursor:pointer;color:var(--fg);"
                     @onclick="(() => OnActivate(currentTab.Id))"
                     @onclick:stopPropagation="true"
                     @onmouseup="(e => OnMouseUp(e, currentTab.Id))"
                     @onmouseup:stopPropagation="true"
                     title="@doc.Name">
                 <span>@doc.Name@(doc.IsDirty ? " ●" : "")@(doc.HasExternalModification ? " ↻" : "")</span>
-                <span style="margin-left:8px;color:var(--muted);" 
+                <span class="close" 
                       aria-label="Close @doc.Name"
                       role="button"
                       tabindex="0"
