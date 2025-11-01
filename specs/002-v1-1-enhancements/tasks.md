@@ -257,24 +257,28 @@ Note: OS theme change detection (T071–T074) is deferred for a later pass. Curr
 
 ---
 
-## Phase 8: User Story 6 - Menu Icons for Visual Navigation (Priority: P3)
+## Phase 8: User Story 6 - Menu Icons for Visual Navigation (Priority: P3) — Won't Fix (v1.1 platform limitation)
 
 **Goal**: Add icons to menu items for faster visual recognition
 
 **Independent Test**: Open each menu (File, Edit, View, Help) and verify icons appear next to appropriate items
 
+Note: Native Electron menus on Windows and Linux do not support custom icon images. macOS has limited support for template images. To maintain cross-platform parity, this user story is marked "Won't Fix" for v1.1. The Phase 7 toolbar provides visual icons for common actions as an alternative.
+
 ### Implementation for User Story 6
 
-- [ ] T128 [P] [US6] Add icon assets to src/TextEdit.UI/wwwroot/images/icons/ (folder, save, scissors, pages, clipboard, undo, redo, info)
-- [ ] T129 [P] [US6] Update File menu in ElectronHost.cs to add icon paths: Open (folder), Save (floppy), Close (X), Exit (door)
-- [ ] T130 [P] [US6] Update Edit menu in ElectronHost.cs to add icon paths: Cut (scissors), Copy (pages), Paste (clipboard), Undo (arrow-left), Redo (arrow-right)
-- [ ] T131 [P] [US6] Update View menu in ElectronHost.cs to add icon paths for theme/toolbar options
-- [ ] T132 [P] [US6] Update Help menu in ElectronHost.cs to add icon path: About (info/question)
-- [ ] T133 [US6] Implement icon size consistency (16x16px) across all menu items per FR-058
- - [ ] T134 [US6] Ensure menu icons are legible in light and dark themes; provide light/dark variants or a verified CSS filter approach; include visual checks per FR-059
-- [ ] T135 [US6] Verify icons display correctly on all platforms (Windows, macOS, Linux)
+- [ ] (Won't Fix) T128 [P] [US6] Add icon assets to src/TextEdit.UI/wwwroot/images/icons/ (folder, save, scissors, pages, clipboard, undo, redo, info)
+- [ ] (Won't Fix) T129 [P] [US6] Update File menu in ElectronHost.cs to add icon paths: Open (folder), Save (floppy), Close (X), Exit (door)
+- [ ] (Won't Fix) T130 [P] [US6] Update Edit menu in ElectronHost.cs to add icon paths: Cut (scissors), Copy (pages), Paste (clipboard), Undo (arrow-left), Redo (arrow-right)
+- [ ] (Won't Fix) T131 [P] [US6] Update View menu in ElectronHost.cs to add icon paths for theme/toolbar options
+- [ ] (Won't Fix) T132 [P] [US6] Update Help menu in ElectronHost.cs to add icon path: About (info/question)
+- [ ] (Won't Fix) T133 [US6] Implement icon size consistency (16x16px) across all menu items per FR-058
+ - [ ] (Won't Fix) T134 [US6] Ensure menu icons are legible in light and dark themes; provide light/dark variants or a verified CSS filter approach; include visual checks per FR-059
+- [ ] (Won't Fix) T135 [US6] Verify icons display correctly on all platforms (Windows, macOS, Linux)
 
-**Checkpoint**: Menu icons complete and consistent across all menus
+  - Symptom: When document changes are undone to the point that the document content matches what was last saved (or as it was when opened), the dirty marker (●) still shows in the tab, indicating unsaved changes even though the content is identical to the saved version.
+  - Reproduction steps:
+**Checkpoint**: Won't Fix (v1.1) — Menu icons not supported cross-platform in native menus; toolbar icons provide the visual affordance for v1.1
 
 ---
 
@@ -551,6 +555,12 @@ Task T020: "Create MarkdownFormattingService"
 ## Known issues
 
 Documenting current runtime issues to guide QA and future fixes. These are not limited to markdown files.
+
+- Menu icons not supported in native menus (Electron/Electron.NET)
+  - Symptom: Application menus on Windows and Linux do not display custom icons next to menu items; macOS has limited support for monochrome template images only.
+  - Impact: User Story 6 (Menu Icons) cannot be delivered consistently across platforms. Visual affordances for common actions are provided via the toolbar instead.
+  - Cause: Platform limitation in native menu APIs used by Electron; Electron.NET follows Electron behavior. No reliable cross-platform support.
+  - Decision: Won't fix for v1.1. Revisit if Electron adds cross-platform icon support or if app adopts a custom, non-native menu rendering layer in the future.
 
 - Large-file UI freezes and occasional reconnects (≈ ≥30KB documents)
   - Symptom: With larger documents, certain interactions can briefly stall the UI and, at times, trigger a renderer reconnect (SignalR). If the markdown preview is open, it may visibly reload. This behavior can occur even when the preview is closed.
