@@ -46,6 +46,19 @@ html, body { height: 100%; margin: 0; }
     --pre-fg: #e5e7eb;
 }
 
+    /* Accessibility: Screen reader only content */
+    .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
+    }
+
 .main-layout {
   display: flex;
   flex-direction: column;
@@ -296,4 +309,98 @@ body {
     position: absolute;
     right: 0.75rem;
     top: 0.5rem;
+}
+
+/* Toolbar Styling */
+.toolbar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.toolbar-button {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--fg);
+    padding: 2px 2px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 32px;
+    transition: background 150ms ease;
+    flex-shrink: 0;
+}
+
+.toolbar-button:hover:not(:disabled) {
+    background: var(--border);
+}
+
+.toolbar-button:active:not(:disabled) {
+    background: var(--code-bg);
+}
+
+.toolbar-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.toolbar-button .icon {
+    font-style: normal;
+    line-height: 1;
+    font-size: 16px;
+}
+
+.toolbar-button .icon.bold {
+    font-weight: 700;
+}
+
+.toolbar-button .icon.italic {
+    font-style: italic;
+}
+
+.toolbar-divider {
+    width: 1px;
+    height: 28px;
+    background: var(--border);
+    margin: 0 6px;
+    flex-shrink: 0;
+}
+
+.toolbar-dropdown {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    max-width: 180px;
+}
+
+.toolbar-dropdown:hover {
+    border-color: var(--muted);
+}
+
+.toolbar-dropdown:focus {
+    outline: 2px solid var(--link);
+    outline-offset: 0;
+}
+
+.font-family-dropdown {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.font-size-dropdown {
+    max-width: 80px;
 }

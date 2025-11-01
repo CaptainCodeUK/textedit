@@ -5,6 +5,7 @@ using TextEdit.Core.Documents;
 using TextEdit.Core.Editing;
 using TextEdit.Infrastructure.Ipc;
 using TextEdit.UI.App;
+using TextEdit.UI.Services;
 
 namespace TextEdit.UI.Components.Editor;
 
@@ -16,6 +17,7 @@ public partial class TextEditor : ComponentBase, IDisposable
     [Inject] protected AppState AppState { get; set; } = default!;
     [Inject] protected IJSRuntime JSRuntime { get; set; } = default!;
     [Inject] protected DialogService DialogService { get; set; } = default!; // For About dialog
+    [Inject] protected MarkdownFormattingService FormattingService { get; set; } = default!;
 
     private ElementReference textareaElement;
     protected Document? CurrentDoc => AppState.ActiveDocument;
@@ -73,8 +75,18 @@ public partial class TextEditor : ComponentBase, IDisposable
         EditorCommandHub.CloseRightRequested = HandleCloseRight;
         EditorCommandHub.ToggleWordWrapRequested = HandleToggleWordWrap;
         EditorCommandHub.TogglePreviewRequested = HandleTogglePreview;
+        EditorCommandHub.ToggleToolbarRequested = HandleToggleToolbar;
         EditorCommandHub.AboutRequested = HandleAboutRequested; // T055
         EditorCommandHub.OptionsRequested = HandleOptionsRequested; // US3
+        
+        // Format menu commands
+        EditorCommandHub.FormatHeading1Requested = () => HandleFormatCommand(MarkdownFormattingService.MarkdownFormat.H1);
+        EditorCommandHub.FormatHeading2Requested = () => HandleFormatCommand(MarkdownFormattingService.MarkdownFormat.H2);
+        EditorCommandHub.FormatBoldRequested = () => HandleFormatCommand(MarkdownFormattingService.MarkdownFormat.Bold);
+        EditorCommandHub.FormatItalicRequested = () => HandleFormatCommand(MarkdownFormattingService.MarkdownFormat.Italic);
+        EditorCommandHub.FormatCodeRequested = () => HandleFormatCommand(MarkdownFormattingService.MarkdownFormat.Code);
+        EditorCommandHub.FormatBulletListRequested = () => HandleFormatCommand(MarkdownFormattingService.MarkdownFormat.BulletedList);
+        EditorCommandHub.FormatNumberedListRequested = () => HandleFormatCommand(MarkdownFormattingService.MarkdownFormat.NumberedList);
     }
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -360,6 +372,40 @@ public partial class TextEditor : ComponentBase, IDisposable
         return InvokeAsync(StateHasChanged);
     }
 
+    protected Task HandleToggleToolbar()
+    {
+        AppState.Preferences.ToolbarVisible = !AppState.Preferences.ToolbarVisible;
+        _ = AppState.SavePreferencesAsync();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    protected async Task HandleFormatCommand(MarkdownFormattingService.MarkdownFormat format)
+    {
+        if (CurrentDoc is null) return;
+        
+        try
+        {
+            var start = await JSRuntime.InvokeAsync<int>("eval", "document.getElementById('main-editor-textarea')?.selectionStart ?? 0");
+            var end = await JSRuntime.InvokeAsync<int>("eval", "document.getElementById('main-editor-textarea')?.selectionEnd ?? 0");
+            
+            // Push current state to undo before applying format
+            UndoRedo.Push(CurrentDoc, CurrentDoc.Content);
+            
+            var result = FormattingService.ApplyFormat(CurrentDoc.Content, start, end, format);
+            
+            CurrentDoc.SetContent(result.NewContent);
+            AppState.NotifyDocumentUpdated();
+            
+            // Update textarea and restore selection
+            await JSRuntime.InvokeVoidAsync("eval", 
+                $"{{ const el = document.getElementById('main-editor-textarea'); if (el) {{ el.value = {System.Text.Json.JsonSerializer.Serialize(result.NewContent)}; el.setSelectionRange({result.NewSelectionStart}, {result.NewSelectionEnd}); }} }}");
+        }
+        catch
+        {
+            // Ignore formatting errors
+        }
+    }
+
     protected void OnBlur(FocusEventArgs _)
     {
         FlushPendingUndoPush();
@@ -382,6 +428,18 @@ public partial class TextEditor : ComponentBase, IDisposable
             if (CurrentDoc is not null)
             {
                 State.CaretIndexByDocument[CurrentDoc.Id] = position.Index;
+                
+                // Update toolbar state based on selection and dirty state
+                // Check if there's a selection by comparing start/end
+                bool hasSelection = false;
+                try
+                {
+                    var selEnd = await JSRuntime.InvokeAsync<int>("eval", "document.getElementById('main-editor-textarea')?.selectionEnd ?? 0");
+                    hasSelection = position.Index != selEnd;
+                }
+                catch { /* ignore */ }
+                
+                AppState.ToolbarState.Update(CurrentDoc.IsDirty, hasSelection);
             }
             // Notify StatusBar only; avoid causing full AppState change that re-renders editor
             State.NotifyChanged();

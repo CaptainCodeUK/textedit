@@ -1,0 +1,135 @@
+@using TextEdit.UI.App
+@using TextEdit.UI.Services
+@using static TextEdit.UI.Services.MarkdownFormattingService
+
+@if (AppState.Preferences.ToolbarVisible)
+{
+    <div class="toolbar">
+        <!-- File Operations -->
+        <button type="button" 
+                class="toolbar-button" 
+                title="New (Ctrl+N)"
+                @onclick="HandleNew">
+            <span class="icon">📄</span>
+        </button>
+        
+        <button type="button" 
+                class="toolbar-button" 
+                title="Open File (Ctrl+O)"
+                @onclick="HandleOpen">
+            <span class="icon">📁</span>
+        </button>
+        
+        <button type="button" 
+                class="toolbar-button" 
+                title="Save (Ctrl+S)"
+                disabled="@(!AppState.ToolbarState.CanSave)"
+                @onclick="HandleSave">
+            <span class="icon">💾</span>
+        </button>
+        
+        <div class="toolbar-divider"></div>
+        
+        <!-- Clipboard Operations -->
+        <button type="button" 
+                class="toolbar-button" 
+                title="Cut (Ctrl+X)"
+                disabled="@(!AppState.ToolbarState.CanCut)"
+                @onclick="HandleCut">
+            <span class="icon">✂️</span>
+        </button>
+        
+        <button type="button" 
+                class="toolbar-button" 
+                title="Copy (Ctrl+C)"
+                disabled="@(!AppState.ToolbarState.CanCopy)"
+                @onclick="HandleCopy">
+            <span class="icon">📄</span>
+        </button>
+        
+        <button type="button" 
+                class="toolbar-button" 
+                title="Paste (Ctrl+V)"
+                disabled="@(!AppState.ToolbarState.CanPaste)"
+                @onclick="HandlePaste">
+            <span class="icon">📋</span>
+        </button>
+        
+        <div class="toolbar-divider"></div>
+        
+        <!-- Font Family Dropdown -->
+        <select class="toolbar-dropdown font-family-dropdown" 
+                title="Font Family"
+                value="@(AppState.Preferences.FontFamily)"
+                @onchange="HandleFontFamilyChange">
+            <option value="">System Monospace</option>
+            @foreach (var font in GetSystemFonts())
+            {
+                <option value="@font">@font</option>
+            }
+        </select>
+        
+        <!-- Font Size Dropdown -->
+        <select class="toolbar-dropdown font-size-dropdown" 
+                title="Font Size"
+                value="@(AppState.Preferences.FontSize)"
+                @onchange="HandleFontSizeChange">
+            @for (int size = 8; size <= 72; size++)
+            {
+                <option value="@size">@size pt</option>
+            }
+        </select>
+        
+        <div class="toolbar-divider"></div>
+        
+        <!-- Markdown Formatting -->
+        <button type="button" 
+                class="toolbar-button" 
+                title="Heading 1"
+                @onclick="@(() => HandleFormat(MarkdownFormat.H1))">
+            <span class="icon">H1</span>
+        </button>
+        
+        <button type="button" 
+                class="toolbar-button" 
+                title="Heading 2"
+                @onclick="@(() => HandleFormat(MarkdownFormat.H2))">
+            <span class="icon">H2</span>
+        </button>
+        
+        <button type="button" 
+                class="toolbar-button" 
+                title="Bold (Ctrl+B)"
+                @onclick="@(() => HandleFormat(MarkdownFormat.Bold))">
+            <span class="icon bold">B</span>
+        </button>
+        
+        <button type="button" 
+                class="toolbar-button" 
+                title="Italic (Ctrl+I)"
+                @onclick="@(() => HandleFormat(MarkdownFormat.Italic))">
+            <span class="icon italic">I</span>
+        </button>
+        
+        <button type="button" 
+                class="toolbar-button" 
+                title="Inline Code"
+                @onclick="@(() => HandleFormat(MarkdownFormat.Code))">
+            <span class="icon">`</span>
+        </button>
+        
+        <button type="button" 
+                class="toolbar-button" 
+                title="Bulleted List"
+                @onclick="@(() => HandleFormat(MarkdownFormat.BulletedList))">
+            <span class="icon">•</span>
+        </button>
+        
+        <button type="button" 
+                class="toolbar-button" 
+                title="Numbered List"
+                @onclick="@(() => HandleFormat(MarkdownFormat.NumberedList))">
+            <span class="icon">1.</span>
+        </button>
+    </div>
+}

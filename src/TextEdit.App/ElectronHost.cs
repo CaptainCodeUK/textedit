@@ -40,6 +40,9 @@ public static partial class ElectronHost
         // Subscribe to editor state changes to update menu checkmarks
         _appState.EditorState.Changed += OnEditorStateChanged;
         
+        // Subscribe to app state changes to update menu checkmarks (for preferences like toolbar visibility)
+        _appState.Changed += OnAppStateChanged;
+        
         // Phase 3: Single-instance enforcement
         _ = SetupSingleInstanceAsync();
         
@@ -113,6 +116,11 @@ public static partial class ElectronHost
     {
         ConfigureMenus();
     }
+
+        private static void OnAppStateChanged()
+        {
+            ConfigureMenus();
+        }
 
     /// <summary>
     /// Setup global error handlers to catch and log unhandled JavaScript and Electron errors
@@ -291,6 +299,23 @@ public static partial class ElectronHost
             }
         };
 
+        var formatMenu = new MenuItem
+        {
+            Label = "Format",
+            Submenu = new MenuItem[]
+            {
+                new MenuItem { Label = "Heading 1", Accelerator = "CmdOrCtrl+1", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.FormatHeading1Requested); } },
+                new MenuItem { Label = "Heading 2", Accelerator = "CmdOrCtrl+2", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.FormatHeading2Requested); } },
+                new MenuItem { Type = MenuType.separator },
+                new MenuItem { Label = "Bold", Accelerator = "CmdOrCtrl+B", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.FormatBoldRequested); } },
+                new MenuItem { Label = "Italic", Accelerator = "CmdOrCtrl+I", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.FormatItalicRequested); } },
+                new MenuItem { Label = "Inline Code", Accelerator = "CmdOrCtrl+`", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.FormatCodeRequested); } },
+                new MenuItem { Type = MenuType.separator },
+                new MenuItem { Label = "Bullet List", Accelerator = "CmdOrCtrl+Shift+8", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.FormatBulletListRequested); } },
+                new MenuItem { Label = "Numbered List", Accelerator = "CmdOrCtrl+Shift+7", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.FormatNumberedListRequested); } },
+            }
+        };
+
         var windowMenu = new MenuItem
         {
             Label = "Window",
@@ -314,6 +339,7 @@ public static partial class ElectronHost
             {
                 new MenuItem { Label = "Toggle Word Wrap", Accelerator = "Alt+Z", Type = MenuType.checkbox, Checked = _appState?.EditorState.WordWrap ?? false, Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.ToggleWordWrapRequested); } },
                 new MenuItem { Label = "Toggle Markdown Preview", Accelerator = "Alt+P", Type = MenuType.checkbox, Checked = _appState?.EditorState.ShowPreview ?? false, Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.TogglePreviewRequested); } },
+                new MenuItem { Label = "Toggle Toolbar", Accelerator = "Alt+T", Type = MenuType.checkbox, Checked = _appState?.Preferences.ToolbarVisible ?? true, Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.ToggleToolbarRequested); } },
                 new MenuItem { Type = MenuType.separator },
                 new MenuItem { Role = MenuRole.reload },
                 new MenuItem { Role = MenuRole.toggledevtools },
@@ -331,7 +357,7 @@ public static partial class ElectronHost
             }
         };
 
-        Electron.Menu.SetApplicationMenu(new[] { fileMenu, editMenu, viewMenu, windowMenu, helpMenu });
+        Electron.Menu.SetApplicationMenu(new[] { fileMenu, editMenu, formatMenu, viewMenu, windowMenu, helpMenu });
     }
 
     /// <summary>

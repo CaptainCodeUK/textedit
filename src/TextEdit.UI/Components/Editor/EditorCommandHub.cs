@@ -19,8 +19,18 @@ public static class EditorCommandHub
     public static Func<Task>? CloseRightRequested { get; set; }
     public static Func<Task>? ToggleWordWrapRequested { get; set; }
     public static Func<Task>? TogglePreviewRequested { get; set; }
+    public static Func<Task>? ToggleToolbarRequested { get; set; }
     public static Func<Task>? AboutRequested { get; set; } // T055: About dialog
     public static Func<Task>? OptionsRequested { get; set; } // US3: Options dialog
+    
+    // Format menu commands
+    public static Func<Task>? FormatHeading1Requested { get; set; }
+    public static Func<Task>? FormatHeading2Requested { get; set; }
+    public static Func<Task>? FormatBoldRequested { get; set; }
+    public static Func<Task>? FormatItalicRequested { get; set; }
+    public static Func<Task>? FormatCodeRequested { get; set; }
+    public static Func<Task>? FormatBulletListRequested { get; set; }
+    public static Func<Task>? FormatNumberedListRequested { get; set; }
 
     public static Task InvokeSafe(Func<Task>? action)
         => action is null ? Task.CompletedTask : action();

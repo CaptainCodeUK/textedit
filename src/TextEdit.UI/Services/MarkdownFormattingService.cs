@@ -26,16 +26,16 @@ public class MarkdownFormattingService
     /// <summary>
     /// Apply markdown format to current selection or insert markers at cursor.
     /// </summary>
-    /// <param name="document">Document to modify</param>
-    /// <param name="format">Format type to apply</param>
+    /// <param name="currentContent">Current document content</param>
     /// <param name="selectionStart">Start index of selection (or cursor position)</param>
     /// <param name="selectionEnd">End index of selection (or cursor position)</param>
-    /// <returns>New cursor position after formatting</returns>
-    public (string newContent, int newCursorPosition) ApplyFormat(
+    /// <param name="format">Format type to apply</param>
+    /// <returns>Result with new content and selection positions</returns>
+    public FormattingResult ApplyFormat(
         string currentContent,
-        MarkdownFormat format,
         int selectionStart,
-        int selectionEnd)
+        int selectionEnd,
+        MarkdownFormat format)
     {
         var hasSelection = selectionEnd > selectionStart;
         var selectedText = hasSelection 
@@ -60,8 +60,9 @@ public class MarkdownFormattingService
             var before = currentContent.Substring(0, selectionStart);
             var after = currentContent.Substring(selectionEnd);
             var newContent = before + prefix + selectedText + suffix + after;
-            var newCursor = selectionStart + prefix.Length + selectedText.Length + suffix.Length;
-            return (newContent, newCursor);
+            var newSelStart = selectionStart + prefix.Length;
+            var newSelEnd = newSelStart + selectedText.Length;
+            return new FormattingResult(newContent, newSelStart, newSelEnd);
         }
         else
         {
@@ -70,7 +71,12 @@ public class MarkdownFormattingService
             var after = currentContent.Substring(selectionStart);
             var newContent = before + prefix + suffix + after;
             var newCursor = selectionStart + prefix.Length; // Position cursor between markers
-            return (newContent, newCursor);
+            return new FormattingResult(newContent, newCursor, newCursor);
         }
     }
+
+    /// <summary>
+    /// Result of applying a markdown format operation
+    /// </summary>
+    public record FormattingResult(string NewContent, int NewSelectionStart, int NewSelectionEnd);
 }
