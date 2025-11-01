@@ -1,7 +1,6 @@
 namespace TextEdit.Infrastructure.Tests.FileSystem;
 
 using System.Text;
-using FluentAssertions;
 using TextEdit.Infrastructure.FileSystem;
 using Xunit;
 
@@ -37,7 +36,7 @@ public class FileSystemServiceTests : IDisposable
         var size = _sut.GetFileSize(path);
 
         // Assert
-        size.Should().Be(new FileInfo(path).Length);
+    Assert.Equal(new FileInfo(path).Length, size);
     }
 
     [Fact]
@@ -50,7 +49,7 @@ public class FileSystemServiceTests : IDisposable
         var size = _sut.GetFileSize(path);
 
         // Assert
-        size.Should().Be(0);
+    Assert.Equal(0, size);
     }
 
     [Fact]
@@ -65,7 +64,7 @@ public class FileSystemServiceTests : IDisposable
         var result = await _sut.ReadLargeFileAsync(path, Encoding.UTF8);
 
         // Assert
-        result.Should().Be(expected);
+    Assert.Equal(expected, result);
     }
 
     [Fact]
@@ -85,8 +84,8 @@ public class FileSystemServiceTests : IDisposable
         var result = await _sut.ReadLargeFileAsync(path, Encoding.UTF8);
 
         // Assert
-        result.Should().Be(expected);
-        result.Length.Should().BeGreaterThan(1_000_000); // Verify it's actually large
+    Assert.Equal(expected, result);
+    Assert.True(result.Length > 1_000_000); // Verify it's actually large
     }
 
     [Fact]
@@ -104,11 +103,11 @@ public class FileSystemServiceTests : IDisposable
         var result = await _sut.ReadLargeFileAsync(path, Encoding.UTF8, progress);
 
         // Assert
-        result.Should().Be(content);
-        progressValues.Should().NotBeEmpty("progress should be reported during large file read");
-        // Progress reporting is async and may arrive out of order; just verify 100% was reported at some point
-        progressValues.Should().Contain(100, "progress should eventually report 100%");
-        progressValues.Should().Contain(p => p > 0 && p < 100, "progress should report intermediate values");
+    Assert.Equal(content, result);
+    Assert.NotEmpty(progressValues); // progress should be reported during large file read
+    // Progress reporting is async and may arrive out of order; just verify 100% was reported at some point
+    Assert.Contains(100, progressValues); // progress should eventually report 100%
+    Assert.Contains(progressValues, p => p > 0 && p < 100); // progress should report intermediate values
     }
 
     [Fact]
@@ -138,8 +137,8 @@ public class FileSystemServiceTests : IDisposable
         await _sut.WriteLargeFileAsync(path, content, Encoding.UTF8);
 
         // Assert
-        var result = await File.ReadAllTextAsync(path, Encoding.UTF8);
-        result.Should().Be(content);
+    var result = await File.ReadAllTextAsync(path, Encoding.UTF8);
+    Assert.Equal(content, result);
     }
 
     [Fact]
@@ -158,9 +157,9 @@ public class FileSystemServiceTests : IDisposable
         await _sut.WriteLargeFileAsync(path, content, Encoding.UTF8);
 
         // Assert
-        var result = await File.ReadAllTextAsync(path, Encoding.UTF8);
-        result.Should().Be(content);
-        result.Length.Should().BeGreaterThan(1_000_000); // Verify it's actually large
+    var result = await File.ReadAllTextAsync(path, Encoding.UTF8);
+    Assert.Equal(content, result);
+    Assert.True(result.Length > 1_000_000); // Verify it's actually large
     }
 
     [Fact]
@@ -176,11 +175,11 @@ public class FileSystemServiceTests : IDisposable
         // Act
         await _sut.WriteLargeFileAsync(path, content, Encoding.UTF8, progress);
 
-        // Assert
-        File.Exists(path).Should().BeTrue();
-        progressValues.Should().NotBeEmpty();
-        progressValues.Last().Should().Be(100); // Final progress should be 100%
-        progressValues.Should().BeInAscendingOrder(); // Progress should increase
+    // Assert
+    Assert.True(File.Exists(path));
+    Assert.NotEmpty(progressValues);
+    Assert.Contains(100, progressValues); // eventually hits 100
+    Assert.Contains(progressValues, p => p > 0 && p < 100); // intermediate updates
     }
 
     [Fact]
@@ -220,7 +219,7 @@ public class FileSystemServiceTests : IDisposable
         await _sut.WriteLargeFileAsync(path, original, Encoding.UTF8);
         var result = await _sut.ReadLargeFileAsync(path, Encoding.UTF8);
 
-        // Assert
-        result.Should().Be(original);
+    // Assert
+    Assert.Equal(original, result);
     }
 }

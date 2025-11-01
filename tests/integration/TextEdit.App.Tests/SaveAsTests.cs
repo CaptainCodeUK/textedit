@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Xunit;
 using TextEdit.UI.App;
 using TextEdit.Core.Documents;
 using TextEdit.Core.Editing;
@@ -55,17 +55,17 @@ public class SaveAsTests : IDisposable
 
         // Open original
         var opened = await app.OpenAsync();
-        opened.Should().NotBeNull();
-        app.ActiveDocument!.FilePath.Should().Be(_helloPath);
+    Assert.NotNull(opened);
+    Assert.Equal(_helloPath, app.ActiveDocument!.FilePath);
 
         // Act: Save As to existing file (OS Replace is trusted)
         var result = await app.SaveAsActiveAsync();
 
         // Assert: content replaced and filename updated
-        result.Should().BeTrue();
-        (await File.ReadAllTextAsync(_helloAPath)).Should().Be("A");
-        app.ActiveDocument!.FilePath.Should().Be(_helloAPath);
-        app.ActiveDocument!.Name.Should().Be(Path.GetFileName(_helloAPath));
+    Assert.True(result);
+    Assert.Equal("A", await File.ReadAllTextAsync(_helloAPath));
+    Assert.Equal(_helloAPath, app.ActiveDocument!.FilePath);
+    Assert.Equal(Path.GetFileName(_helloAPath), app.ActiveDocument!.Name);
     }
 
     public void Dispose()

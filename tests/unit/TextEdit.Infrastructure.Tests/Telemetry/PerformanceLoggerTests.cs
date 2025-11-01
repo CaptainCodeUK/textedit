@@ -1,6 +1,5 @@
-using FluentAssertions;
-using TextEdit.Infrastructure.Telemetry;
 using Xunit;
+using TextEdit.Infrastructure.Telemetry;
 
 namespace TextEdit.Infrastructure.Tests.Telemetry;
 
@@ -16,8 +15,8 @@ public class PerformanceLoggerTests
         var scope = logger.BeginOperation("TestOperation");
 
         // Assert
-        scope.Should().NotBeNull();
-        scope.Should().BeAssignableTo<IDisposable>();
+    Assert.NotNull(scope);
+    Assert.IsAssignableFrom<IDisposable>(scope);
     }
 
     [Fact]
@@ -34,10 +33,10 @@ public class PerformanceLoggerTests
 
         // Assert
         var stats = logger.GetStats("TestOperation");
-        stats.Should().NotBeNull();
-        stats!.Count.Should().Be(1);
-        stats.SuccessCount.Should().Be(1);
-        stats.AverageDurationMs.Should().BeGreaterOrEqualTo(10);
+    Assert.NotNull(stats);
+    Assert.Equal(1, stats!.Count);
+    Assert.Equal(1, stats.SuccessCount);
+    Assert.True(stats.AverageDurationMs >= 10);
     }
 
     [Fact]
@@ -51,13 +50,13 @@ public class PerformanceLoggerTests
 
         // Assert
         var stats = logger.GetStats("TestOp");
-        stats.Should().NotBeNull();
-        stats!.Count.Should().Be(1);
-        stats.SuccessCount.Should().Be(1);
-        stats.AverageDurationMs.Should().Be(42);
-        stats.MinDurationMs.Should().Be(42);
-        stats.MaxDurationMs.Should().Be(42);
-        stats.SuccessRate.Should().Be(1.0);
+    Assert.NotNull(stats);
+    Assert.Equal(1, stats!.Count);
+    Assert.Equal(1, stats.SuccessCount);
+    Assert.Equal(42, stats.AverageDurationMs);
+    Assert.Equal(42, stats.MinDurationMs);
+    Assert.Equal(42, stats.MaxDurationMs);
+    Assert.Equal(1.0, stats.SuccessRate);
     }
 
     [Fact]
@@ -71,10 +70,10 @@ public class PerformanceLoggerTests
 
         // Assert
         var stats = logger.GetStats("TestOp");
-        stats.Should().NotBeNull();
-        stats!.Count.Should().Be(1);
-        stats.SuccessCount.Should().Be(0);
-        stats.SuccessRate.Should().Be(0.0);
+    Assert.NotNull(stats);
+    Assert.Equal(1, stats!.Count);
+    Assert.Equal(0, stats.SuccessCount);
+    Assert.Equal(0.0, stats.SuccessRate);
     }
 
     [Fact]
@@ -91,13 +90,13 @@ public class PerformanceLoggerTests
 
         // Assert
         var stats = logger.GetStats("BatchOp");
-        stats.Should().NotBeNull();
-        stats!.Count.Should().Be(4);
-        stats.SuccessCount.Should().Be(3);
-        stats.SuccessRate.Should().BeApproximately(0.75, 0.001);
-        stats.MinDurationMs.Should().Be(10);
-        stats.MaxDurationMs.Should().Be(40);
-        stats.AverageDurationMs.Should().Be(25); // (10+20+30+40)/4
+    Assert.NotNull(stats);
+    Assert.Equal(4, stats!.Count);
+    Assert.Equal(3, stats.SuccessCount);
+    Assert.InRange(stats.SuccessRate, 0.749, 0.751);
+    Assert.Equal(10, stats.MinDurationMs);
+    Assert.Equal(40, stats.MaxDurationMs);
+    Assert.Equal(25, stats.AverageDurationMs); // (10+20+30+40)/4
     }
 
     [Fact]
@@ -113,12 +112,12 @@ public class PerformanceLoggerTests
 
         // Assert
         var statsA = logger.GetStats("OpA");
-        statsA!.Count.Should().Be(2);
-        statsA.AverageDurationMs.Should().Be(125);
+    Assert.Equal(2, statsA!.Count);
+    Assert.Equal(125, statsA.AverageDurationMs);
 
         var statsB = logger.GetStats("OpB");
-        statsB!.Count.Should().Be(1);
-        statsB.AverageDurationMs.Should().Be(200);
+    Assert.Equal(1, statsB!.Count);
+    Assert.Equal(200, statsB.AverageDurationMs);
     }
 
     [Fact]
@@ -131,7 +130,7 @@ public class PerformanceLoggerTests
         var stats = logger.GetStats("NonExistent");
 
         // Assert
-        stats.Should().BeNull();
+    Assert.Null(stats);
     }
 
     [Fact]
@@ -168,7 +167,7 @@ public class PerformanceLoggerTests
 
         // Verify only one operation was logged
         var stats = logger.GetStats("SafeOp");
-        stats!.Count.Should().Be(1);
+    Assert.Equal(1, stats!.Count);
     }
 
     [Fact]
@@ -200,9 +199,9 @@ public class PerformanceLoggerTests
 
         // Assert
         var stats = logger.GetStats("ConcurrentOp");
-        stats.Should().NotBeNull();
-        stats!.Count.Should().Be(threadCount * operationsPerThread);
-        stats.SuccessCount.Should().Be(threadCount * operationsPerThread / 2); // Half were success
+    Assert.NotNull(stats);
+    Assert.Equal(threadCount * operationsPerThread, stats!.Count);
+    Assert.Equal(threadCount * operationsPerThread / 2, stats.SuccessCount); // Half were success
     }
 
     [Fact]
@@ -237,9 +236,9 @@ public class PerformanceLoggerTests
 
         // Assert
         var stats = logger.GetStats("ConcurrentScope");
-        stats.Should().NotBeNull();
-        stats!.Count.Should().Be(threadCount * operationsPerThread);
-        stats.SuccessCount.Should().Be(threadCount * operationsPerThread); // All should succeed
+    Assert.NotNull(stats);
+    Assert.Equal(threadCount * operationsPerThread, stats!.Count);
+    Assert.Equal(threadCount * operationsPerThread, stats.SuccessCount); // All should succeed
     }
 
     [Fact]
@@ -249,12 +248,12 @@ public class PerformanceLoggerTests
         var stats = new OperationStats("EmptyOp");
 
         // Assert
-        stats.Count.Should().Be(0);
-        stats.SuccessCount.Should().Be(0);
-        stats.SuccessRate.Should().Be(0);
-        stats.MinDurationMs.Should().Be(0);
-        stats.MaxDurationMs.Should().Be(0);
-        stats.AverageDurationMs.Should().Be(0);
+    Assert.Equal(0, stats.Count);
+    Assert.Equal(0, stats.SuccessCount);
+    Assert.Equal(0, stats.SuccessRate);
+    Assert.Equal(0, stats.MinDurationMs);
+    Assert.Equal(0, stats.MaxDurationMs);
+    Assert.Equal(0, stats.AverageDurationMs);
     }
 
     [Fact]
@@ -270,13 +269,13 @@ public class PerformanceLoggerTests
         stats.RecordOperation(200, success: true);
 
         // Assert
-        stats.Count.Should().Be(4);
-        stats.SuccessCount.Should().Be(3);
-        stats.SuccessRate.Should().BeApproximately(0.75, 0.001);
-        stats.MinDurationMs.Should().Be(50);
-        stats.MaxDurationMs.Should().Be(200);
-        stats.AverageDurationMs.Should().Be(125); // (100+50+150+200)/4
-        stats.OperationName.Should().Be("TestOp");
+    Assert.Equal(4, stats.Count);
+    Assert.Equal(3, stats.SuccessCount);
+    Assert.InRange(stats.SuccessRate, 0.749, 0.751);
+    Assert.Equal(50, stats.MinDurationMs);
+    Assert.Equal(200, stats.MaxDurationMs);
+    Assert.Equal(125, stats.AverageDurationMs); // (100+50+150+200)/4
+    Assert.Equal("TestOp", stats.OperationName);
     }
 
     [Fact]
@@ -316,9 +315,9 @@ public class PerformanceLoggerTests
 
         // Assert
         var stats = logger.GetStats("TimedOp");
-        stats.Should().NotBeNull();
-        stats!.AverageDurationMs.Should().BeGreaterOrEqualTo(50);
-        stats.AverageDurationMs.Should().BeLessThan(100); // Reasonable upper bound
+    Assert.NotNull(stats);
+    Assert.True(stats!.AverageDurationMs >= 50);
+    Assert.True(stats.AverageDurationMs < 100); // Reasonable upper bound
     }
 
     [Fact]
@@ -332,11 +331,11 @@ public class PerformanceLoggerTests
 
         // Assert
         var stats = logger.GetStats("InstantOp");
-        stats.Should().NotBeNull();
-        stats!.Count.Should().Be(1);
-        stats.MinDurationMs.Should().Be(0);
-        stats.MaxDurationMs.Should().Be(0);
-        stats.AverageDurationMs.Should().Be(0);
+    Assert.NotNull(stats);
+    Assert.Equal(1, stats!.Count);
+    Assert.Equal(0, stats.MinDurationMs);
+    Assert.Equal(0, stats.MaxDurationMs);
+    Assert.Equal(0, stats.AverageDurationMs);
     }
 
     [Fact]
@@ -350,7 +349,7 @@ public class PerformanceLoggerTests
 
         // Assert
         var stats = logger.GetStats("SlowOp");
-        stats.Should().NotBeNull();
-        stats!.MaxDurationMs.Should().Be(long.MaxValue / 2);
+    Assert.NotNull(stats);
+    Assert.Equal(long.MaxValue / 2, stats!.MaxDurationMs);
     }
 }

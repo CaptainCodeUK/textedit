@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Xunit;
 using Xunit;
 using TextEdit.UI.App;
 using TextEdit.Core.Documents;
@@ -63,8 +63,8 @@ public class AccessibilityTests
         };
         
         // Assert: All shortcuts are documented
-        expectedShortcuts.Should().HaveCount(18);
-        expectedShortcuts.Keys.Should().OnlyHaveUniqueItems();
+    Assert.Equal(18, expectedShortcuts.Count);
+    Assert.Equal(expectedShortcuts.Keys.Count, expectedShortcuts.Keys.Distinct().Count());
         
         // NOTE: Actual keyboard event handling is verified through ElectronHost.cs menu configuration
         // and EditorCommandHub event routing. Full end-to-end keyboard tests would require
@@ -90,7 +90,7 @@ public class AccessibilityTests
             "PreviewPanel"   // Markdown preview (when visible)
         };
         
-        expectedFocusOrder.Should().HaveCount(3);
+    Assert.Equal(3, expectedFocusOrder.Length);
         
         // NOTE: In Blazor, focus order is managed through:
         // - Semantic HTML structure (nav, main, aside)
@@ -112,9 +112,9 @@ public class AccessibilityTests
         dialogService.ShowErrorDialog("Test Error", "This is a test error message.");
         
         // Assert: Dialog is visible and should trap focus
-        dialogService.ShowError.Should().BeTrue();
-        dialogService.ErrorTitle.Should().Be("Test Error");
-        dialogService.ErrorMessage.Should().Be("This is a test error message.");
+    Assert.True(dialogService.ShowError);
+    Assert.Equal("Test Error", dialogService.ErrorTitle);
+    Assert.Equal("This is a test error message.", dialogService.ErrorMessage);
         
         // The dialog component (ErrorDialog.razor) must implement:
         // 1. Focus the first interactive element (OK button) on mount
@@ -126,7 +126,7 @@ public class AccessibilityTests
         dialogService.HideErrorDialog();
         
         // Assert: Dialog closed
-        dialogService.ShowError.Should().BeFalse();
+    Assert.False(dialogService.ShowError);
         
         // NOTE: Focus return verification requires component testing with rendered DOM,
         // which would be implemented in full Playwright browser tests.
@@ -167,7 +167,7 @@ public class AccessibilityTests
             ["ConfirmDialog"] = "role='dialog' aria-labelledby='confirm-title' aria-describedby='confirm-message'",
         };
         
-        expectedARIALabels.Should().HaveCount(13);
+    Assert.Equal(13, expectedARIALabels.Count);
         
         // Additional semantic HTML requirements:
         // - Use <nav> for TabStrip
@@ -198,7 +198,7 @@ public class AccessibilityTests
             "Preview updated"
         };
         
-        expectedAnnouncements.Should().HaveCount(9);
+    Assert.Equal(9, expectedAnnouncements.Length);
         
         // Implementation notes:
         // - Use aria-live="polite" for non-urgent status updates
@@ -228,8 +228,8 @@ public class AccessibilityTests
             ["FocusIndicators"] = 3.0
         };
         
-        contrastRequirements.Should().HaveCount(6);
-        contrastRequirements.Values.Should().OnlyContain(ratio => ratio >= 3.0);
+    Assert.Equal(6, contrastRequirements.Count);
+    Assert.All(contrastRequirements.Values, ratio => Assert.True(ratio >= 3.0));
         
         // Color combinations to verify (from Tailwind CSS classes in the app):
         var colorTests = new[]
@@ -244,7 +244,7 @@ public class AccessibilityTests
             new { Element = "FocusRing", Foreground = "ring-blue-500", Background = "transparent", Context = "Keyboard focus" },
         };
         
-        colorTests.Should().HaveCount(8);
+    Assert.Equal(8, colorTests.Length);
         
         // NOTE: Actual contrast ratio verification requires:
         // 1. Computing contrast ratio from CSS color values
@@ -294,7 +294,7 @@ public class AccessibilityTests
             "valid-lang",
         };
         
-        axeCoreChecks.Should().HaveCount(18);
+    Assert.Equal(18, axeCoreChecks.Length);
         
         // Implementation example (when Playwright + Electron is fully set up):
         /*
@@ -336,15 +336,15 @@ public class AccessibilityTests
         var doc3 = app.CreateNew();
         
         // Assert: Three tabs exist
-        app.Tabs.Should().HaveCount(3);
+    Assert.Equal(3, app.Tabs.Count);
         
         // Act: Switch tabs
         var tab2 = app.Tabs[1];
         app.ActivateTab(tab2.Id);
         
         // Assert: Correct tab is active
-        app.ActiveTab.Should().NotBeNull();
-        app.ActiveTab!.DocumentId.Should().Be(doc2.Id);
+    Assert.NotNull(app.ActiveTab);
+    Assert.Equal(doc2.Id, app.ActiveTab!.DocumentId);
         
         // NOTE: In the actual UI, when a tab is activated:
         // 1. The editor textarea should receive focus
@@ -372,15 +372,15 @@ public class AccessibilityTests
             new { Title = "Save Error", Message = "An error occurred while saving 'document.txt': Disk is full.", Action = "OK" },
         };
         
-        errorScenarios.Should().HaveCount(4);
+    Assert.Equal(4, errorScenarios.Length);
         
         // Each error should:
         foreach (var scenario in errorScenarios)
         {
-            scenario.Title.Should().NotBeEmpty();
-            scenario.Message.Should().NotBeEmpty();
-            scenario.Message.Length.Should().BeGreaterThan(scenario.Title.Length);
-            scenario.Action.Should().Be("OK"); // Consistent dismissal button
+            Assert.False(string.IsNullOrEmpty(scenario.Title));
+            Assert.False(string.IsNullOrEmpty(scenario.Message));
+            Assert.True(scenario.Message.Length > scenario.Title.Length);
+            Assert.Equal("OK", scenario.Action); // Consistent dismissal button
         }
     }
     

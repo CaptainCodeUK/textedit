@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Xunit;
 using TextEdit.Infrastructure.Autosave;
 
 namespace TextEdit.Core.Tests;
@@ -19,14 +19,14 @@ public class AutosaveServiceTests : IDisposable
         var service = new AutosaveService();
 
         // Assert
-        service.LastAutosave.Should().Be(DateTime.MinValue);
+    Assert.Equal(DateTime.MinValue, service.LastAutosave);
     }
 
     [Fact]
     public void LastAutosave_InitiallyMinValue()
     {
         // Assert
-        _service.LastAutosave.Should().Be(DateTime.MinValue);
+    Assert.Equal(DateTime.MinValue, _service.LastAutosave);
     }
 
     [Fact]
@@ -48,8 +48,8 @@ public class AutosaveServiceTests : IDisposable
         var completed = await Task.WhenAny(tcs.Task, Task.Delay(500));
 
         // Assert
-        triggered.Should().BeTrue();
-        completed.Should().Be(tcs.Task);
+    Assert.True(triggered);
+    Assert.Same(tcs.Task, completed);
     }
 
     [Fact]
@@ -78,8 +78,8 @@ public class AutosaveServiceTests : IDisposable
         }
 
         // Assert
-        _service.LastAutosave.Should().BeAfter(initialValue);
-        _service.LastAutosave.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(2));
+    Assert.True(_service.LastAutosave > initialValue);
+    Assert.True(DateTime.UtcNow - _service.LastAutosave <= TimeSpan.FromSeconds(2));
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public class AutosaveServiceTests : IDisposable
         await Task.Delay(200); // Wait to ensure no more triggers
 
         // Assert
-        triggerCount.Should().Be(countAfterStop);
+    Assert.Equal(countAfterStop, triggerCount);
     }
 
     [Fact]
@@ -113,7 +113,7 @@ public class AutosaveServiceTests : IDisposable
         await Task.Delay(150);
 
         // Assert - if we get here without exception, test passes
-        _service.LastAutosave.Should().Be(DateTime.MinValue);
+    Assert.Equal(DateTime.MinValue, _service.LastAutosave);
     }
 
     [Fact]
@@ -139,7 +139,7 @@ public class AutosaveServiceTests : IDisposable
         await Task.WhenAny(tcs.Task, Task.Delay(500));
 
         // Assert
-        triggerCount.Should().BeGreaterThan(1);
+    Assert.True(triggerCount > 1);
     }
 
     [Fact]
@@ -168,8 +168,8 @@ public class AutosaveServiceTests : IDisposable
         await Task.WhenAny(tcs.Task, Task.Delay(500));
 
         // Assert
-        triggered1.Should().BeTrue();
-        triggered2.Should().BeTrue();
+    Assert.True(triggered1);
+    Assert.True(triggered2);
     }
 
     public void Dispose()

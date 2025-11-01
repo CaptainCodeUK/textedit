@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Xunit;
 
 namespace TextEdit.IPC.Tests;
 
@@ -20,7 +20,7 @@ public class FileExtensionTests
         var result = !Path.HasExtension(input) ? input + ".txt" : input;
 
         // Assert
-        result.Should().Be(expected);
+    Assert.Equal(expected, result);
     }
 
     [Theory]
@@ -36,7 +36,7 @@ public class FileExtensionTests
         var result = !Path.HasExtension(input) ? input + ".txt" : input;
 
         // Assert
-        result.Should().Be(expected);
+    Assert.Equal(expected, result);
     }
 
     [Theory]
@@ -48,7 +48,7 @@ public class FileExtensionTests
         var result = !Path.HasExtension(input) ? input + ".txt" : input;
 
         // Assert
-        result.Should().Be(expected);
+    Assert.Equal(expected, result);
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public class FileExtensionTests
 
         // Assert
         // The behavior is to add .txt when no extension is detected
-        result.Should().Be("file..txt");
+    Assert.Equal("file..txt", result);
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class FileExtensionTests
         var hasExtension = Path.HasExtension(input);
 
         // Assert
-        hasExtension.Should().BeFalse();
+    Assert.False(hasExtension);
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public class FileExtensionTests
         var hasExtension = Path.HasExtension(input);
 
         // Assert
-        hasExtension.Should().BeFalse();
+    Assert.False(hasExtension);
     }
 
     [Theory]
@@ -104,6 +104,6 @@ public class FileExtensionTests
         var hasExtension = Path.HasExtension(input);
 
         // Assert
-        hasExtension.Should().Be(expectedHasExtension);
+    Assert.Equal(expectedHasExtension, hasExtension);
     }
 }

@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Xunit;
 using TextEdit.Core.Documents;
 
 namespace TextEdit.Core.Tests;
@@ -12,10 +12,10 @@ public class TabTests
         var tab = new Tab();
 
         // Assert
-        tab.Id.Should().NotBeEmpty();
-        tab.DocumentId.Should().BeEmpty();
-        tab.IsActive.Should().BeFalse();
-        tab.Title.Should().Be("Untitled");
+    Assert.NotEqual(Guid.Empty, tab.Id);
+    Assert.Equal(Guid.Empty, tab.DocumentId);
+    Assert.False(tab.IsActive);
+    Assert.Equal("Untitled", tab.Title);
     }
 
     [Fact]
@@ -29,7 +29,7 @@ public class TabTests
         tab.DocumentId = docId;
 
         // Assert
-        tab.DocumentId.Should().Be(docId);
+    Assert.Equal(docId, tab.DocumentId);
     }
 
     [Fact]
@@ -42,13 +42,13 @@ public class TabTests
         tab.IsActive = true;
 
         // Assert
-        tab.IsActive.Should().BeTrue();
+    Assert.True(tab.IsActive);
 
         // Act
         tab.IsActive = false;
 
         // Assert
-        tab.IsActive.Should().BeFalse();
+    Assert.False(tab.IsActive);
     }
 
     [Theory]
@@ -64,7 +64,7 @@ public class TabTests
         tab.Title = title;
 
         // Assert
-        tab.Title.Should().Be(title);
+    Assert.Equal(title, tab.Title);
     }
 }
 
@@ -77,7 +77,7 @@ public class TabServiceTests
         var service = new TabService();
 
         // Assert
-        service.Tabs.Should().BeEmpty();
+    Assert.Empty(service.Tabs);
     }
 
     [Fact]
@@ -91,11 +91,11 @@ public class TabServiceTests
         var tab = service.AddTab(doc);
 
         // Assert
-        service.Tabs.Should().HaveCount(1);
-        service.Tabs[0].Should().Be(tab);
-        tab.DocumentId.Should().Be(doc.Id);
-        tab.Title.Should().Be("Untitled");
-        tab.IsActive.Should().BeTrue();
+    Assert.Equal(1, service.Tabs.Count);
+    Assert.Same(tab, service.Tabs[0]);
+    Assert.Equal(doc.Id, tab.DocumentId);
+    Assert.Equal("Untitled", tab.Title);
+    Assert.True(tab.IsActive);
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public class TabServiceTests
         var tab = service.AddTab(doc);
 
         // Assert
-        tab.Title.Should().Be("test.txt");
+    Assert.Equal("test.txt", tab.Title);
     }
 
     [Fact]
@@ -126,9 +126,9 @@ public class TabServiceTests
         var tab2 = service.AddTab(doc2);
 
         // Assert
-        service.Tabs.Should().HaveCount(2);
-        tab1.IsActive.Should().BeFalse();
-        tab2.IsActive.Should().BeTrue();
+    Assert.Equal(2, service.Tabs.Count);
+    Assert.False(tab1.IsActive);
+    Assert.True(tab2.IsActive);
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public class TabServiceTests
         service.ActivateTab(tab.Id);
 
         // Assert
-        tab.IsActive.Should().BeTrue();
+    Assert.True(tab.IsActive);
     }
 
     [Fact]
@@ -163,8 +163,8 @@ public class TabServiceTests
         service.ActivateTab(tab1.Id);
 
         // Assert
-        tab1.IsActive.Should().BeTrue();
-        tab2.IsActive.Should().BeFalse();
+    Assert.True(tab1.IsActive);
+    Assert.False(tab2.IsActive);
     }
 
     [Fact]
@@ -180,10 +180,10 @@ public class TabServiceTests
         service.ActivateTab(Guid.NewGuid());
 
         // Assert
-        service.Tabs.Should().HaveCount(1);
-        // Since we tried to activate a nonexistent tab, no tabs become active
-        // The implementation deactivates all tabs first, so IsActive becomes false
-        tab.IsActive.Should().BeFalse();
+    Assert.Equal(1, service.Tabs.Count);
+    // Since we tried to activate a nonexistent tab, no tabs become active
+    // The implementation deactivates all tabs first, so IsActive becomes false
+    Assert.False(tab.IsActive);
     }
 
     [Fact]
@@ -198,7 +198,7 @@ public class TabServiceTests
         service.CloseTab(tab.Id);
 
         // Assert
-        service.Tabs.Should().BeEmpty();
+    Assert.Empty(service.Tabs);
     }
 
     [Fact]
@@ -213,8 +213,8 @@ public class TabServiceTests
         service.CloseTab(Guid.NewGuid());
 
         // Assert
-        service.Tabs.Should().HaveCount(1);
-        service.Tabs[0].Should().Be(tab);
+    Assert.Equal(1, service.Tabs.Count);
+    Assert.Same(tab, service.Tabs[0]);
     }
 
     [Fact]
@@ -233,8 +233,8 @@ public class TabServiceTests
         service.CloseTab(tab2.Id);
 
         // Assert
-        service.Tabs.Should().HaveCount(1);
-        tab1.IsActive.Should().BeTrue();
+    Assert.Equal(1, service.Tabs.Count);
+    Assert.True(tab1.IsActive);
     }
 
     [Fact]
@@ -255,8 +255,8 @@ public class TabServiceTests
         service.CloseTab(tab2.Id);
 
         // Assert
-        service.Tabs.Should().HaveCount(2);
-        tab3.IsActive.Should().BeTrue(); // Same index (1)
+    Assert.Equal(2, service.Tabs.Count);
+    Assert.True(tab3.IsActive); // Same index (1)
     }
 
     [Fact]
@@ -277,8 +277,8 @@ public class TabServiceTests
         service.CloseTab(tab3.Id);
 
         // Assert
-        service.Tabs.Should().HaveCount(2);
-        tab2.IsActive.Should().BeTrue();
+    Assert.Equal(2, service.Tabs.Count);
+    Assert.True(tab2.IsActive);
     }
 
     [Fact]
@@ -299,8 +299,8 @@ public class TabServiceTests
         service.CloseTab(tab1.Id);
 
         // Assert
-        service.Tabs.Should().HaveCount(2);
-        tab2.IsActive.Should().BeTrue();
-        tab3.IsActive.Should().BeFalse();
+    Assert.Equal(2, service.Tabs.Count);
+    Assert.True(tab2.IsActive);
+    Assert.False(tab3.IsActive);
     }
 }

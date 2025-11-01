@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using FluentAssertions;
+using Xunit;
 
 namespace TextEdit.IPC.Tests;
 
@@ -27,9 +27,9 @@ public class IpcContractTests
         var deserialized = JsonSerializer.Deserialize<OpenFileDialogRequest>(json, _jsonOptions);
 
         // Assert
-        deserialized.Should().NotBeNull();
-        deserialized!.Filters.Should().BeEquivalentTo(new[] { "txt", "md" });
-        deserialized.Multi.Should().BeFalse();
+    Assert.NotNull(deserialized);
+    Assert.Equal(new[] { "txt", "md" }, deserialized!.Filters);
+    Assert.False(deserialized.Multi);
     }
 
     [Fact]
@@ -43,9 +43,10 @@ public class IpcContractTests
         var deserialized = JsonSerializer.Deserialize<OpenFileDialogResponse>(json, _jsonOptions);
 
         // Assert
-        deserialized.Should().NotBeNull();
-        deserialized!.Canceled.Should().BeFalse();
-        deserialized.FilePaths.Should().ContainSingle().Which.Should().Be("/path/to/file.txt");
+    Assert.NotNull(deserialized);
+    Assert.False(deserialized!.Canceled);
+    var single = Assert.Single(deserialized.FilePaths);
+    Assert.Equal("/path/to/file.txt", single);
     }
 
     [Fact]
@@ -59,9 +60,9 @@ public class IpcContractTests
         var deserialized = JsonSerializer.Deserialize<OpenFileDialogResponse>(json, _jsonOptions);
 
         // Assert
-        deserialized.Should().NotBeNull();
-        deserialized!.Canceled.Should().BeTrue();
-        deserialized.FilePaths.Should().BeEmpty();
+    Assert.NotNull(deserialized);
+    Assert.True(deserialized!.Canceled);
+    Assert.Empty(deserialized.FilePaths);
     }
 
     [Fact]
@@ -75,9 +76,9 @@ public class IpcContractTests
         var deserialized = JsonSerializer.Deserialize<SaveFileDialogRequest>(json, _jsonOptions);
 
         // Assert
-        deserialized.Should().NotBeNull();
-        deserialized!.DefaultPath.Should().Be("/home/user/document.txt");
-        deserialized.Filters.Should().BeEquivalentTo(new[] { "txt", "md" });
+    Assert.NotNull(deserialized);
+    Assert.Equal("/home/user/document.txt", deserialized!.DefaultPath);
+    Assert.Equal(new[] { "txt", "md" }, deserialized.Filters);
     }
 
     [Fact]
@@ -91,9 +92,9 @@ public class IpcContractTests
         var deserialized = JsonSerializer.Deserialize<SaveFileDialogResponse>(json, _jsonOptions);
 
         // Assert
-        deserialized.Should().NotBeNull();
-        deserialized!.Canceled.Should().BeFalse();
-        deserialized.FilePath.Should().Be("/path/to/saved/file.txt");
+    Assert.NotNull(deserialized);
+    Assert.False(deserialized!.Canceled);
+    Assert.Equal("/path/to/saved/file.txt", deserialized.FilePath);
     }
 
     [Fact]
@@ -107,9 +108,9 @@ public class IpcContractTests
         var deserialized = JsonSerializer.Deserialize<SaveFileDialogResponse>(json, _jsonOptions);
 
         // Assert
-        deserialized.Should().NotBeNull();
-        deserialized!.Canceled.Should().BeTrue();
-        deserialized.FilePath.Should().BeNull();
+    Assert.NotNull(deserialized);
+    Assert.True(deserialized!.Canceled);
+    Assert.Null(deserialized.FilePath);
     }
 
     [Fact]
@@ -130,10 +131,10 @@ public class IpcContractTests
         var deserialized = JsonSerializer.Deserialize<PersistUnsavedRequest>(json, _jsonOptions);
 
         // Assert
-        deserialized.Should().NotBeNull();
-        deserialized!.Records.Should().HaveCount(2);
-        deserialized.Records[0].Kind.Should().Be("NewDocument");
-        deserialized.Records[1].Kind.Should().Be("ExistingFilePatch");
+    Assert.NotNull(deserialized);
+    Assert.Equal(2, deserialized!.Records.Length);
+    Assert.Equal("NewDocument", deserialized.Records[0].Kind);
+    Assert.Equal("ExistingFilePatch", deserialized.Records[1].Kind);
     }
 
     [Fact]
@@ -153,10 +154,10 @@ public class IpcContractTests
         var deserialized = JsonSerializer.Deserialize<RestoreSessionResponse>(json, _jsonOptions);
 
         // Assert
-        deserialized.Should().NotBeNull();
-        deserialized!.Records.Should().HaveCount(1);
-        deserialized.Records[0].Kind.Should().Be("NewDocument");
-        deserialized.Records[0].Content.Should().Be("Restored text");
+    Assert.NotNull(deserialized);
+    Assert.Single(deserialized!.Records);
+    Assert.Equal("NewDocument", deserialized.Records[0].Kind);
+    Assert.Equal("Restored text", deserialized.Records[0].Content);
     }
 }
 

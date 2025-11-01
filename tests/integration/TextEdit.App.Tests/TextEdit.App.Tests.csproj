@@ -11,7 +11,6 @@
 
   <ItemGroup>
     <PackageReference Include="Deque.AxeCore.Playwright" Version="4.8.2" />
-    <PackageReference Include="FluentAssertions" Version="8.8.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.0" />
     <PackageReference Include="Microsoft.Playwright" Version="1.55.0" />
     <PackageReference Include="xunit" Version="2.4.2" />

@@ -1,7 +1,7 @@
 using Microsoft.Playwright;
 using Deque.AxeCore.Playwright;
 using Deque.AxeCore.Commons;
-using FluentAssertions;
+using Xunit;
 using Xunit;
 using Xunit.Sdk;
 using System.Diagnostics;
@@ -163,7 +163,7 @@ public class PlaywrightDomTests : IAsyncLifetime
             // Playwright/CDP not available in this environment — skip this test.
             return;
         }
-        _page.Should().NotBeNull("Page should be connected to the running Electron app");
+    Assert.NotNull(_page); // Page should be connected to the running Electron app
         
         // Wait for main content to be visible
         await _page!.WaitForSelectorAsync("textarea[id='main-editor-textarea']", new()
@@ -176,14 +176,7 @@ public class PlaywrightDomTests : IAsyncLifetime
         var axeResults = await _page.RunAxe();
         
         // Assert - No violations should be found
-        axeResults.Violations.Should().BeEmpty(
-            $"Expected no accessibility violations. Found {axeResults.Violations.Length}:\n" +
-            string.Join("\n", axeResults.Violations.Select(v => 
-                $"- {v.Id}: {v.Description} (Impact: {v.Impact})\n" +
-                $"  Help: {v.HelpUrl}\n" +
-                $"  Nodes: {string.Join(", ", v.Nodes.Select(n => n.Html))}"
-            ))
-        );
+        Assert.Empty(axeResults.Violations);
     }
     
     [Fact]
@@ -194,7 +187,7 @@ public class PlaywrightDomTests : IAsyncLifetime
             return;
         }
         // Arrange
-        _page.Should().NotBeNull();
+    Assert.NotNull(_page);
         
         // Act - Scan just the tab navigation area
         var tabStripSelector = "nav[role='tablist']";
@@ -208,17 +201,14 @@ public class PlaywrightDomTests : IAsyncLifetime
         });
         
         // Assert
-        axeResults.Violations.Should().BeEmpty(
-            $"Tab navigation should have no ARIA violations. Found:\n" +
-            string.Join("\n", axeResults.Violations.Select(v => v.Description))
-        );
+        Assert.Empty(axeResults.Violations);
         
         // Verify tab structure exists
         var tabList = await _page.QuerySelectorAsync(tabStripSelector);
-        tabList.Should().NotBeNull("Tab list should be present");
+    Assert.NotNull(tabList); // Tab list should be present
         
         var tabs = await _page.QuerySelectorAllAsync("button[role='tab']");
-        tabs.Should().NotBeEmpty("Should have at least one tab");
+    Assert.NotEmpty(tabs); // Should have at least one tab
     }
     
     [Fact]
@@ -229,7 +219,7 @@ public class PlaywrightDomTests : IAsyncLifetime
             return;
         }
         // Arrange
-        _page.Should().NotBeNull();
+    Assert.NotNull(_page);
         
         // Act - Scan the editor panel
         var editorSelector = "main[role='tabpanel']";
@@ -243,17 +233,14 @@ public class PlaywrightDomTests : IAsyncLifetime
         });
         
         // Assert
-        axeResults.Violations.Should().BeEmpty(
-            $"Editor panel should be ARIA compliant. Found violations:\n" +
-            string.Join("\n", axeResults.Violations.Select(v => v.Description))
-        );
+        Assert.Empty(axeResults.Violations);
         
         // Verify editor has proper ARIA attributes
         var editor = await _page.QuerySelectorAsync(editorSelector);
-        editor.Should().NotBeNull();
+    Assert.NotNull(editor);
         
         var ariaLabelledBy = await editor!.GetAttributeAsync("aria-labelledby");
-        ariaLabelledBy.Should().NotBeNullOrEmpty("Editor should be labelled by active tab");
+    Assert.False(string.IsNullOrEmpty(ariaLabelledBy)); // Editor should be labelled by active tab
     }
     
     [Fact]
@@ -264,25 +251,22 @@ public class PlaywrightDomTests : IAsyncLifetime
             return;
         }
         // Arrange
-        _page.Should().NotBeNull();
+    Assert.NotNull(_page);
         
         // Act - Check status bar accessibility
         var statusBarSelector = "[role='status']";
         var statusBar = await _page!.QuerySelectorAsync(statusBarSelector);
         
         // Assert
-        statusBar.Should().NotBeNull("Status bar should have role='status'");
+    Assert.NotNull(statusBar); // Status bar should have role='status'
         
         var ariaLive = await statusBar!.GetAttributeAsync("aria-live");
-        ariaLive.Should().Be("polite", "Status bar should have aria-live='polite'");
+    Assert.Equal("polite", ariaLive); // Status bar should have aria-live='polite'
         
         // Run axe scan on full page (including status bar)
         var axeResults = await _page.RunAxe();
         
-        axeResults.Violations.Should().BeEmpty(
-            $"Status bar should have no accessibility violations. Found:\n" +
-            string.Join("\n", axeResults.Violations.Select(v => v.Description))
-        );
+        Assert.Empty(axeResults.Violations);
     }
     
     [Fact]
@@ -295,7 +279,7 @@ public class PlaywrightDomTests : IAsyncLifetime
         // This test verifies that when dialogs are opened, they have proper ARIA structure
         // Since dialogs may not be visible initially, we document the expected structure
         
-        _page.Should().NotBeNull();
+    Assert.NotNull(_page);
         
         // Document expected dialog ARIA requirements
         var expectedDialogRoles = new[]
@@ -304,9 +288,7 @@ public class PlaywrightDomTests : IAsyncLifetime
             "dialog"       // For ConfirmDialog
         };
         
-        expectedDialogRoles.Should().NotBeEmpty(
-            "Dialogs should use either role='alertdialog' or role='dialog'"
-        );
+        Assert.NotEmpty(expectedDialogRoles); // Dialogs should use either role
         
         // Note: Full dialog testing would require:
         // 1. Triggering dialog open via keyboard shortcuts
@@ -325,7 +307,7 @@ public class PlaywrightDomTests : IAsyncLifetime
             return;
         }
         // Arrange
-        _page.Should().NotBeNull();
+    Assert.NotNull(_page);
         
         // Act - Run axe-core with focus on WCAG AA standards (includes color contrast)
         var axeResults = await _page!.RunAxe(new AxeRunOptions
@@ -342,12 +324,7 @@ public class PlaywrightDomTests : IAsyncLifetime
             .Where(v => v.Id == "color-contrast")
             .ToList();
         
-        colorContrastViolations.Should().BeEmpty(
-            $"All text should meet WCAG AA color contrast requirements. Violations:\n" +
-            string.Join("\n", colorContrastViolations.SelectMany(v => v.Nodes).Select(n =>
-                $"- Element: {n.Html}\n  Issue: {string.Join(", ", n.Any.Select(a => a.Message))}"
-            ))
-        );
+        Assert.Empty(colorContrastViolations);
     }
     
     [Fact]
@@ -358,7 +335,7 @@ public class PlaywrightDomTests : IAsyncLifetime
             return;
         }
         // Arrange
-        _page.Should().NotBeNull();
+    Assert.NotNull(_page);
         
         // Act - Run general keyboard accessibility audit
         var axeResults = await _page!.RunAxe(new AxeRunOptions
@@ -377,12 +354,7 @@ public class PlaywrightDomTests : IAsyncLifetime
                        v.Id.Contains("focus"))
             .ToList();
         
-        keyboardViolations.Should().BeEmpty(
-            $"All interactive elements should be keyboard accessible. Violations:\n" +
-            string.Join("\n", keyboardViolations.Select(v => 
-                $"{v.Id}: {v.Description}"
-            ))
-        );
+        Assert.Empty(keyboardViolations);
     }
     
     [Fact]
@@ -393,7 +365,7 @@ public class PlaywrightDomTests : IAsyncLifetime
             return;
         }
         // Arrange
-        _page.Should().NotBeNull();
+    Assert.NotNull(_page);
         
         // Act - Check for proper landmark structure
         var axeResults = await _page!.RunAxe(new AxeRunOptions
@@ -415,8 +387,8 @@ public class PlaywrightDomTests : IAsyncLifetime
         var nav = await _page.QuerySelectorAsync("nav[role='tablist']");
         var main = await _page.QuerySelectorAsync("main[role='tabpanel']");
         
-        nav.Should().NotBeNull("Should have navigation landmark");
-        main.Should().NotBeNull("Should have main landmark");
+    Assert.NotNull(nav); // Should have navigation landmark
+    Assert.NotNull(main); // Should have main landmark
     }
 }
 

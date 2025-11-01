@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Xunit;
 using TextEdit.Infrastructure.FileSystem;
 
 namespace TextEdit.Core.Tests;
@@ -43,9 +43,9 @@ public class FileWatcherTests : IDisposable
         var result = await Task.WhenAny(tcs.Task, Task.Delay(2000));
 
         // Assert
-        result.Should().Be(tcs.Task);
-        changeDetected.Should().BeTrue();
-        tcs.Task.Result.Should().Be(testFile);
+    Assert.Same(tcs.Task, result);
+    Assert.True(changeDetected);
+    Assert.Equal(testFile, tcs.Task.Result);
     }
 
     [Fact]
@@ -67,23 +67,23 @@ public class FileWatcherTests : IDisposable
         await Task.Delay(500);
 
         // Assert: No change should be detected
-        changeCount.Should().Be(0);
+    Assert.Equal(0, changeCount);
     }
 
     [Fact]
     public void Watch_WithNullPath_DoesNotCrash()
     {
         // Act & Assert: Should not throw
-        var act = () => _watcher.Watch(null!);
-        act.Should().NotThrow();
+    var ex = Record.Exception(() => _watcher.Watch(null!));
+    Assert.Null(ex);
     }
 
     [Fact]
     public void Watch_WithEmptyPath_DoesNotCrash()
     {
         // Act & Assert: Should not throw
-        var act = () => _watcher.Watch("");
-        act.Should().NotThrow();
+    var ex = Record.Exception(() => _watcher.Watch(""));
+    Assert.Null(ex);
     }
 
     [Fact]
@@ -91,8 +91,8 @@ public class FileWatcherTests : IDisposable
     {
         // Act & Assert: Should not throw
         var nonexistent = Path.Combine(_testDir, "does-not-exist.txt");
-        var act = () => _watcher.Watch(nonexistent);
-        act.Should().NotThrow();
+    var ex = Record.Exception(() => _watcher.Watch(nonexistent));
+    Assert.Null(ex);
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public class FileWatcherTests : IDisposable
         await Task.Delay(300);
 
         // Assert: Should detect both changes (might dedupe rapid changes)
-        changes.Should().HaveCountGreaterThanOrEqualTo(1);
+    Assert.True(changes.Count >= 1);
     }
 
     [Fact]
@@ -127,8 +127,8 @@ public class FileWatcherTests : IDisposable
         _watcher.Watch(testFile);
 
         // Act & Assert: Should not throw
-        var act = () => _watcher.Dispose();
-        act.Should().NotThrow();
+    var ex = Record.Exception(() => _watcher.Dispose());
+    Assert.Null(ex);
     }
 
     public void Dispose()

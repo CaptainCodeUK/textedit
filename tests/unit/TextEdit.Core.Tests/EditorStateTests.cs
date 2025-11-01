@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Xunit;
 using TextEdit.Core.Editing;
 
 namespace TextEdit.Core.Tests;
@@ -12,12 +12,13 @@ public class EditorStateTests
         var state = new EditorState();
 
         // Assert
-        state.WordWrap.Should().BeTrue();
-        state.ShowPreview.Should().BeFalse();
-        state.CaretLine.Should().Be(1);
-        state.CaretColumn.Should().Be(1);
-        state.CharacterCount.Should().Be(0);
-        state.CaretIndexByDocument.Should().NotBeNull().And.BeEmpty();
+    Assert.True(state.WordWrap);
+    Assert.False(state.ShowPreview);
+    Assert.Equal(1, state.CaretLine);
+    Assert.Equal(1, state.CaretColumn);
+    Assert.Equal(0, state.CharacterCount);
+    Assert.NotNull(state.CaretIndexByDocument);
+    Assert.Empty(state.CaretIndexByDocument);
     }
 
     [Fact]
@@ -34,11 +35,11 @@ public class EditorStateTests
         state.CharacterCount = 1234;
 
         // Assert
-        state.WordWrap.Should().BeFalse();
-        state.ShowPreview.Should().BeTrue();
-        state.CaretLine.Should().Be(42);
-        state.CaretColumn.Should().Be(15);
-        state.CharacterCount.Should().Be(1234);
+    Assert.False(state.WordWrap);
+    Assert.True(state.ShowPreview);
+    Assert.Equal(42, state.CaretLine);
+    Assert.Equal(15, state.CaretColumn);
+    Assert.Equal(1234, state.CharacterCount);
     }
 
     [Fact]
@@ -54,9 +55,9 @@ public class EditorStateTests
         state.CaretIndexByDocument[doc2Id] = 250;
 
         // Assert
-        state.CaretIndexByDocument.Should().HaveCount(2);
-        state.CaretIndexByDocument[doc1Id].Should().Be(100);
-        state.CaretIndexByDocument[doc2Id].Should().Be(250);
+    Assert.Equal(2, state.CaretIndexByDocument.Count);
+    Assert.Equal(100, state.CaretIndexByDocument[doc1Id]);
+    Assert.Equal(250, state.CaretIndexByDocument[doc2Id]);
     }
 
     [Fact]
@@ -71,7 +72,7 @@ public class EditorStateTests
         state.NotifyChanged();
 
         // Assert
-        eventRaised.Should().BeTrue();
+    Assert.True(eventRaised);
     }
 
     [Fact]
@@ -81,10 +82,8 @@ public class EditorStateTests
         var state = new EditorState();
 
         // Act
-        var act = () => state.NotifyChanged();
-
-        // Assert
-        act.Should().NotThrow();
+    var ex = Record.Exception(() => state.NotifyChanged());
+    Assert.Null(ex);
     }
 
     [Fact]
@@ -101,6 +100,6 @@ public class EditorStateTests
         state.NotifyChanged();
 
         // Assert
-        callCount.Should().Be(3);
+    Assert.Equal(3, callCount);
     }
 }

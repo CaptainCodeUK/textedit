@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Xunit;
 using TextEdit.Core.Documents;
 using TextEdit.Infrastructure.Persistence;
 using System.Text;
@@ -31,11 +31,11 @@ public class PersistenceServiceTests : IDisposable
 
         // Assert
         var sessionFile = Path.Combine(_testSessionDir, $"{doc.Id}.json");
-        File.Exists(sessionFile).Should().BeTrue();
+    Assert.True(File.Exists(sessionFile));
         var json = await File.ReadAllTextAsync(sessionFile);
-        json.Should().Contain("Unsaved content");
-        json.Should().Contain($"\"Id\":\"{doc.Id}\"");
-        json.Should().Contain("\"IsDirty\":true");
+    Assert.Contains("Unsaved content", json);
+    Assert.Contains($"\"Id\":\"{doc.Id}\"", json);
+    Assert.Contains("\"IsDirty\":true", json);
     }
 
     [Fact]
@@ -52,13 +52,13 @@ public class PersistenceServiceTests : IDisposable
 
         // Assert
         var sessionFile = Path.Combine(_testSessionDir, $"{doc.Id}.json");
-        File.Exists(sessionFile).Should().BeTrue();
+    Assert.True(File.Exists(sessionFile));
         var json = await File.ReadAllTextAsync(sessionFile);
-        json.Should().Contain($"\"{doc.Id}\"");
-        json.Should().Contain("/test/file.txt");
-        json.Should().Contain("\"IsDirty\":false");
-        // Content should be null or empty for saved files
-        json.Should().Match(s => s.Contains("\"Content\":null") || s.Contains("\"Content\":\"\""));
+    Assert.Contains($"\"{doc.Id}\"", json);
+    Assert.Contains("/test/file.txt", json);
+    Assert.Contains("\"IsDirty\":false", json);
+    // Content should be null or empty for saved files
+    Assert.True(json.Contains("\"Content\":null") || json.Contains("\"Content\":\"\""));
     }
 
     [Fact]
@@ -85,8 +85,8 @@ public class PersistenceServiceTests : IDisposable
         var restored = await _service.RestoreAsync();
 
         // Assert
-        restored.Should().BeEmpty();
-        File.Exists(emptyGuidFile).Should().BeFalse(); // Should be deleted
+    Assert.Empty(restored);
+    Assert.False(File.Exists(emptyGuidFile)); // Should be deleted
     }
 
     [Fact]
@@ -106,11 +106,11 @@ public class PersistenceServiceTests : IDisposable
         var restored = (await _service.RestoreAsync()).ToList();
 
         // Assert
-        restored.Should().HaveCount(1);
+    Assert.Single(restored);
         var restoredDoc = restored[0];
-        restoredDoc.Content.Should().Be("More modifications");
-        restoredDoc.IsDirty.Should().BeTrue();
-        restoredDoc.FilePath.Should().Be(tempFile);
+    Assert.Equal("More modifications", restoredDoc.Content);
+    Assert.True(restoredDoc.IsDirty);
+    Assert.Equal(tempFile, restoredDoc.FilePath);
 
         // Cleanup
         if (File.Exists(tempFile))
@@ -131,11 +131,11 @@ public class PersistenceServiceTests : IDisposable
         var restored = (await _service.RestoreAsync()).ToList();
 
         // Assert
-        restored.Should().HaveCount(1);
+    Assert.Single(restored);
         var restoredDoc = restored[0];
-        restoredDoc.Content.Should().Be("Untitled content");
-        restoredDoc.IsDirty.Should().BeTrue();
-        restoredDoc.FilePath.Should().BeNull();
+    Assert.Equal("Untitled content", restoredDoc.Content);
+    Assert.True(restoredDoc.IsDirty);
+    Assert.Null(restoredDoc.FilePath);
     }
 
     [Fact]
@@ -156,10 +156,10 @@ public class PersistenceServiceTests : IDisposable
         var restored = (await _service.RestoreAsync()).ToList();
 
         // Assert
-        restored.Should().HaveCount(3);
-        restored[0].Content.Should().Be("First");
-        restored[1].Content.Should().Be("Second");
-        restored[2].Content.Should().Be("Third");
+    Assert.Equal(3, restored.Count);
+    Assert.Equal("First", restored[0].Content);
+    Assert.Equal("Second", restored[1].Content);
+    Assert.Equal("Third", restored[2].Content);
     }
 
     [Fact]
@@ -170,10 +170,10 @@ public class PersistenceServiceTests : IDisposable
 
         // Assert
         var prefsFile = Path.Combine(_testSessionDir, "editor-prefs.json");
-        File.Exists(prefsFile).Should().BeTrue();
+    Assert.True(File.Exists(prefsFile));
         var json = File.ReadAllText(prefsFile);
-        json.Should().Contain("\"WordWrap\":true");
-        json.Should().Contain("\"ShowPreview\":true");
+    Assert.Contains("\"WordWrap\":true", json);
+    Assert.Contains("\"ShowPreview\":true", json);
     }
 
     [Fact]
@@ -186,8 +186,8 @@ public class PersistenceServiceTests : IDisposable
         var (wordWrap, showPreview) = _service.RestoreEditorPreferences();
 
         // Assert
-        wordWrap.Should().BeFalse();
-        showPreview.Should().BeTrue();
+    Assert.False(wordWrap);
+    Assert.True(showPreview);
     }
 
     [Fact]
@@ -204,8 +204,8 @@ public class PersistenceServiceTests : IDisposable
         var (wordWrap, showPreview) = _service.RestoreEditorPreferences();
 
         // Assert
-        wordWrap.Should().BeTrue(); // Default
-        showPreview.Should().BeFalse(); // Default
+    Assert.True(wordWrap); // Default
+    Assert.False(showPreview); // Default
     }
 
     [Fact]
@@ -223,9 +223,9 @@ public class PersistenceServiceTests : IDisposable
         await _service.PersistAsync(new[] { doc1, doc2, doc3 });
 
         // Assert
-        File.Exists(Path.Combine(_testSessionDir, $"{doc1.Id}.json")).Should().BeTrue();
-        File.Exists(Path.Combine(_testSessionDir, $"{doc2.Id}.json")).Should().BeTrue();
-        File.Exists(Path.Combine(_testSessionDir, $"{doc3.Id}.json")).Should().BeTrue();
+    Assert.True(File.Exists(Path.Combine(_testSessionDir, $"{doc1.Id}.json")));
+    Assert.True(File.Exists(Path.Combine(_testSessionDir, $"{doc2.Id}.json")));
+    Assert.True(File.Exists(Path.Combine(_testSessionDir, $"{doc3.Id}.json")));
     }
 
     [Fact]
@@ -236,13 +236,13 @@ public class PersistenceServiceTests : IDisposable
         doc.SetContent("Content");
         _service.PersistAsync(new[] { doc }).Wait();
         var sessionFile = Path.Combine(_testSessionDir, $"{doc.Id}.json");
-        File.Exists(sessionFile).Should().BeTrue();
+    Assert.True(File.Exists(sessionFile));
 
         // Act
         _service.DeleteSessionFile(doc.Id);
 
         // Assert
-        File.Exists(sessionFile).Should().BeFalse();
+    Assert.False(File.Exists(sessionFile));
     }
 
     [Fact]
@@ -262,7 +262,7 @@ public class PersistenceServiceTests : IDisposable
         var sessionFiles = Directory.GetFiles(_testSessionDir, "*.json")
             .Where(f => !f.EndsWith("editor-prefs.json"))
             .ToList();
-        sessionFiles.Should().BeEmpty();
+    Assert.Empty(sessionFiles);
     }
 
     public void Dispose()

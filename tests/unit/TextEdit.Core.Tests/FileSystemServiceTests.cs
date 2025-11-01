@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Xunit;
 using System.Text;
 using TextEdit.Infrastructure.FileSystem;
 
@@ -22,7 +22,7 @@ public class FileSystemServiceTests
             var result = await _fileSystem.ReadAllTextAsync(tempFile, Encoding.UTF8);
 
             // Assert
-            result.Should().Be(expectedContent);
+            Assert.Equal(expectedContent, result);
         }
         finally
         {
@@ -44,7 +44,7 @@ public class FileSystemServiceTests
 
             // Assert
             var written = await File.ReadAllTextAsync(tempFile, Encoding.UTF8);
-            written.Should().Be(content);
+            Assert.Equal(content, written);
         }
         finally
         {
@@ -64,7 +64,7 @@ public class FileSystemServiceTests
             var result = _fileSystem.FileExists(tempFile);
 
             // Assert
-            result.Should().BeTrue();
+            Assert.True(result);
         }
         finally
         {
@@ -82,7 +82,7 @@ public class FileSystemServiceTests
         var result = _fileSystem.FileExists(nonExistentFile);
 
         // Assert
-        result.Should().BeFalse();
+    Assert.False(result);
     }
 
     [Fact]
@@ -98,9 +98,9 @@ public class FileSystemServiceTests
             await _fileSystem.WriteAllTextAsync(tempFile, content, Encoding.UTF8);
 
             // Assert
-            File.Exists(tempFile).Should().BeTrue();
+            Assert.True(File.Exists(tempFile));
             var written = await File.ReadAllTextAsync(tempFile);
-            written.Should().Be(content);
+            Assert.Equal(content, written);
         }
         finally
         {
@@ -124,7 +124,7 @@ public class FileSystemServiceTests
             var result = await _fileSystem.ReadAllTextAsync(tempFile, Encoding.Unicode);
 
             // Assert
-            result.Should().Be(content);
+            Assert.Equal(content, result);
         }
         finally
         {

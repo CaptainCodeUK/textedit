@@ -1,23 +1,23 @@
-using FluentAssertions;
+using Xunit;
 using TextEdit.Core.Documents;
 using TextEdit.Core.Editing;
 using TextEdit.Core.Abstractions;
-using NSubstitute;
+using Moq;
 using System.Text;
 
 namespace TextEdit.Core.Tests;
 
 public class DocumentServiceTests
 {
-    private readonly IFileSystem _fileSystem;
-    private readonly IUndoRedoService _undoRedo;
+    private readonly Mock<IFileSystem> _fileSystem;
+    private readonly Mock<IUndoRedoService> _undoRedo;
     private readonly DocumentService _service;
 
     public DocumentServiceTests()
     {
-        _fileSystem = Substitute.For<IFileSystem>();
-        _undoRedo = Substitute.For<IUndoRedoService>();
-        _service = new DocumentService(_fileSystem, _undoRedo);
+        _fileSystem = new Mock<IFileSystem>(MockBehavior.Strict);
+        _undoRedo = new Mock<IUndoRedoService>(MockBehavior.Strict);
+        _service = new DocumentService(_fileSystem.Object, _undoRedo.Object);
     }
 
     [Fact]
@@ -28,17 +28,17 @@ public class DocumentServiceTests
         doc.SetContent("New content");
         doc.MarkSaved("/test/newfile.txt");
 
-        _fileSystem.FileExists(doc.FilePath!).Returns(false);
-        _fileSystem.WriteAllTextAsync(doc.FilePath!, "New content", Arg.Any<Encoding>())
+        _fileSystem.Setup(fs => fs.FileExists(doc.FilePath!)).Returns(false);
+        _fileSystem.Setup(fs => fs.WriteAllTextAsync(doc.FilePath!, "New content", It.IsAny<Encoding>()))
             .Returns(Task.CompletedTask);
 
         // Act
         await _service.SaveAsync(doc);
 
         // Assert
-        doc.IsDirty.Should().BeFalse();
-        await _fileSystem.DidNotReceive().ReadAllTextAsync(Arg.Any<string>(), Arg.Any<Encoding>());
-        await _fileSystem.Received(1).WriteAllTextAsync(doc.FilePath!, "New content", Arg.Any<Encoding>());
+    Assert.False(doc.IsDirty);
+    _fileSystem.Verify(fs => fs.ReadAllTextAsync(It.IsAny<string>(), It.IsAny<Encoding>()), Times.Never);
+    _fileSystem.Verify(fs => fs.WriteAllTextAsync(doc.FilePath!, "New content", It.IsAny<Encoding>()), Times.Once);
     }
 
     [Fact]
@@ -50,17 +50,17 @@ public class DocumentServiceTests
         doc.MarkSaved("/test/file.txt");
         doc.SetContent("Modified content");
 
-        _fileSystem.FileExists(doc.FilePath!).Returns(true);
-        _fileSystem.ReadAllTextAsync(doc.FilePath!, Arg.Any<Encoding>()).Returns(Task.FromResult("Current content"));
-        _fileSystem.WriteAllTextAsync(doc.FilePath!, "Modified content", Arg.Any<Encoding>())
+        _fileSystem.Setup(fs => fs.FileExists(doc.FilePath!)).Returns(true);
+        _fileSystem.Setup(fs => fs.ReadAllTextAsync(doc.FilePath!, It.IsAny<Encoding>())).ReturnsAsync("Current content");
+        _fileSystem.Setup(fs => fs.WriteAllTextAsync(doc.FilePath!, "Modified content", It.IsAny<Encoding>()))
             .Returns(Task.CompletedTask);
 
         // Act
         await _service.SaveAsync(doc);
 
         // Assert
-        doc.IsDirty.Should().BeFalse();
-        await _fileSystem.Received(1).WriteAllTextAsync(doc.FilePath!, "Modified content", Arg.Any<Encoding>());
+    Assert.False(doc.IsDirty);
+    _fileSystem.Verify(fs => fs.WriteAllTextAsync(doc.FilePath!, "Modified content", It.IsAny<Encoding>()), Times.Once);
     }
 
     [Fact]
@@ -72,18 +72,18 @@ public class DocumentServiceTests
         doc.MarkSaved("/test/file.txt");
         doc.SetContent("My changes");
 
-        _fileSystem.FileExists(doc.FilePath!).Returns(true);
-        _fileSystem.ReadAllTextAsync(doc.FilePath!, Arg.Any<Encoding>()).Returns(Task.FromResult("Someone else's changes"));
-        _fileSystem.WriteAllTextAsync(doc.FilePath!, "My changes", Arg.Any<Encoding>())
+        _fileSystem.Setup(fs => fs.FileExists(doc.FilePath!)).Returns(true);
+        _fileSystem.Setup(fs => fs.ReadAllTextAsync(doc.FilePath!, It.IsAny<Encoding>())).ReturnsAsync("Someone else's changes");
+        _fileSystem.Setup(fs => fs.WriteAllTextAsync(doc.FilePath!, "My changes", It.IsAny<Encoding>()))
             .Returns(Task.CompletedTask);
 
         // Act
         await _service.SaveAsync(doc);
 
         // Assert - conflict is logged but save proceeds
-        doc.IsDirty.Should().BeFalse();
-        await _fileSystem.Received(1).ReadAllTextAsync(doc.FilePath!, Arg.Any<Encoding>());
-        await _fileSystem.Received(1).WriteAllTextAsync(doc.FilePath!, "My changes", Arg.Any<Encoding>());
+    Assert.False(doc.IsDirty);
+    _fileSystem.Verify(fs => fs.ReadAllTextAsync(doc.FilePath!, It.IsAny<Encoding>()), Times.Once);
+    _fileSystem.Verify(fs => fs.WriteAllTextAsync(doc.FilePath!, "My changes", It.IsAny<Encoding>()), Times.Once);
     }
 
     [Fact]
@@ -95,17 +95,15 @@ public class DocumentServiceTests
         doc.MarkSaved("/test/readonly.txt");
         doc.SetContent("Modified"); // Make it dirty again
 
-        _fileSystem.FileExists(doc.FilePath!).Returns(true);
-        _fileSystem.ReadAllTextAsync(doc.FilePath!, Arg.Any<Encoding>()).Returns(Task.FromResult("Content"));
-        _fileSystem.WriteAllTextAsync(doc.FilePath!, Arg.Any<string>(), Arg.Any<Encoding>())
-            .Returns<Task>(x => throw new UnauthorizedAccessException("Permission denied"));
+        _fileSystem.Setup(fs => fs.FileExists(doc.FilePath!)).Returns(true);
+        _fileSystem.Setup(fs => fs.ReadAllTextAsync(doc.FilePath!, It.IsAny<Encoding>())).ReturnsAsync("Content");
+        _fileSystem.Setup(fs => fs.WriteAllTextAsync(doc.FilePath!, It.IsAny<string>(), It.IsAny<Encoding>()))
+            .ThrowsAsync(new UnauthorizedAccessException("Permission denied"));
 
         // Act
-        var act = async () => await _service.SaveAsync(doc);
-
         // Assert
-        await act.Should().ThrowAsync<UnauthorizedAccessException>()
-            .WithMessage("Permission denied");
+        var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await _service.SaveAsync(doc));
+        Assert.Equal("Permission denied", ex.Message);
     }
 
     [Fact]
@@ -116,37 +114,36 @@ public class DocumentServiceTests
         doc.SetContent("Content");
 
         // Act
-        var act = async () => await _service.SaveAsync(doc);
-
-        // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>();
+    // Assert
+    await Assert.ThrowsAsync<InvalidOperationException>(async () => await _service.SaveAsync(doc));
     }
 
     [Fact]
     public void NewDocument_CreatesDocumentWithDefaults()
     {
+        // Arrange
+        _undoRedo.Setup(u => u.Attach(It.IsAny<Document>(), ""));
+
         // Act
         var doc = _service.NewDocument();
 
         // Assert
-        doc.Should().NotBeNull();
-        doc.Content.Should().BeEmpty();
-        doc.IsDirty.Should().BeFalse();
-        doc.FilePath.Should().BeNull();
-        _undoRedo.Received(1).Attach(doc, "");
+        Assert.NotNull(doc);
+        Assert.Equal(string.Empty, doc.Content);
+        Assert.False(doc.IsDirty);
+        Assert.Null(doc.FilePath);
+        _undoRedo.Verify(u => u.Attach(doc, ""), Times.Once);
     }
 
     [Fact]
     public async Task OpenAsync_WhenFileNotFound_ThrowsFileNotFoundException()
     {
         // Arrange
-        _fileSystem.FileExists("/test/missing.txt").Returns(false);
+    _fileSystem.Setup(fs => fs.FileExists("/test/missing.txt")).Returns(false);
 
         // Act
-        var act = async () => await _service.OpenAsync("/test/missing.txt");
-
-        // Assert
-        await act.Should().ThrowAsync<FileNotFoundException>();
+    // Assert
+    await Assert.ThrowsAsync<FileNotFoundException>(async () => await _service.OpenAsync("/test/missing.txt"));
     }
 
     [Fact]
@@ -159,18 +156,20 @@ public class DocumentServiceTests
         try
         {
             await File.WriteAllTextAsync(tempFile, content);
-            _fileSystem.FileExists(tempFile).Returns(true);
-            _fileSystem.ReadAllTextAsync(tempFile, Arg.Any<Encoding>()).Returns(Task.FromResult(content));
+            _fileSystem.Setup(fs => fs.FileExists(tempFile)).Returns(true);
+            _fileSystem.Setup(fs => fs.GetFileSize(tempFile)).Returns(content.Length);
+            _fileSystem.Setup(fs => fs.ReadAllTextAsync(tempFile, It.IsAny<Encoding>())).ReturnsAsync(content);
+            _undoRedo.Setup(u => u.Attach(It.IsAny<Document>(), content));
 
             // Act
             var doc = await _service.OpenAsync(tempFile);
 
             // Assert
-            doc.Should().NotBeNull();
-            doc.Content.Should().Be(content);
-            doc.FilePath.Should().Be(tempFile);
-            doc.IsDirty.Should().BeFalse();
-            _undoRedo.Received(1).Attach(doc, content);
+            Assert.NotNull(doc);
+            Assert.Equal(content, doc.Content);
+            Assert.Equal(tempFile, doc.FilePath);
+            Assert.False(doc.IsDirty);
+            _undoRedo.Verify(u => u.Attach(doc, content), Times.Once);
         }
         finally
         {
@@ -189,14 +188,16 @@ public class DocumentServiceTests
         try
         {
             await File.WriteAllTextAsync(tempFile, windowsContent);
-            _fileSystem.FileExists(tempFile).Returns(true);
-            _fileSystem.ReadAllTextAsync(tempFile, Arg.Any<Encoding>()).Returns(Task.FromResult(windowsContent));
+            _fileSystem.Setup(fs => fs.FileExists(tempFile)).Returns(true);
+            _fileSystem.Setup(fs => fs.GetFileSize(tempFile)).Returns(windowsContent.Length);
+            _fileSystem.Setup(fs => fs.ReadAllTextAsync(tempFile, It.IsAny<Encoding>())).ReturnsAsync(windowsContent);
+            _undoRedo.Setup(u => u.Attach(It.IsAny<Document>(), normalized));
 
             // Act
             var doc = await _service.OpenAsync(tempFile);
 
             // Assert
-            doc.Content.Should().Be(normalized);
+            Assert.Equal(normalized, doc.Content);
         }
         finally
         {
@@ -211,13 +212,14 @@ public class DocumentServiceTests
         var doc = new Document();
         doc.SetContent("Original");
         var newContent = "Updated";
+        _undoRedo.Setup(u => u.Push(doc, newContent));
 
         // Act
         _service.UpdateContent(doc, newContent);
 
         // Assert
-        doc.Content.Should().Be(newContent);
-        _undoRedo.Received(1).Push(doc, newContent);
+        Assert.Equal(newContent, doc.Content);
+        _undoRedo.Verify(u => u.Push(doc, newContent), Times.Once);
     }
 
     [Fact]
@@ -231,7 +233,7 @@ public class DocumentServiceTests
         _service.UpdateContent(doc, "Same content");
 
         // Assert
-        _undoRedo.DidNotReceive().Push(Arg.Any<Document>(), Arg.Any<string>());
+    _undoRedo.Verify(u => u.Push(It.IsAny<Document>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -241,15 +243,15 @@ public class DocumentServiceTests
         var doc = new Document();
         doc.SetContent("Content");
         var newPath = "/test/newlocation.txt";
-        _fileSystem.WriteAllTextAsync(newPath, "Content", Arg.Any<Encoding>())
+        _fileSystem.Setup(fs => fs.WriteAllTextAsync(newPath, "Content", It.IsAny<Encoding>()))
             .Returns(Task.CompletedTask);
 
         // Act
         await _service.SaveAsync(doc, newPath);
 
         // Assert
-        doc.FilePath.Should().Be(newPath);
-        doc.IsDirty.Should().BeFalse();
+    Assert.Equal(newPath, doc.FilePath);
+    Assert.False(doc.IsDirty);
     }
 
     [Fact]
@@ -263,43 +265,45 @@ public class DocumentServiceTests
         doc.SetContent("Line 1\nLine 2\nLine 3"); // Re-mark dirty
 
         string? capturedText = null;
-        _fileSystem.FileExists("/test/windows.txt").Returns(false);
-        _fileSystem.WriteAllTextAsync("/test/windows.txt", Arg.Do<string>(x => capturedText = x), Arg.Any<Encoding>())
+        _fileSystem.Setup(fs => fs.FileExists("/test/windows.txt")).Returns(false);
+        _fileSystem.Setup(fs => fs.WriteAllTextAsync("/test/windows.txt", It.IsAny<string>(), It.IsAny<Encoding>()))
+            .Callback<string, string, Encoding>((pathArg, textArg, enc) => capturedText = textArg)
             .Returns(Task.CompletedTask);
 
         // Act
         await _service.SaveAsync(doc);
 
         // Assert
-        capturedText.Should().Be("Line 1\r\nLine 2\r\nLine 3");
+    Assert.Equal("Line 1\r\nLine 2\r\nLine 3", capturedText);
     }
 
     [Fact]
     public async Task OpenAsync_LargeFile_MarksReadOnly()
     {
-    // Arrange: Create a 15MB file.
-    // NOTE: The large-file streaming threshold in production is 10MB
-    // (see src/TextEdit.Core/Documents/DocumentService.cs -> LargeFileThreshold).
-    // We intentionally use 15MB here to be safely above the threshold and avoid
-    // boundary-related flakiness. This ensures the streaming/read-only path is exercised.
+        // Arrange: Create a 15MB file.
+        // NOTE: The large-file streaming threshold in production is 10MB
+        // (see src/TextEdit.Core/Documents/DocumentService.cs -> LargeFileThreshold).
+        // We intentionally use 15MB here to be safely above the threshold and avoid
+        // boundary-related flakiness. This ensures the streaming/read-only path is exercised.
         var tempFile = Path.GetTempFileName();
-    var largeContent = new string('x', 15 * 1024 * 1024); // 15MB (> 10MB threshold)
+        var largeContent = new string('x', 15 * 1024 * 1024); // 15MB (> 10MB threshold)
         
         try
         {
             await File.WriteAllTextAsync(tempFile, largeContent);
-            _fileSystem.FileExists(tempFile).Returns(true);
-                _fileSystem.GetFileSize(tempFile).Returns(15L * 1024 * 1024); // 15MB
-                _fileSystem.ReadLargeFileAsync(tempFile, Arg.Any<Encoding>(), Arg.Any<IProgress<int>>(), Arg.Any<CancellationToken>())
-                    .Returns(Task.FromResult(largeContent));
+            _fileSystem.Setup(fs => fs.FileExists(tempFile)).Returns(true);
+            _fileSystem.Setup(fs => fs.GetFileSize(tempFile)).Returns(15L * 1024 * 1024);
+            _fileSystem.Setup(fs => fs.ReadLargeFileAsync(tempFile, It.IsAny<Encoding>(), It.IsAny<IProgress<int>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(largeContent);
+            _undoRedo.Setup(u => u.Attach(It.IsAny<Document>(), largeContent));
 
             // Act
             var doc = await _service.OpenAsync(tempFile);
 
             // Assert
-            doc.Should().NotBeNull();
-            doc.IsReadOnly.Should().BeTrue();
-            doc.FilePath.Should().Be(tempFile);
+            Assert.NotNull(doc);
+            Assert.True(doc.IsReadOnly);
+            Assert.Equal(tempFile, doc.FilePath);
         }
         finally
         {
@@ -317,16 +321,18 @@ public class DocumentServiceTests
         try
         {
             await File.WriteAllTextAsync(tempFile, smallContent);
-            _fileSystem.FileExists(tempFile).Returns(true);
-            _fileSystem.ReadAllTextAsync(tempFile, Arg.Any<Encoding>()).Returns(Task.FromResult(smallContent));
+            _fileSystem.Setup(fs => fs.FileExists(tempFile)).Returns(true);
+            _fileSystem.Setup(fs => fs.GetFileSize(tempFile)).Returns(smallContent.Length);
+            _fileSystem.Setup(fs => fs.ReadAllTextAsync(tempFile, It.IsAny<Encoding>())).ReturnsAsync(smallContent);
+            _undoRedo.Setup(u => u.Attach(It.IsAny<Document>(), smallContent));
 
             // Act
             var doc = await _service.OpenAsync(tempFile);
 
             // Assert
-            doc.Should().NotBeNull();
-            doc.IsReadOnly.Should().BeFalse();
-            doc.Content.Should().Be(smallContent);
+            Assert.NotNull(doc);
+            Assert.False(doc.IsReadOnly);
+            Assert.Equal(smallContent, doc.Content);
         }
         finally
         {

@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Xunit;
 using TextEdit.Infrastructure.Ipc;
 using TextEdit.Core.Preferences;
 using TextEdit.Infrastructure.Persistence;
@@ -27,7 +27,7 @@ public class IpcBridgeTests
         var result = await _bridge.ShowOpenFileDialogAsync();
 
         // Assert
-        result.Should().BeNull();
+    Assert.Null(result);
     }
 
     [Fact]
@@ -37,7 +37,7 @@ public class IpcBridgeTests
         var result = await _bridge.ShowSaveFileDialogAsync();
 
         // Assert
-        result.Should().BeNull();
+    Assert.Null(result);
     }
 
     [Fact]
@@ -47,23 +47,23 @@ public class IpcBridgeTests
         var result = await _bridge.ConfirmCloseDirtyAsync("test.txt");
 
         // Assert
-        result.Should().Be(IpcBridge.CloseDecision.Cancel);
+    Assert.Equal(IpcBridge.CloseDecision.Cancel, result);
     }
 
     [Fact]
     public async Task ConfirmCloseDirtyAsync_WithNullName_DoesNotCrash()
     {
         // Act & Assert
-        var result = await _bridge.ConfirmCloseDirtyAsync(null);
-        result.Should().Be(IpcBridge.CloseDecision.Cancel);
+    var result = await _bridge.ConfirmCloseDirtyAsync(null);
+    Assert.Equal(IpcBridge.CloseDecision.Cancel, result);
     }
 
     [Fact]
     public async Task ConfirmCloseDirtyAsync_WithEmptyName_DoesNotCrash()
     {
         // Act & Assert
-        var result = await _bridge.ConfirmCloseDirtyAsync("");
-        result.Should().Be(IpcBridge.CloseDecision.Cancel);
+    var result = await _bridge.ConfirmCloseDirtyAsync("");
+    Assert.Equal(IpcBridge.CloseDecision.Cancel, result);
     }
 
     [Fact]
@@ -73,23 +73,23 @@ public class IpcBridgeTests
         var result = await _bridge.ConfirmReloadExternalAsync("test.txt");
 
         // Assert
-        result.Should().Be(IpcBridge.ExternalChangeDecision.Cancel);
+    Assert.Equal(IpcBridge.ExternalChangeDecision.Cancel, result);
     }
 
     [Fact]
     public async Task ConfirmReloadExternalAsync_WithNullName_DoesNotCrash()
     {
         // Act & Assert
-        var result = await _bridge.ConfirmReloadExternalAsync(null);
-        result.Should().Be(IpcBridge.ExternalChangeDecision.Cancel);
+    var result = await _bridge.ConfirmReloadExternalAsync(null);
+    Assert.Equal(IpcBridge.ExternalChangeDecision.Cancel, result);
     }
 
     [Fact]
     public async Task ConfirmReloadExternalAsync_WithEmptyName_DoesNotCrash()
     {
         // Act & Assert
-        var result = await _bridge.ConfirmReloadExternalAsync("");
-        result.Should().Be(IpcBridge.ExternalChangeDecision.Cancel);
+    var result = await _bridge.ConfirmReloadExternalAsync("");
+    Assert.Equal(IpcBridge.ExternalChangeDecision.Cancel, result);
     }
 
     [Fact]
@@ -100,9 +100,9 @@ public class IpcBridgeTests
         var dontSave = IpcBridge.CloseDecision.DontSave;
         var cancel = IpcBridge.CloseDecision.Cancel;
 
-        save.Should().NotBe(dontSave);
-        save.Should().NotBe(cancel);
-        dontSave.Should().NotBe(cancel);
+    Assert.NotEqual(dontSave, save);
+    Assert.NotEqual(cancel, save);
+    Assert.NotEqual(cancel, dontSave);
     }
 
     [Fact]
@@ -113,8 +113,8 @@ public class IpcBridgeTests
         var keep = IpcBridge.ExternalChangeDecision.Keep;
         var cancel = IpcBridge.ExternalChangeDecision.Cancel;
 
-        reload.Should().NotBe(keep);
-        reload.Should().NotBe(cancel);
-        keep.Should().NotBe(cancel);
+    Assert.NotEqual(keep, reload);
+    Assert.NotEqual(cancel, reload);
+    Assert.NotEqual(cancel, keep);
     }
 }

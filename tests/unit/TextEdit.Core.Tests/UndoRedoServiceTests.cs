@@ -1,4 +1,4 @@
-using FluentAssertions;
+using Xunit;
 using TextEdit.Core.Documents;
 using TextEdit.Core.Editing;
 
@@ -17,8 +17,8 @@ public class UndoRedoServiceTests
         service.Attach(doc);
 
         // Assert
-        service.CanUndo(doc.Id).Should().BeFalse();
-        service.CanRedo(doc.Id).Should().BeFalse();
+    Assert.False(service.CanUndo(doc.Id));
+    Assert.False(service.CanRedo(doc.Id));
     }
 
     [Fact]
@@ -32,8 +32,8 @@ public class UndoRedoServiceTests
         service.Attach(doc, "Initial content");
 
         // Assert
-        service.CanUndo(doc.Id).Should().BeFalse(); // Need at least 2 items to undo
-        service.CanRedo(doc.Id).Should().BeFalse();
+    Assert.False(service.CanUndo(doc.Id)); // Need at least 2 items to undo
+    Assert.False(service.CanRedo(doc.Id));
     }
 
     [Fact]
@@ -48,8 +48,8 @@ public class UndoRedoServiceTests
         service.Push(doc, "First edit");
 
         // Assert
-        service.CanUndo(doc.Id).Should().BeTrue();
-        service.CanRedo(doc.Id).Should().BeFalse();
+    Assert.True(service.CanUndo(doc.Id));
+    Assert.False(service.CanRedo(doc.Id));
     }
 
     [Fact]
@@ -64,8 +64,8 @@ public class UndoRedoServiceTests
         service.Push(doc, "Second content");
 
         // Assert
-        service.CanUndo(doc.Id).Should().BeTrue(); // Now we have 2 items
-        service.CanRedo(doc.Id).Should().BeFalse();
+    Assert.True(service.CanUndo(doc.Id)); // Now we have 2 items
+    Assert.False(service.CanRedo(doc.Id));
     }
 
     [Fact]
@@ -82,7 +82,7 @@ public class UndoRedoServiceTests
         service.Push(doc, "New branch");
 
         // Assert
-        service.CanRedo(doc.Id).Should().BeFalse();
+    Assert.False(service.CanRedo(doc.Id));
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class UndoRedoServiceTests
         var result = service.Undo(doc.Id);
 
         // Assert
-        result.Should().BeNull();
+    Assert.Null(result);
     }
 
     [Fact]
@@ -113,9 +113,9 @@ public class UndoRedoServiceTests
         var result = service.Undo(doc.Id);
 
         // Assert
-        result.Should().Be("Initial");
-        service.CanUndo(doc.Id).Should().BeFalse();
-        service.CanRedo(doc.Id).Should().BeTrue();
+    Assert.Equal("Initial", result);
+    Assert.False(service.CanUndo(doc.Id));
+    Assert.True(service.CanRedo(doc.Id));
     }
 
     [Fact]
@@ -129,9 +129,9 @@ public class UndoRedoServiceTests
         service.Push(doc, "V3");
 
         // Act & Assert
-        service.Undo(doc.Id).Should().Be("V2");
-        service.Undo(doc.Id).Should().Be("V1");
-        service.Undo(doc.Id).Should().BeNull();
+    Assert.Equal("V2", service.Undo(doc.Id));
+    Assert.Equal("V1", service.Undo(doc.Id));
+    Assert.Null(service.Undo(doc.Id));
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public class UndoRedoServiceTests
         var result = service.Redo(doc.Id);
 
         // Assert
-        result.Should().BeNull();
+    Assert.Null(result);
     }
 
     [Fact]
@@ -163,9 +163,9 @@ public class UndoRedoServiceTests
         var result = service.Redo(doc.Id);
 
         // Assert
-        result.Should().Be("V2");
-        service.CanRedo(doc.Id).Should().BeFalse();
-        service.CanUndo(doc.Id).Should().BeTrue();
+    Assert.Equal("V2", result);
+    Assert.False(service.CanRedo(doc.Id));
+    Assert.True(service.CanUndo(doc.Id));
     }
 
     [Fact]
@@ -181,9 +181,9 @@ public class UndoRedoServiceTests
         service.Undo(doc.Id);
 
         // Act & Assert
-        service.Redo(doc.Id).Should().Be("V2");
-        service.Redo(doc.Id).Should().Be("V3");
-        service.Redo(doc.Id).Should().BeNull();
+    Assert.Equal("V2", service.Redo(doc.Id));
+    Assert.Equal("V3", service.Redo(doc.Id));
+    Assert.Null(service.Redo(doc.Id));
     }
 
     [Fact]
@@ -193,7 +193,7 @@ public class UndoRedoServiceTests
         var service = new UndoRedoService();
 
         // Act & Assert
-        service.CanUndo(Guid.NewGuid()).Should().BeFalse();
+    Assert.False(service.CanUndo(Guid.NewGuid()));
     }
 
     [Fact]
@@ -203,7 +203,7 @@ public class UndoRedoServiceTests
         var service = new UndoRedoService();
 
         // Act & Assert
-        service.CanRedo(Guid.NewGuid()).Should().BeFalse();
+    Assert.False(service.CanRedo(Guid.NewGuid()));
     }
 
     [Fact]
@@ -221,8 +221,8 @@ public class UndoRedoServiceTests
         service.Clear(doc.Id);
 
         // Assert
-        service.CanUndo(doc.Id).Should().BeFalse();
-        service.CanRedo(doc.Id).Should().BeFalse();
+    Assert.False(service.CanUndo(doc.Id));
+    Assert.False(service.CanRedo(doc.Id));
     }
 
     [Fact]
@@ -232,10 +232,8 @@ public class UndoRedoServiceTests
         var service = new UndoRedoService();
 
         // Act
-        Action act = () => service.Clear(Guid.NewGuid());
-
-        // Assert
-        act.Should().NotThrow();
+    var ex = Record.Exception(() => service.Clear(Guid.NewGuid()));
+    Assert.Null(ex);
     }
 
     [Fact]
@@ -250,18 +248,18 @@ public class UndoRedoServiceTests
         service.Push(doc, "Step3");
 
         // Act & Assert - Undo twice
-        service.Undo(doc.Id).Should().Be("Step2");
-        service.Undo(doc.Id).Should().Be("Step1");
+    Assert.Equal("Step2", service.Undo(doc.Id));
+    Assert.Equal("Step1", service.Undo(doc.Id));
 
         // Redo once
-        service.Redo(doc.Id).Should().Be("Step2");
+    Assert.Equal("Step2", service.Redo(doc.Id));
 
         // New edit clears redo
         service.Push(doc, "NewBranch");
-        service.CanRedo(doc.Id).Should().BeFalse();
+    Assert.False(service.CanRedo(doc.Id));
 
         // Undo should go back to Step2 (not Step1, because NewBranch replaced Step3)
-        service.Undo(doc.Id).Should().Be("Step2");
+    Assert.Equal("Step2", service.Undo(doc.Id));
     }
 
     [Fact]
@@ -277,8 +275,8 @@ public class UndoRedoServiceTests
         service.Attach(doc, "Fresh");
 
         // Assert
-        service.CanUndo(doc.Id).Should().BeFalse();
-        service.CanRedo(doc.Id).Should().BeFalse();
+    Assert.False(service.CanUndo(doc.Id));
+    Assert.False(service.CanRedo(doc.Id));
     }
 
     [Fact]
@@ -296,8 +294,8 @@ public class UndoRedoServiceTests
         service.Push(doc2, "Doc2-V2");
 
         // Act & Assert
-        service.Undo(doc1.Id).Should().Be("Doc1-V1");
-        service.CanUndo(doc2.Id).Should().BeTrue();
-        service.Undo(doc2.Id).Should().Be("Doc2-V1");
+    Assert.Equal("Doc1-V1", service.Undo(doc1.Id));
+    Assert.True(service.CanUndo(doc2.Id));
+    Assert.Equal("Doc2-V1", service.Undo(doc2.Id));
     }
 }
