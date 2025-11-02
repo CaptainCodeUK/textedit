@@ -5,7 +5,6 @@ window.textEditFocusTrap = {
   trap: function (dialogSelector, dotNetRef, methodName) {
     var dialog = document.querySelector(dialogSelector);
     if (!dialog) {
-      console.warn('Focus trap: dialog not found', dialogSelector);
       return;
     }
     

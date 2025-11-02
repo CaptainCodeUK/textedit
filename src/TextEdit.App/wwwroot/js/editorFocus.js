@@ -1,5 +1,4 @@
 // Focus management for the text editor
-console.log('[editorFocus] script loaded');
 // Global guard/state to avoid duplicate initialization and handlers
 window.__editorFocusState = window.__editorFocusState || { initialized: {}, globalKeydown: {}, globalMousedown: {} };
 window.editorFocus = {
@@ -60,11 +59,9 @@ window.editorFocus = {
     // Initialize global focus management
     initialize: function(editorId) {
         if (window.__editorFocusState.initialized[editorId]) {
-            console.log('[editorFocus] initialize skipped (already initialized for)', editorId);
             return;
         }
         window.__editorFocusState.initialized[editorId] = true;
-        console.log('[editorFocus] initialize called for', editorId);
         // Prevent focus loss when clicking on non-interactive areas
         if (!window.__editorFocusState.globalMousedown[editorId]) {
             document.addEventListener('mousedown', function(e) {
@@ -107,13 +104,11 @@ window.editorFocus = {
             const newPos = start + 1;
             editor.setSelectionRange(newPos, newPos);
             editor.dispatchEvent(new Event('input', { bubbles: true }));
-            console.log('[editorFocus] Tab character inserted at position', start);
         }
 
         // Insert TAB characters in textarea instead of moving focus
         function attachTabHandlerTo(editor) {
             if (!editor) {
-                console.log('[editorFocus] attachTabHandlerTo: editor element not found');
                 return;
             }
             if (editor.dataset && editor.dataset.tabHandlerAttached === 'true') {
@@ -123,10 +118,8 @@ window.editorFocus = {
             if (editor._tabHandlerAttached) return; // legacy flag safeguard
             editor._tabHandlerAttached = true;
             if (editor.dataset) editor.dataset.tabHandlerAttached = 'true';
-            console.log('[editorFocus] Attaching Tab handler to', editor.id);
             editor.addEventListener('keydown', function(e) {
                 if (e.key === 'Tab') {
-                    console.log('[editorFocus] Tab key pressed in editor');
                     e.preventDefault();
                     e.stopPropagation();
                     // Insert a single tab character, replacing any selected text
@@ -147,7 +140,6 @@ window.editorFocus = {
                     if (handledByElement) {
                         return;
                     }
-                    console.log('[editorFocus] Global handler caught Tab for active editor');
                     e.preventDefault();
                     e.stopPropagation();
                     insertTab(active);
@@ -158,7 +150,6 @@ window.editorFocus = {
 
         // Initial attach if editor already exists
         const initialEditor = document.getElementById(editorId);
-        console.log('[editorFocus] Initial editor lookup:', initialEditor ? 'found' : 'not found');
         attachTabHandlerTo(initialEditor);
 
         // Observe DOM changes to (re)attach when Blazor re-renders the editor
@@ -169,18 +160,14 @@ window.editorFocus = {
             }
         });
         observer.observe(document.body, { childList: true, subtree: true });
-        console.log('[editorFocus] MutationObserver started');
     }
 };
 
 // Auto-initialize when DOM is ready
 if (document.readyState === 'loading') {
-    console.log('[editorFocus] Auto-init: waiting for DOMContentLoaded');
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('[editorFocus] DOMContentLoaded fired, initializing...');
         window.editorFocus.initialize('main-editor-textarea');
     });
 } else {
-    console.log('[editorFocus] Auto-init: DOM already ready, initializing...');
     window.editorFocus.initialize('main-editor-textarea');
 }

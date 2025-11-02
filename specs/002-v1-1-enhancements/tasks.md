@@ -385,16 +385,16 @@ Note: Native Electron menus on Windows and Linux do not support custom icon imag
 
 **Purpose**: Final improvements that affect multiple user stories
 
-- [ ] T191 [P] Run quickstart.md validation steps
-- [ ] T192 [P] Verify all acceptance scenarios from spec.md can be executed
-- [ ] T193 Code cleanup and remove any debug logging
-- [ ] T194 Refactor any remaining code duplication
-- [ ] T195 [P] Optimize theme CSS bundle size
-- [ ] T196 [P] Optimize icon asset sizes
-- [ ] T197 Security review of CLI arg handling (path traversal, injection)
-- [ ] T198 Security review of preferences JSON parsing
-- [ ] T199 Test edge cases: very long file paths, many tabs (50+), rapid theme switching
-- [ ] T200 Test graceful degradation: corrupt preferences file, missing icons, unavailable fonts
+- [x] T191 [P] Run quickstart.md validation steps
+- [x] T192 [P] Verify all acceptance scenarios from spec.md can be executed
+- [x] T193 Code cleanup and remove any debug logging
+- [x] T194 Refactor any remaining code duplication
+- [x] T195 [P] Optimize theme CSS bundle size
+- [x] T196 [P] Optimize icon asset sizes
+- [x] T197 Security review of CLI arg handling (path traversal, injection)
+- [x] T198 Security review of preferences JSON parsing
+- [x] T199 Test edge cases: very long file paths, many tabs (50+), rapid theme switching
+- [x] T200 Test graceful degradation: corrupt preferences file, missing icons, unavailable fonts
 
 ---
 
