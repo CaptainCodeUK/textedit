@@ -67,36 +67,36 @@
                         <span class="icon">📋</span>
                 </button>
         
-                <div class="toolbar-divider"></div>
-        
-                <!-- Font Family Dropdown -->
-                <select class="toolbar-dropdown font-family-dropdown" 
-                                title="Font Family"
-                                tabindex="-1"
-                                value="@(AppState.Preferences.FontFamily)"
-                                @onchange="HandleFontFamilyChange">
-                        <option value="">System Monospace</option>
-                        @foreach (var font in GetSystemFonts())
-                        {
-                                <option value="@font">@font</option>
-                        }
-                </select>
-        
-                <!-- Font Size Dropdown -->
-                <select class="toolbar-dropdown font-size-dropdown" 
-                                title="Font Size"
-                                tabindex="-1"
-                                value="@(AppState.Preferences.FontSize)"
-                                @onchange="HandleFontSizeChange">
-                        @for (int size = 8; size <= 72; size++)
-                        {
-                                <option value="@size">@size pt</option>
-                        }
-                </select>
-        
-                <div class="toolbar-divider"></div>
-        
-                <!-- Markdown Formatting -->
+        <div class="toolbar-divider"></div>
+
+        <!-- Font Family Dropdown -->
+        <select class="toolbar-dropdown font-family-dropdown" 
+                        title="Font Family"
+                        aria-label="Font Family"
+                        tabindex="-1"
+                        value="@(AppState.Preferences.FontFamily)"
+                        @onchange="HandleFontFamilyChange">
+                <option value="">System Monospace</option>
+                @foreach (var font in GetSystemFonts())
+                {
+                        <option value="@font">@font</option>
+                }
+        </select>
+
+        <!-- Font Size Dropdown -->
+        <select class="toolbar-dropdown font-size-dropdown" 
+                        title="Font Size"
+                        aria-label="Font Size"
+                        tabindex="-1"
+                        value="@(AppState.Preferences.FontSize)"
+                        @onchange="HandleFontSizeChange">
+                @for (int size = 8; size <= 72; size++)
+                {
+                        <option value="@size">@size pt</option>
+                }
+        </select>
+
+        <div class="toolbar-divider"></div>                <!-- Markdown Formatting -->
                 <button type="button" 
                                 class="toolbar-button" 
                                 title="Heading 1"
