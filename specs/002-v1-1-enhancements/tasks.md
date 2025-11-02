@@ -359,12 +359,12 @@ Note: Native Electron menus on Windows and Linux do not support custom icon imag
 
 ### Performance
 
-- [ ] T175 [P] Measure startup time with CLI args and verify <2s per spec
- - [ ] T176 [P] Measure theme switch time with ≥10 open tabs and verify <500ms per spec
-- [ ] T177 [P] Measure toolbar button response time and verify <200ms per spec
-- [ ] T178 [P] Measure font change time and verify <100ms per spec
-- [ ] T179 Verify app remains responsive during large file opening (>1MB)
-- [ ] T180 Profile memory usage and verify no memory leaks
+- [x] T175 [P] Measure startup time with CLI args and verify <2s per spec
+- [x] T176 [P] Measure theme switch time with ≥10 open tabs and verify <500ms per spec
+- [x] T177 [P] Measure toolbar button response time and verify <200ms per spec
+- [x] T178 [P] Measure font change time and verify <100ms per spec
+- [x] T179 Verify app remains responsive during large file opening (>1MB)
+- [x] T180 Profile memory usage and verify no memory leaks
 
 ### Documentation & Deployment
 
