@@ -16,15 +16,12 @@ jobs:
         include:
           - os: ubuntu-latest
             target: linux
-            shell: bash
             toolsPath: ~/.dotnet/tools
           - os: windows-latest
             target: win
-            shell: pwsh
             toolsPath: $Env:USERPROFILE\.dotnet\tools
           - os: macos-latest
             target: osx
-            shell: bash
             toolsPath: ~/.dotnet/tools
 
     steps:
@@ -42,7 +39,6 @@ jobs:
           node-version: '18'
 
       - name: Install ElectronNET CLI
-        shell: ${{ matrix.shell }}
         run: |
           dotnet tool install --global ElectronNET.CLI
 
@@ -58,16 +54,13 @@ jobs:
 
       - name: Restore
         run: dotnet restore textedit.sln
-        shell: ${{ matrix.shell }}
 
       - name: Build solution
         run: dotnet build textedit.sln -c Release /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary
-        shell: ${{ matrix.shell }}
 
-      - name: Package (${ { matrix.target } })
+      - name: Package (${{ matrix.target }})
         working-directory: src/TextEdit.App
         run: electronize build /target ${{ matrix.target }}
-        shell: ${{ matrix.shell }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
