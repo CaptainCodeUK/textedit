@@ -6,7 +6,7 @@
       id="editor-panel"
       aria-labelledby="@(AppState.ActiveTab != null ? $"tab-{AppState.ActiveTab.Id}" : "")"
       style="height:100%;min-height:0;display:flex;flex-direction:column;flex:1 1 auto;">
-  <textarea id="main-editor-textarea"
+    <textarea id="main-editor-textarea"
               class="editor-textarea flex-1 min-h-0 w-full p-2 font-mono resize-none"
               role="textbox"
               aria-label="Text editor content"
@@ -15,6 +15,7 @@
               @ref="textareaElement"
               @bind="Content"
               @bind:event="oninput"
+                            @onkeydown:stopPropagation="true"
               @onfocus="UpdateCaretPosition"
               @onmouseup="UpdateCaretPosition"
               @onkeyup="UpdateCaretPosition"

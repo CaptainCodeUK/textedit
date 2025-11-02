@@ -1,5 +1,7 @@
 // Focus management for the text editor
 console.log('[editorFocus] script loaded');
+// Global guard/state to avoid duplicate initialization and handlers
+window.__editorFocusState = window.__editorFocusState || { initialized: {}, globalKeydown: {}, globalMousedown: {} };
 window.editorFocus = {
     focus: function (elementId) {
         const element = document.getElementById(elementId);
@@ -57,9 +59,15 @@ window.editorFocus = {
 
     // Initialize global focus management
     initialize: function(editorId) {
+        if (window.__editorFocusState.initialized[editorId]) {
+            console.log('[editorFocus] initialize skipped (already initialized for)', editorId);
+            return;
+        }
+        window.__editorFocusState.initialized[editorId] = true;
         console.log('[editorFocus] initialize called for', editorId);
         // Prevent focus loss when clicking on non-interactive areas
-        document.addEventListener('mousedown', function(e) {
+        if (!window.__editorFocusState.globalMousedown[editorId]) {
+            document.addEventListener('mousedown', function(e) {
             const target = e.target;
             const editor = document.getElementById(editorId);
             
@@ -87,6 +95,8 @@ window.editorFocus = {
                 }, 0);
             }
         });
+        window.__editorFocusState.globalMousedown[editorId] = true;
+        }
 
         // Helper: insert a tab character at current caret and update binding
         function insertTab(editor) {
@@ -107,7 +117,7 @@ window.editorFocus = {
                 return;
             }
             if (editor.dataset && editor.dataset.tabHandlerAttached === 'true') {
-                console.log('[editorFocus] Tab handler already attached to', editor.id);
+                // Already attached; skip
                 return;
             }
             if (editor._tabHandlerAttached) return; // legacy flag safeguard
@@ -126,17 +136,25 @@ window.editorFocus = {
         }
 
         // Global capture-phase safeguard: handle Tab when active element is the editor
-        document.addEventListener('keydown', function(e) {
-            if (e.key !== 'Tab') return;
-            const active = document.activeElement;
-            if (!active) return;
-            if (active.id === editorId && active.tagName === 'TEXTAREA') {
-                console.log('[editorFocus] Global handler caught Tab for active editor');
-                e.preventDefault();
-                e.stopPropagation();
-                insertTab(active);
-            }
-        }, true);
+        if (!window.__editorFocusState.globalKeydown[editorId]) {
+            document.addEventListener('keydown', function(e) {
+                if (e.key !== 'Tab') return;
+                const active = document.activeElement;
+                if (!active) return;
+                if (active.id === editorId && active.tagName === 'TEXTAREA') {
+                    // If element-level handler is attached, let it handle
+                    const handledByElement = (active.dataset && active.dataset.tabHandlerAttached === 'true') || active._tabHandlerAttached;
+                    if (handledByElement) {
+                        return;
+                    }
+                    console.log('[editorFocus] Global handler caught Tab for active editor');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    insertTab(active);
+                }
+            }, true);
+            window.__editorFocusState.globalKeydown[editorId] = true;
+        }
 
         // Initial attach if editor already exists
         const initialEditor = document.getElementById(editorId);

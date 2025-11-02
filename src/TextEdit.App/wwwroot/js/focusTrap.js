@@ -1,0 +1,63 @@
+// focusTrap.js
+window.textEditFocusTrap = {
+  activeTraps: {},
+  
+  trap: function (dialogSelector, dotNetRef, methodName) {
+    var dialog = document.querySelector(dialogSelector);
+    if (!dialog) {
+      console.warn('Focus trap: dialog not found', dialogSelector);
+      return;
+    }
+    
+    // Remove existing trap if present
+    if (this.activeTraps[dialogSelector]) {
+      document.removeEventListener('keydown', this.activeTraps[dialogSelector], true);
+    }
+    
+    // Create the trap handler
+    var trapHandler = function (e) {
+      // Check if the event target is within this dialog or the dialog itself
+      if (!dialog.contains(e.target) && e.target !== dialog) return;
+      
+      if (e.key === 'Escape' && dotNetRef && methodName) {
+        e.preventDefault();
+        e.stopPropagation();
+        dotNetRef.invokeMethodAsync(methodName);
+        return;
+      }
+      
+      if (e.key === 'Tab') {
+        var focusable = dialog.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+        if (!focusable.length) return;
+        
+        var first = focusable[0];
+        var last = focusable[focusable.length - 1];
+        
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            e.stopPropagation();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            e.stopPropagation();
+            first.focus();
+          }
+        }
+      }
+    };
+    
+    // Register trap with capture phase to intercept early
+    document.addEventListener('keydown', trapHandler, true);
+    this.activeTraps[dialogSelector] = trapHandler;
+  },
+  
+  release: function (dialogSelector) {
+    if (this.activeTraps[dialogSelector]) {
+      document.removeEventListener('keydown', this.activeTraps[dialogSelector], true);
+      delete this.activeTraps[dialogSelector];
+    }
+  }
+};

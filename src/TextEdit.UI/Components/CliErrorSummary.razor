@@ -1,14 +1,16 @@
 @using TextEdit.UI.App
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
 
 @if (InvalidFiles != null && InvalidFiles.Any())
 {
-    <div class="cli-error-summary">
+    <div id="cli-error-summary" class="cli-error-summary" role="alertdialog" aria-modal="true" aria-labelledby="cli-error-title" aria-describedby="cli-error-list" tabindex="-1" @ref="_dialogRef" @onkeydown="HandleKeyDown">
         <div class="cli-error-header">
             <span class="cli-error-icon">⚠️</span>
-            <strong>Some files could not be opened</strong>
+            <strong id="cli-error-title">Some files could not be opened</strong>
             <button class="cli-error-close" @onclick="OnDismiss" aria-label="Dismiss">×</button>
         </div>
-        <ul class="cli-error-list">
+    <ul id="cli-error-list" class="cli-error-list">
             @foreach (var file in InvalidFiles)
             {
                 <li>
@@ -21,11 +23,65 @@
 }
 
 @code {
+    private ElementReference _dialogRef;
+    private DotNetObjectReference<CliErrorSummary>? _dotNetRef;
+    private bool _trapAttached;
+    
     [Parameter]
     public IEnumerable<InvalidFileInfo>? InvalidFiles { get; set; }
 
     [Parameter]
     public EventCallback OnDismiss { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (InvalidFiles != null && InvalidFiles.Any() && !_trapAttached)
+        {
+            await Task.Delay(50); // Wait for dialog to render
+            await _dialogRef.FocusAsync();
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("textEditFocusTrap.trap", "#cli-error-summary", _dotNetRef, "DismissDialog");
+            _trapAttached = true;
+        }
+        else if ((InvalidFiles == null || !InvalidFiles.Any()) && _trapAttached)
+        {
+            await JS.InvokeVoidAsync("textEditFocusTrap.release", "#cli-error-summary");
+            _trapAttached = false;
+        }
+    }
+
+    [JSInvokable]
+    public async Task DismissDialog()
+    {
+        await OnDismiss.InvokeAsync();
+        await RestoreFocusToEditor();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            await OnDismiss.InvokeAsync();
+            await RestoreFocusToEditor();
+        }
+    }
+    
+    public void Dispose()
+    {
+        _ = JS.InvokeVoidAsync("textEditFocusTrap.release", "#cli-error-summary");
+        _trapAttached = false;
+        _dotNetRef?.Dispose();
+    }
+    
+    private async Task RestoreFocusToEditor()
+    {
+        try
+        {
+            await Task.Delay(100); // Allow dialog to close
+            await JS.InvokeVoidAsync("editorFocus.focus", "main-editor-textarea");
+        }
+        catch { /* ignore */ }
+    }
 
     public record InvalidFileInfo(string Path, string Reason);
 }

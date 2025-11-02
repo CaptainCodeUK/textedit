@@ -92,6 +92,13 @@ public partial class TextEditor : ComponentBase, IDisposable
     {
         if (firstRender)
         {
+            // Initialize the Tab key handler for the editor
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("editorFocus.initialize", "main-editor-textarea");
+            }
+            catch { /* ignore */ }
+            
             await FocusEditorAsync();
             // Initialize counts and caret on first render
             State.CharacterCount = CurrentDoc?.Content.Length ?? 0;

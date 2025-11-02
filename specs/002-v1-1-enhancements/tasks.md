@@ -350,8 +350,8 @@ Note: Native Electron menus on Windows and Linux do not support custom icon imag
 
 ### UX & Accessibility
 
-- [ ] T169 [P] Run accessibility audit with axe DevTools on all new dialogs (About, Options, CliErrorSummary)
-- [ ] T170 [P] Verify keyboard navigation works for all toolbar buttons and dialogs
+- [x] T169 [P] Run accessibility audit with axe DevTools on all new dialogs (About, Options, CliErrorSummary)
+- [x] T170 [P] Verify keyboard navigation works for all toolbar buttons and dialogs
 - [ ] T171 [P] Test screen reader support (NVDA/JAWS on Windows, VoiceOver on macOS)
 - [ ] T172 Test error messages are clear and actionable (CLI errors, validation errors)
 - [ ] T173 Verify loading indicators present for operations >200ms (theme switch, file open)
