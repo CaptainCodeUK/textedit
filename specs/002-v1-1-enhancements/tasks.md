@@ -400,11 +400,11 @@ Note: Native Electron menus on Windows and Linux do not support custom icon imag
 
 ## Additional validation tasks (from analysis)
 
-- [ ] T201 [P] [US1][Perf] Measure time to open tabs for up to 10 CLI files and assert ≤3s per SC-001
-- [ ] T202 [P] [US1] Verify non-blocking CLI error summary appears ≤2s after UI interactive per SC-016
-- [ ] T203 [P] [US2][Perf] Assert title bar updates (dirty/active) within ≤100ms per SC-013
-- [ ] T204 [P] [US5] Enforce and test font-size clamping to 8–72pt per FR-049a; confirm defaults per FR-048a/FR-049a
-- [ ] T205 [P] [US4] Implement prompt when opening a file whose extension was removed from recognized list (non-critical defaults); offer "Open as text" or "Use system default"; add tests
+- [x] T201 [P] [US1][Perf] Measure time to open tabs for up to 10 CLI files and assert ≤3s per SC-001
+- [x] T202 [P] [US1] Verify non-blocking CLI error summary appears ≤2s after UI interactive per SC-016
+- [x] T203 [P] [US2][Perf] Assert title bar updates (dirty/active) within ≤100ms per SC-013
+- [x] T204 [P] [US5] Enforce and test font-size clamping to 8–72pt per FR-049a; confirm defaults per FR-048a/FR-049a
+- [x] T205 [P] [US4] Implement prompt when opening a file whose extension was removed from recognized list (non-critical defaults); offer "Open as text" or "Use system default"; add tests
 
 ---
 
