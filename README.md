@@ -1,4 +1,4 @@
-# TextEdit - A Modern Desktop Text Editor
+# Scrappy Text Editor - A Modern Desktop Text Editor
 
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/8.0)
 <!-- Electron.NET badge intentionally without version to avoid drift -->
@@ -6,6 +6,8 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A cross-platform desktop text editor built with .NET 8, Blazor Server, and Electron.NET. Features multi-document tabs, markdown preview, session persistence, and smart autosave.
+
+Scrappy Text Editor was formerly named “TextEdit” in early internal builds; some internal folder names (e.g., session storage) still reflect that for backward compatibility.
 
 ## 🚀 Features
 
@@ -71,6 +73,20 @@ dotnet restore
 ```
 
 The application will launch with Electron.NET in development mode.
+
+### CLI usage
+
+You can launch Scrappy with files from the command line; they’ll open in tabs. If Scrappy is already running, a second launch will forward the files to the existing window.
+
+```bash
+# Open one or more files
+scrappy-text-editor notes.txt README.md
+
+# While the app is already running, open another file in the current window
+scrappy-text-editor todo.md
+```
+
+If some paths are invalid or unreadable, a non-blocking summary dialog lists the files and reasons (e.g., “File not found”, “Permission denied”, “Invalid path”).
 
 ### Build for Production
 
@@ -212,11 +228,30 @@ TextEdit automatically saves your work without intrusive save dialogs:
 - **Modified existing files** → Changes saved to temp files, restored with dirty flag
 - **Crash Recovery** → Autosave runs every 30 seconds
 
-Session and preference files are stored in the OS application data directory under `TextEdit/Session`:
+Session files are stored in the OS application data directory under `TextEdit/Session` (legacy name retained for compatibility):
 
 - Windows: `%AppData%\TextEdit\Session`
 - macOS: `~/Library/Application Support/TextEdit/Session`
 - Linux: `~/.config/TextEdit/Session`
+
+### Preferences
+
+User preferences (theme, logging, recognized file extensions, etc.) are stored as JSON:
+
+- Path: `%AppData%/Scrappy/preferences.json` (Windows), `~/Library/Application Support/Scrappy/preferences.json` (macOS), or `~/.config/Scrappy/preferences.json` (Linux)
+- Format: camelCase JSON with atomic-save behavior (temp file + rename)
+
+### Options dialog
+
+Open Options from the menu to configure:
+
+- Theme: Light or Dark (System mode deferred)
+- Logging: Enable detailed logging and open log folder
+- Recognized File Extensions: Add/remove extensions (must match `^\.[a-zA-Z0-9-]+$`; `.txt` and `.md` cannot be removed)
+
+### Fonts
+
+Font controls are available in the toolbar. Defaults are chosen to balance readability and compactness; common monospace fonts are supported. Typical size range: 10–24 px.
 
 ## 📚 Documentation
 
@@ -240,3 +275,19 @@ This project is licensed under the MIT License.
 ---
 
 **Built with ❤️ using .NET 8, Blazor, and Electron.NET**
+
+---
+
+## 🧩 Icon Build Instructions
+
+To generate multi-resolution app icons for packaging, you can use a Node tool like `electron-icon-maker`:
+
+```bash
+# Install (optional, run from any directory)
+npm install -g electron-icon-maker
+
+# Generate icons from a square PNG source (at least 1024x1024)
+electron-icon-maker --input ./assets/icon.png --output ./src/TextEdit.App/wwwroot/icons
+```
+
+Ensure `electron.manifest.json` points to the generated icon assets. The repository already includes icons under `src/TextEdit.App/wwwroot/icons/`.

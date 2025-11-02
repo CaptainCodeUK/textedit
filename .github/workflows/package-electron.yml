@@ -1,0 +1,77 @@
+name: Package Electron Apps
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  package:
+    name: Package (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux
+            shell: bash
+            toolsPath: ~/.dotnet/tools
+          - os: windows-latest
+            target: win
+            shell: pwsh
+            toolsPath: $Env:USERPROFILE\.dotnet\tools
+          - os: macos-latest
+            target: osx
+            shell: bash
+            toolsPath: ~/.dotnet/tools
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup Node 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install ElectronNET CLI
+        shell: ${{ matrix.shell }}
+        run: |
+          dotnet tool install --global ElectronNET.CLI
+
+      - name: Ensure dotnet tools on PATH
+        if: runner.os != 'Windows'
+        run: echo "${{ matrix.toolsPath }}" >> $GITHUB_PATH
+        shell: bash
+
+      - name: Ensure dotnet tools on PATH (Windows)
+        if: runner.os == 'Windows'
+        run: echo "${{ matrix.toolsPath }}" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        shell: pwsh
+
+      - name: Restore
+        run: dotnet restore textedit.sln
+        shell: ${{ matrix.shell }}
+
+      - name: Build solution
+        run: dotnet build textedit.sln -c Release /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary
+        shell: ${{ matrix.shell }}
+
+      - name: Package (${ { matrix.target } })
+        working-directory: src/TextEdit.App
+        run: electronize build /target ${{ matrix.target }}
+        shell: ${{ matrix.shell }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.target }}-${{ runner.os }}
+          path: src/TextEdit.App/bin/Desktop/**
+          if-no-files-found: warn

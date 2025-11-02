@@ -368,16 +368,16 @@ Note: Native Electron menus on Windows and Linux do not support custom icon imag
 
 ### Documentation & Deployment
 
-- [ ] T181 Update README.md with "Scrappy Text Editor" branding
-- [ ] T182 Update README.md with CLI usage examples per spec documentation requirements
-- [ ] T183 Update README.md with Options dialog instructions
-- [ ] T184 Add build instructions for multi-resolution app icons
-- [ ] T185 Update CHANGELOG.md with all v1.1 features
-- [ ] T186 Document font defaults and range in user documentation
-- [ ] T187 Document preferences storage location and format
-- [ ] T188 Create deployment checklist for all platforms (Windows, macOS, Linux)
-- [ ] T189 Test Electron builds on all target platforms
-- [ ] T190 Final code review addressing all constitution principles
+- [x] T181 Update README.md with "Scrappy Text Editor" branding
+- [x] T182 Update README.md with CLI usage examples per spec documentation requirements
+- [x] T183 Update README.md with Options dialog instructions
+- [x] T184 Add build instructions for multi-resolution app icons
+- [x] T185 Update CHANGELOG.md with all v1.1 features
+- [x] T186 Document font defaults and range in user documentation
+- [x] T187 Document preferences storage location and format
+- [x] T188 Create deployment checklist for all platforms (Windows, macOS, Linux)
+- [ ] T189 Test Electron builds on all target platforms — DEFERRED
+- [x] T190 Final code review addressing all constitution principles
 
 ---
 
