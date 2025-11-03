@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WindowState",
+  "type": "object",
+  "properties": {
+    "x": { "type": "integer" },
+    "y": { "type": "integer" },
+    "width": { "type": "integer" },
+    "height": { "type": "integer" },
+    "state": { "type": "string", "enum": ["normal", "maximized", "minimized"] },
+    "monitorId": { "type": "string" }
+  },
+  "required": ["x", "y", "width", "height", "state"],
+  "additionalProperties": false
+}

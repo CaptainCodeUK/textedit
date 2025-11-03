@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ReleaseArtifact",
+  "type": "object",
+  "properties": {
+    "filename": { "type": "string" },
+    "fileSize": { "type": "integer" },
+    "downloadUrl": { "type": "string", "format": "uri" },
+    "platform": { "type": "string", "enum": ["Windows", "macOS", "Linux"] },
+    "version": { "type": "string" }
+  },
+  "required": ["filename", "fileSize", "downloadUrl", "platform", "version"],
+  "additionalProperties": false
+}
