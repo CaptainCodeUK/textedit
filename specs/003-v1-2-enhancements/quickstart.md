@@ -4,6 +4,7 @@
 - .NET 8.0 SDK
 - Node.js (for Electron.NET)
 - ElectronNET.CLI (install with `dotnet tool install ElectronNET.CLI -g`)
+- WeCantSpell.Hunspell NuGet package (for spell checking)
 - GitHub Actions enabled for CI/CD
 
 ## Build and Run (Development)
@@ -33,9 +34,13 @@ fish -c 'electronize build /target osx'
 - Coverage: `TestResults/CoverageReport/`
 
 ## Custom Dictionary Location
-- Linux: `~/.config/TextEdit/CustomDictionary.txt`
+- Linux: `~/.config/TextEdit/CustomDictionary.txt` (plain text or Hunspell .dic format)
 - macOS: `~/Library/Application Support/TextEdit/CustomDictionary.txt`
 - Windows: `%AppData%\TextEdit\CustomDictionary.txt`
+
+## Built-in Spell Check Dictionary
+- Bundled English Hunspell dictionary (.dic/.aff) included in application resources
+- Loaded automatically on startup if spell checking is enabled
 
 ## Updating/Testing Auto-Updater
 - Publish a new release on GitHub with attached artifacts
