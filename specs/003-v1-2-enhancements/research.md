@@ -1,5 +1,10 @@
 # Research: Scrappy Text Editor v1.2 Enhancements
 
+## Decision: Spell checking engine/library
+- **Chosen**: Use WeCantSpell.Hunspell (MIT) as the spell checking engine for all platforms.
+- **Rationale**: Modern, .NET-native implementation of Hunspell (industry standard, used by LibreOffice/Firefox/Chrome). Supports custom/user dictionaries, Unicode, and is actively maintained. Integrates easily with .NET 8, Blazor, and Electron.NET. Avoids reinventing spell checking logic and leverages proven algorithms.
+- **Alternatives considered**: NHunspell (older, less .NET-native), NetSpell (less accurate), custom implementation (higher maintenance, less robust).
+
 ## Decision: Spell checking in code blocks
 - **Chosen**: Spell checking is disabled within code blocks and markdown fenced sections; no misspelling indicators appear inside those regions.
 - **Rationale**: Reduces false positives for technical content, matches user/editor expectations, and improves usability for developers and technical writers.

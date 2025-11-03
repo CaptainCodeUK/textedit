@@ -52,7 +52,16 @@ Users need to modify multiple instances of the same text efficiently, such as re
 
 ### User Story 3 - Spell Checking with Built-in Dictionary (Priority: P2)
 
+
 Users need to identify and correct spelling errors in their documents to ensure professional quality content. Manual proofreading is time-consuming and misses errors. A built-in spell checker provides real-time feedback for common English words without requiring additional configuration.
+
+**Implementation Note:**
+Spell checking will use the open-source [WeCantSpell.Hunspell](https://github.com/WeCantSpell/Hunspell) library (MIT license), a modern .NET implementation of Hunspell. This provides robust dictionary support, Unicode, and cross-platform compatibility. Custom and built-in dictionaries will be loaded using Hunspell's standard formats. No proprietary or closed-source components will be used.
+
+**Rationale:**
+- Hunspell is the industry standard for spell checking (used by LibreOffice, Firefox, Chrome).
+- WeCantSpell.Hunspell is actively maintained, .NET-native, and supports custom/user dictionaries.
+- Avoids reinventing spell checking logic and leverages proven algorithms.
 
 **Why this priority**: Spell checking significantly improves content quality and is expected in modern text editors. The built-in dictionary provides immediate value without user configuration. This is independently testable - type text with misspellings and verify visual indicators.
 
@@ -187,16 +196,17 @@ The development team needs to efficiently create distributable packages (install
 - **FR-008**: System MUST treat all replacement operations as undoable actions in the undo history, with "Replace All" as a single atomic operation
 - **FR-009**: System MUST keep Find/Replace dialogs non-modal, allowing document editing while dialog is open
 
+
 **Spell Checking**:
 
-- **FR-010**: System MUST include a built-in English dictionary containing common words for spell checking
+- **FR-010**: System MUST use WeCantSpell.Hunspell for spell checking, loading a built-in English dictionary in Hunspell format
 - **FR-011**: System MUST visually indicate potentially misspelled words with red wavy underlines in real-time as user types
-- **FR-012**: System MUST provide spelling suggestions via right-click context menu on misspelled words, showing up to 10 ranked suggestions
+- **FR-012**: System MUST provide spelling suggestions via right-click context menu on misspelled words, showing up to 10 ranked suggestions (from Hunspell)
 - **FR-013**: System MUST allow users to replace misspelled words with suggestions via single click in context menu
-- **FR-014**: System MUST support adding words to a custom user dictionary via "Add to Dictionary" context menu option
+- **FR-014**: System MUST support adding words to a custom user dictionary (Hunspell .dic/.aff or plain text) via "Add to Dictionary" context menu option
 - **FR-015**: System MUST persist custom dictionary entries in user preferences directory across application sessions
 - **FR-016**: System MUST provide Options dialog section for managing custom dictionary (view, add, remove words)
-- **FR-017**: System MUST store custom dictionary in human-readable plain text format, one word per line
+- **FR-017**: System MUST store custom dictionary in human-readable plain text or Hunspell .dic format, one word per line
 - **FR-018**: System MUST complete spell checking for documents up to 10,000 words within 3 seconds on modern hardware
 - **FR-019**: System MUST allow users to enable/disable spell checking globally via Options dialog with immediate effect
 

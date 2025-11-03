@@ -19,9 +19,15 @@ Technical approach leverages the existing .NET 8, Blazor Server, Electron.NET ar
 ## Technical Context
 
 **Language/Version**: C# 12, .NET 8.0
-**Primary Dependencies**: Electron.NET 23.6.2, Blazor Server, Markdig, Squirrel (for auto-update), GitHub Actions
+**Primary Dependencies**: Electron.NET 23.6.2, Blazor Server, Markdig, Squirrel (for auto-update), WeCantSpell.Hunspell (for spell checking), GitHub Actions
 **Storage**: JSON files in OS app data directories (preferences, session, custom dictionary)
 **Testing**: xUnit, NSubstitute, FluentAssertions, BenchmarkDotNet
+
+**Spell Checking Integration**:
+- Use [WeCantSpell.Hunspell](https://github.com/WeCantSpell/Hunspell) (MIT) for all spell checking operations.
+- Load built-in and custom dictionaries in Hunspell format (.dic/.aff).
+- Integrate with Blazor UI for real-time misspelling detection and suggestions.
+- Custom dictionary management will append to a user .dic file and reload on app start.
 **Target Platform**: Windows, macOS, Linux (desktop, Electron shell)
 **Project Type**: Desktop (Electron.NET host, Blazor Server UI)
 **Performance Goals**: Startup <2s, shutdown <2s, markdown render <5ms cold/<50μs cached, file open <2s for <10MB, spell check <3s for 10k words
