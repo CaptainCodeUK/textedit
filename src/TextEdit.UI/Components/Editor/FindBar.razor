@@ -49,17 +49,15 @@
     private int _currentDisplay => _currentIndex < 0 ? 0 : _currentIndex + 1;
     private ElementReference _searchInput;
 
-    protected override async Task OnParametersSetAsync()
+    protected override void OnParametersSet()
     {
-        // Recompute matches if text changed and there's a term
+        // Recompute matches if underlying text changed
         if (!string.IsNullOrEmpty(_term))
         {
             ComputeResults();
-            // Keep current index in range
             if (_result is not null && _result.Matches.Count > 0)
             {
-                if (_currentIndex >= _result.Matches.Count) _currentIndex = 0;
-                await SelectCurrentAsync();
+                if (_currentIndex < 0 || _currentIndex >= _result.Matches.Count) _currentIndex = 0;
             }
             else
             {
@@ -68,12 +66,22 @@
         }
     }
 
+    private bool _selectAllOnOpen;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (IsVisible)
         {
-            // Focus the search input on open
-            try { await _searchInput.FocusAsync(); } catch { }
+            try 
+            {
+                await _searchInput.FocusAsync();
+                if (_selectAllOnOpen)
+                {
+                    await JS.InvokeVoidAsync("eval", "(function(){var el=document.activeElement;if(el&&el.tagName==='INPUT'){el.setSelectionRange(0, el.value.length);}})();");
+                    _selectAllOnOpen = false;
+                }
+            }
+            catch { }
         }
     }
 
@@ -85,18 +93,19 @@
         {
             _currentIndex = -1;
         }
-        StateHasChanged();
+    StateHasChanged();
     }
 
-    private async Task SelectCurrentAsync()
+    private async Task SelectCurrentAsync(bool keepFindFocus = true)
     {
         if (_result is null || _result.Matches.Count == 0 || _currentIndex < 0) return;
         var m = _result.Matches[_currentIndex];
         try
         {
-            // Set selection and focus editor
-            var js = $"{{ const el = document.getElementById('{EditorElementId}'); if (el) {{ el.focus(); el.setSelectionRange({m.Start}, {m.Start + m.Length}); }} }}";
+            // Set selection without stealing focus from the find input
+            var js = $"{{ const el = document.getElementById('{EditorElementId}'); if (el) {{ el.setSelectionRange({m.Start}, {m.Start + m.Length}); }} }}";
             await JS.InvokeVoidAsync("eval", js);
+            // keepFindFocus retained for signature compatibility (no-op here)
         }
         catch { /* ignore */ }
     }
@@ -114,7 +123,7 @@
         else
         {
             _currentIndex = FindService.FindNextIndex(_result, _currentIndex);
-            await SelectCurrentAsync();
+            await SelectCurrentAsync(keepFindFocus: true);
         }
         StateHasChanged();
     }
@@ -132,30 +141,54 @@
         else
         {
             _currentIndex = FindService.FindPreviousIndex(_result, _currentIndex);
-            await SelectCurrentAsync();
+            await SelectCurrentAsync(keepFindFocus: true);
         }
         StateHasChanged();
     }
 
-    private void OnTermChanged(ChangeEventArgs e)
+    private async void OnTermChanged(ChangeEventArgs e)
     {
         _term = e.Value?.ToString() ?? string.Empty;
         ComputeResults();
-        _ = Next(); // jump to first match automatically
+        if (_result is not null && _result.Matches.Count > 0)
+        {
+            _currentIndex = 0; // jump to first match only
+            await SelectCurrentAsync(keepFindFocus: true);
+        }
+        else
+        {
+            _currentIndex = -1;
+        }
     }
 
-    private void ToggleMatchCase(ChangeEventArgs e)
+    private async void ToggleMatchCase(ChangeEventArgs e)
     {
         _matchCase = (bool)(e.Value ?? false);
         ComputeResults();
-        _ = Next();
+        if (_result is not null && _result.Matches.Count > 0)
+        {
+            _currentIndex = 0;
+            await SelectCurrentAsync(keepFindFocus: true);
+        }
+        else
+        {
+            _currentIndex = -1;
+        }
     }
 
-    private void ToggleWholeWord(ChangeEventArgs e)
+    private async void ToggleWholeWord(ChangeEventArgs e)
     {
         _wholeWord = (bool)(e.Value ?? false);
         ComputeResults();
-        _ = Next();
+        if (_result is not null && _result.Matches.Count > 0)
+        {
+            _currentIndex = 0;
+            await SelectCurrentAsync(keepFindFocus: true);
+        }
+        else
+        {
+            _currentIndex = -1;
+        }
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
@@ -175,6 +208,7 @@
         if (!IsVisible)
         {
             IsVisible = true;
+            _selectAllOnOpen = true;
             StateHasChanged();
         }
         return Task.CompletedTask;
@@ -196,4 +230,6 @@
         await OnClose.InvokeAsync();
         try { await JS.InvokeVoidAsync("editorFocus.focus", EditorElementId); } catch { }
     }
+
+    
 }

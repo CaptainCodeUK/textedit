@@ -6,13 +6,13 @@
       role="tabpanel" 
       id="editor-panel"
       aria-labelledby="@(AppState.ActiveTab != null ? $"tab-{AppState.ActiveTab.Id}" : "")"
-      style="height:100%;min-height:0;display:flex;flex-direction:column;flex:1 1 auto; position:relative;">
+        style="height:100%;min-height:0;display:flex;flex-direction:column;flex:1 1 auto; position:relative;">
     <textarea id="main-editor-textarea"
               class="editor-textarea flex-1 min-h-0 w-full p-2 font-mono resize-none"
               role="textbox"
               aria-label="Text editor content"
               aria-multiline="true"
-              style="height:100%;min-height:0;flex:1 1 auto;box-sizing:border-box;border:none;outline:1px solid var(--border);border-radius:6px;padding-right:12px;padding-bottom:12px;caret-color:var(--fg);line-height:1.4;white-space:@(State.WordWrap ? "pre-wrap" : "pre");overflow-wrap:@(State.WordWrap ? "break-word" : "normal");"
+                    style="height:100%;min-height:0;flex:1 1 auto;box-sizing:border-box;border:none;outline:1px solid var(--border);border-radius:6px;padding-right:12px;padding-bottom:12px;caret-color:var(--fg);line-height:1.4;white-space:@(State.WordWrap ? "pre-wrap" : "pre");overflow-wrap:@(State.WordWrap ? "break-word" : "normal");"
               @ref="textareaElement"
               @bind="Content"
               @bind:event="oninput"
@@ -22,10 +22,10 @@
               @onkeyup="UpdateCaretPosition"
               @onblur="OnBlur"></textarea>
 
-  <FindBar 
+      <FindBar 
         @ref="_findBar"
         IsVisible="@_showFind"
         Text="@Content"
-        OnClose="@OnFindClosed"
+      OnClose="@OnFindClosed"
         EditorElementId="main-editor-textarea" />
 </main>

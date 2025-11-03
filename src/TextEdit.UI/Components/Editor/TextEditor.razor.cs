@@ -108,18 +108,16 @@ public partial class TextEditor : ComponentBase, IDisposable
 
     private async Task HandleFindNextRequested()
     {
-        // Ensure bar is visible then go to next
-        _showFind = true;
-        await InvokeAsync(StateHasChanged);
+        // Navigate without reopening the Find bar
         try { await _findBar?.NextAsync()!; } catch { /* ignore */ }
     }
 
     private async Task HandleFindPreviousRequested()
     {
-        _showFind = true;
-        await InvokeAsync(StateHasChanged);
+        // Navigate without reopening the Find bar
         try { await _findBar?.PrevAsync()!; } catch { /* ignore */ }
     }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
