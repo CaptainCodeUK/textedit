@@ -1,0 +1,199 @@
+@using TextEdit.Core.Searching
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@inject FindService FindService
+@inject IJSRuntime JS
+
+@if (IsVisible)
+{
+    <div class="findbar-container" @onkeydown="HandleKeyDown" style="position:absolute; top:10px; right:10px; z-index:60;">
+        <div class="findbar" style="display:flex; align-items:center; gap:8px; padding:8px; border-radius:8px; background: var(--surface); color: var(--fg); border:1px solid var(--border); box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+            <input @ref="_searchInput"
+                   placeholder="Find"
+                   aria-label="Find"
+                   value="@_term"
+                   @oninput="OnTermChanged"
+                   style="min-width:200px; padding:6px 8px; border:1px solid var(--border); background:var(--bg); color:var(--fg); border-radius:6px; outline:none;" />
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted);">
+                <input type="checkbox" checked="@_matchCase" @onchange="ToggleMatchCase" />
+                <span>Match case</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted);">
+                <input type="checkbox" checked="@_wholeWord" @onchange="ToggleWholeWord" />
+                <span>Whole word</span>
+            </label>
+            <div style="font-size:12px; color: var(--muted); min-width:64px; text-align:center;">
+                @(_result?.Matches.Count > 0 ? ($"{_currentDisplay}/{_result.Matches.Count}") : "0/0")
+            </div>
+            <div style="display:flex; gap:6px;">
+                <button class="btn" @onclick="Prev" title="Find previous (Shift+F3)" style="padding:6px 8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); border-radius:6px;">◀</button>
+                <button class="btn" @onclick="Next" title="Find next (F3 or Enter)" style="padding:6px 8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); border-radius:6px;">▶</button>
+            </div>
+            <button class="btn" @onclick="Close" aria-label="Close find" title="Close" style="padding:6px 8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); border-radius:6px;">×</button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public string EditorElementId { get; set; } = "main-editor-textarea";
+    [Parameter] public string Text { get; set; } = string.Empty;
+
+    private string _term = string.Empty;
+    private bool _matchCase = false;
+    private bool _wholeWord = false;
+    private FindResult? _result;
+    private int _currentIndex = -1;
+    private int _currentDisplay => _currentIndex < 0 ? 0 : _currentIndex + 1;
+    private ElementReference _searchInput;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Recompute matches if text changed and there's a term
+        if (!string.IsNullOrEmpty(_term))
+        {
+            ComputeResults();
+            // Keep current index in range
+            if (_result is not null && _result.Matches.Count > 0)
+            {
+                if (_currentIndex >= _result.Matches.Count) _currentIndex = 0;
+                await SelectCurrentAsync();
+            }
+            else
+            {
+                _currentIndex = -1;
+            }
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (IsVisible)
+        {
+            // Focus the search input on open
+            try { await _searchInput.FocusAsync(); } catch { }
+        }
+    }
+
+    private void ComputeResults()
+    {
+        var query = new FindQuery(_term ?? string.Empty, _matchCase, _wholeWord);
+        _result = FindService.FindAll(Text ?? string.Empty, query);
+        if (_result.Matches.Count == 0)
+        {
+            _currentIndex = -1;
+        }
+        StateHasChanged();
+    }
+
+    private async Task SelectCurrentAsync()
+    {
+        if (_result is null || _result.Matches.Count == 0 || _currentIndex < 0) return;
+        var m = _result.Matches[_currentIndex];
+        try
+        {
+            // Set selection and focus editor
+            var js = $"{{ const el = document.getElementById('{EditorElementId}'); if (el) {{ el.focus(); el.setSelectionRange({m.Start}, {m.Start + m.Length}); }} }}";
+            await JS.InvokeVoidAsync("eval", js);
+        }
+        catch { /* ignore */ }
+    }
+
+    private async Task Next()
+    {
+        if (_result is null)
+        {
+            ComputeResults();
+        }
+        if (_result is null || _result.Matches.Count == 0)
+        {
+            _currentIndex = -1;
+        }
+        else
+        {
+            _currentIndex = FindService.FindNextIndex(_result, _currentIndex);
+            await SelectCurrentAsync();
+        }
+        StateHasChanged();
+    }
+
+    private async Task Prev()
+    {
+        if (_result is null)
+        {
+            ComputeResults();
+        }
+        if (_result is null || _result.Matches.Count == 0)
+        {
+            _currentIndex = -1;
+        }
+        else
+        {
+            _currentIndex = FindService.FindPreviousIndex(_result, _currentIndex);
+            await SelectCurrentAsync();
+        }
+        StateHasChanged();
+    }
+
+    private void OnTermChanged(ChangeEventArgs e)
+    {
+        _term = e.Value?.ToString() ?? string.Empty;
+        ComputeResults();
+        _ = Next(); // jump to first match automatically
+    }
+
+    private void ToggleMatchCase(ChangeEventArgs e)
+    {
+        _matchCase = (bool)(e.Value ?? false);
+        ComputeResults();
+        _ = Next();
+    }
+
+    private void ToggleWholeWord(ChangeEventArgs e)
+    {
+        _wholeWord = (bool)(e.Value ?? false);
+        ComputeResults();
+        _ = Next();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await Next();
+        }
+        else if (e.Key == "Escape")
+        {
+            await Close();
+        }
+    }
+
+    public Task ShowAsync()
+    {
+        if (!IsVisible)
+        {
+            IsVisible = true;
+            StateHasChanged();
+        }
+        return Task.CompletedTask;
+    }
+
+    public async Task NextAsync()
+    {
+        await Next();
+    }
+
+    public async Task PrevAsync()
+    {
+        await Prev();
+    }
+
+    public async Task Close()
+    {
+        IsVisible = false;
+        await OnClose.InvokeAsync();
+        try { await JS.InvokeVoidAsync("editorFocus.focus", EditorElementId); } catch { }
+    }
+}

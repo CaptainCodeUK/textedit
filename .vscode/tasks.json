@@ -1,179 +1,190 @@
 {
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "build",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "build",
-                "${workspaceFolder}/textedit.sln",
-                "/property:GenerateFullPaths=true",
-                "/consoleloggerparameters:NoSummary"
-            ],
-            "problemMatcher": "$msCompile",
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
-        },
-        {
-            "label": "clean",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "clean",
-                "${workspaceFolder}/textedit.sln"
-            ],
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "restore",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "restore",
-                "${workspaceFolder}/textedit.sln"
-            ],
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "electronize:init",
-            "command": "electronize",
-            "type": "shell",
-            "args": [
-                "init"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}/src/TextEdit.App"
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "electronize:start",
-            "command": "electronize",
-            "type": "shell",
-            "args": [
-                "start"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}/src/TextEdit.App"
-            },
-            "isBackground": true,
-            "presentation": {
-                "reveal": "silent",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": false,
-                "clear": false
-            },
-            "problemMatcher": {
-                "pattern": {
-                    "regexp": "^(ERROR|FATAL|Build FAILED).*$",
-                    "message": 0
-                },
-                "background": {
-                    "activeOnStart": true,
-                    "beginsPattern": "^Start Electron Desktop Application",
-                    "endsPattern": "^stdout: ASP\\.NET Core host has fully started\\."
-                }
-            }
-        },
-        {
-            "label": "electronize:build:win",
-            "command": "electronize",
-            "type": "shell",
-            "args": [
-                "build",
-                "/target",
-                "win"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}/src/TextEdit.App"
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "electronize:build:mac",
-            "command": "electronize",
-            "type": "shell",
-            "args": [
-                "build",
-                "/target",
-                "osx"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}/src/TextEdit.App"
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "electronize:build:linux",
-            "command": "electronize",
-            "type": "shell",
-            "args": [
-                "build",
-                "/target",
-                "linux"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}/src/TextEdit.App"
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "test:unit",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "test",
-                "${workspaceFolder}/tests/unit/TextEdit.Core.Tests/TextEdit.Core.Tests.csproj",
-                "--logger:console;verbosity=detailed"
-            ],
-            "problemMatcher": "$msCompile",
-            "group": {
-                "kind": "test",
-                "isDefault": true
-            }
-        },
-        {
-            "label": "test:all",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "test",
-                "${workspaceFolder}/textedit.sln",
-                "--logger:console;verbosity=detailed"
-            ],
-            "problemMatcher": "$msCompile",
-            "group": "test"
-        },
-        {
-            "label": "test:coverage",
-            "command": "dotnet",
-            "type": "shell",
-            "args": [
-                "test",
-                "${workspaceFolder}/textedit.sln",
-                "/p:CollectCoverage=true",
-                "/p:CoverletOutputFormat=cobertura",
-                "/p:CoverletOutput=./TestResults/",
-                "/p:Threshold=65",
-                "/p:ThresholdType=line",
-                "/p:ThresholdStat=total"
-            ],
-            "problemMatcher": "$msCompile",
-            "group": "test"
-        },
-        {
-            "label": "wait-for-app",
-            "type": "shell",
-            "command": "${workspaceFolder}/scripts/wait-for-app.fish",
-            "problemMatcher": [],
-            "presentation": {
-                "reveal": "always",
-                "panel": "new"
-            }
-        }
-    ]
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "build",
+			"command": "dotnet",
+			"type": "process",
+			"args": [
+				"build",
+				"${workspaceFolder}/textedit.sln",
+				"/property:GenerateFullPaths=true",
+				"/consoleloggerparameters:NoSummary"
+			],
+			"problemMatcher": "$msCompile",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"label": "clean",
+			"command": "dotnet",
+			"type": "process",
+			"args": [
+				"clean",
+				"${workspaceFolder}/textedit.sln"
+			],
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "restore",
+			"command": "dotnet",
+			"type": "process",
+			"args": [
+				"restore",
+				"${workspaceFolder}/textedit.sln"
+			],
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "electronize:init",
+			"command": "electronize",
+			"type": "shell",
+			"args": [
+				"init"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/src/TextEdit.App"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "electronize:start",
+			"command": "electronize",
+			"type": "shell",
+			"args": [
+				"start"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/src/TextEdit.App"
+			},
+			"isBackground": true,
+			"presentation": {
+				"reveal": "silent",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": false,
+				"clear": false
+			},
+			"problemMatcher": {
+				"pattern": {
+					"regexp": "^(ERROR|FATAL|Build FAILED).*$",
+					"message": 0
+				},
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": "^Start Electron Desktop Application",
+					"endsPattern": "^stdout: ASP\\.NET Core host has fully started\\."
+				}
+			}
+		},
+		{
+			"label": "electronize:build:win",
+			"command": "electronize",
+			"type": "shell",
+			"args": [
+				"build",
+				"/target",
+				"win"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/src/TextEdit.App"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "electronize:build:mac",
+			"command": "electronize",
+			"type": "shell",
+			"args": [
+				"build",
+				"/target",
+				"osx"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/src/TextEdit.App"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "electronize:build:linux",
+			"command": "electronize",
+			"type": "shell",
+			"args": [
+				"build",
+				"/target",
+				"linux"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/src/TextEdit.App"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "test:unit",
+			"command": "dotnet",
+			"type": "process",
+			"args": [
+				"test",
+				"${workspaceFolder}/tests/unit/TextEdit.Core.Tests/TextEdit.Core.Tests.csproj",
+				"--logger:console;verbosity=detailed"
+			],
+			"problemMatcher": "$msCompile",
+			"group": {
+				"kind": "test",
+				"isDefault": true
+			}
+		},
+		{
+			"label": "test:all",
+			"command": "dotnet",
+			"type": "process",
+			"args": [
+				"test",
+				"${workspaceFolder}/textedit.sln",
+				"--logger:console;verbosity=detailed"
+			],
+			"problemMatcher": "$msCompile",
+			"group": "test"
+		},
+		{
+			"label": "test:coverage",
+			"command": "dotnet",
+			"type": "shell",
+			"args": [
+				"test",
+				"${workspaceFolder}/textedit.sln",
+				"/p:CollectCoverage=true",
+				"/p:CoverletOutputFormat=cobertura",
+				"/p:CoverletOutput=./TestResults/",
+				"/p:Threshold=65",
+				"/p:ThresholdType=line",
+				"/p:ThresholdStat=total"
+			],
+			"problemMatcher": "$msCompile",
+			"group": "test"
+		},
+		{
+			"label": "wait-for-app",
+			"type": "shell",
+			"command": "${workspaceFolder}/scripts/wait-for-app.fish",
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "new"
+			}
+		},
+		{
+			"label": "test:unit",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"test",
+				"/home/dave/Documents/source/demo/textedit/tests/unit/TextEdit.Core.Tests/TextEdit.Core.Tests.csproj",
+				"--logger:console;verbosity=detailed"
+			],
+			"group": "test"
+		}
+	]
 }

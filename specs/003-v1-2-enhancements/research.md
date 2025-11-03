@@ -19,3 +19,9 @@
 - **Chosen**: Any in-progress or queued builds for earlier commits are canceled and only the latest commit is built; canceled runs are marked accordingly in CI.
 - **Rationale**: Efficient use of CI resources, fast feedback on current state, avoids redundant builds and artifacts.
 - **Alternatives considered**: Queue all builds (slow, expensive), debounce with time window (delays feedback).
+
+## Decision: Test assertion library preference
+- **Chosen**: Use standard xUnit assertions (`Assert.Equal`, `Assert.True`, `Assert.Throws`, etc.) for all unit tests. Avoid FluentAssertions or other third-party assertion libraries.
+- **Rationale**: Reduces dependencies, keeps tests simple and maintainable, avoids learning curve for new contributors, and xUnit's built-in assertions are sufficient for our needs. FluentAssertions adds minimal value for the added complexity and dependency maintenance.
+- **Alternatives considered**: FluentAssertions (more expressive but adds dependency), Shouldly (similar tradeoffs).
+

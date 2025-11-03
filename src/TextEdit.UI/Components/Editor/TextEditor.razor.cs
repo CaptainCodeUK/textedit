@@ -6,6 +6,8 @@ using TextEdit.Core.Editing;
 using TextEdit.Infrastructure.Ipc;
 using TextEdit.UI.App;
 using TextEdit.UI.Services;
+using TextEdit.UI.Components.Editor;
+using TextEdit.Core.Searching;
 
 namespace TextEdit.UI.Components.Editor;
 
@@ -18,6 +20,7 @@ public partial class TextEditor : ComponentBase, IDisposable
     [Inject] protected IJSRuntime JSRuntime { get; set; } = default!;
     [Inject] protected DialogService DialogService { get; set; } = default!; // For About dialog
     [Inject] protected MarkdownFormattingService FormattingService { get; set; } = default!;
+    [Inject] protected FindService FindService { get; set; } = default!; // US1: text search
 
     private ElementReference textareaElement;
     protected Document? CurrentDoc => AppState.ActiveDocument;
@@ -29,6 +32,9 @@ public partial class TextEditor : ComponentBase, IDisposable
     private static readonly TimeSpan _undoDebounce = TimeSpan.FromMilliseconds(400);
     private bool _pendingCaretSync;
     private Guid? _lastActiveDocId;
+    // Find UI state (US1)
+    private bool _showFind;
+    private FindBar? _findBar;
 
     protected string Content
     {
@@ -78,6 +84,10 @@ public partial class TextEditor : ComponentBase, IDisposable
         EditorCommandHub.ToggleToolbarRequested = HandleToggleToolbar;
         EditorCommandHub.AboutRequested = HandleAboutRequested; // T055
         EditorCommandHub.OptionsRequested = HandleOptionsRequested; // US3
+    // Find
+    EditorCommandHub.FindRequested = HandleFindRequested;
+    EditorCommandHub.FindNextRequested = HandleFindNextRequested;
+    EditorCommandHub.FindPreviousRequested = HandleFindPreviousRequested;
         
         // Format menu commands
         EditorCommandHub.FormatHeading1Requested = () => HandleFormatCommand(MarkdownFormattingService.MarkdownFormat.H1);
@@ -87,6 +97,28 @@ public partial class TextEditor : ComponentBase, IDisposable
         EditorCommandHub.FormatCodeRequested = () => HandleFormatCommand(MarkdownFormattingService.MarkdownFormat.Code);
         EditorCommandHub.FormatBulletListRequested = () => HandleFormatCommand(MarkdownFormattingService.MarkdownFormat.BulletedList);
         EditorCommandHub.FormatNumberedListRequested = () => HandleFormatCommand(MarkdownFormattingService.MarkdownFormat.NumberedList);
+    }
+
+    private async Task HandleFindRequested()
+    {
+        _showFind = true;
+        await InvokeAsync(StateHasChanged);
+        try { await _findBar?.ShowAsync()!; } catch { /* ignore */ }
+    }
+
+    private async Task HandleFindNextRequested()
+    {
+        // Ensure bar is visible then go to next
+        _showFind = true;
+        await InvokeAsync(StateHasChanged);
+        try { await _findBar?.NextAsync()!; } catch { /* ignore */ }
+    }
+
+    private async Task HandleFindPreviousRequested()
+    {
+        _showFind = true;
+        await InvokeAsync(StateHasChanged);
+        try { await _findBar?.PrevAsync()!; } catch { /* ignore */ }
     }
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -416,6 +448,12 @@ public partial class TextEditor : ComponentBase, IDisposable
     protected void OnBlur(FocusEventArgs _)
     {
         FlushPendingUndoPush();
+    }
+
+    private Task OnFindClosed()
+    {
+        _showFind = false;
+        return Task.CompletedTask;
     }
 
     protected async Task OnFocus(FocusEventArgs _)

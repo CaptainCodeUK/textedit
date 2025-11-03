@@ -17,6 +17,7 @@ using TextEdit.Markdown;
 using TextEdit.UI.App;
 using TextEdit.UI.Services;
 using TextEdit.Infrastructure.Logging;
+using TextEdit.Core.Searching;
 
 namespace TextEdit.App;
 
@@ -76,6 +77,8 @@ public class Startup
         services.AddSingleton<PerformanceLogger>();
         // Markdown rendering
         services.AddSingleton<MarkdownRenderer>();
+    // Text search (US1)
+    services.AddSingleton<FindService>();
         
         // Phase 2 (v1.1): Preferences and theming infrastructure
         services.AddSingleton<IPreferencesRepository, PreferencesRepository>();

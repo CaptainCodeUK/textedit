@@ -295,6 +295,11 @@ public static partial class ElectronHost
                 new MenuItem { Role = MenuRole.copy },
                 new MenuItem { Role = MenuRole.paste },
                 new MenuItem { Type = MenuType.separator },
+                // Find commands (US1)
+                new MenuItem { Label = "Find…", Accelerator = "CmdOrCtrl+F", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.FindRequested); } },
+                new MenuItem { Label = "Find Next", Accelerator = "F3", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.FindNextRequested); } },
+                new MenuItem { Label = "Find Previous", Accelerator = "Shift+F3", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.FindPreviousRequested); } },
+                new MenuItem { Type = MenuType.separator },
                 new MenuItem { Label = OperatingSystem.IsMacOS() ? "Preferences…" : "Options…", Accelerator = OperatingSystem.IsMacOS() ? "Cmd+," : "Ctrl+,", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.OptionsRequested); } },
             }
         };

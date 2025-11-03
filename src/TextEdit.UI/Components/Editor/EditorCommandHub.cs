@@ -22,6 +22,10 @@ public static class EditorCommandHub
     public static Func<Task>? ToggleToolbarRequested { get; set; }
     public static Func<Task>? AboutRequested { get; set; } // T055: About dialog
     public static Func<Task>? OptionsRequested { get; set; } // US3: Options dialog
+    // Find commands (US1)
+    public static Func<Task>? FindRequested { get; set; }
+    public static Func<Task>? FindNextRequested { get; set; }
+    public static Func<Task>? FindPreviousRequested { get; set; }
     
     // Format menu commands
     public static Func<Task>? FormatHeading1Requested { get; set; }
