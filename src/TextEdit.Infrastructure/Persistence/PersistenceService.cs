@@ -14,10 +14,18 @@ public class PersistenceService
     /// Initializes the persistence service and ensures the session directory exists.
     /// </summary>
     public PersistenceService()
+        : this(null)
     {
-        // Use user-scoped application data folder for durability (instead of /tmp)
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        _sessionDir = Path.Combine(appData, "TextEdit", "Session");
+    }
+
+    /// <summary>
+    /// Initializes the persistence service with an explicit session directory (primarily for tests).
+    /// When <paramref name="sessionDir"/> is null or empty, defaults to <see cref="AppPaths.SessionDir"/>.
+    /// </summary>
+    /// <param name="sessionDir">Optional custom session directory path.</param>
+    public PersistenceService(string? sessionDir)
+    {
+        _sessionDir = string.IsNullOrWhiteSpace(sessionDir) ? AppPaths.SessionDir : sessionDir;
         Directory.CreateDirectory(_sessionDir);
     }
 

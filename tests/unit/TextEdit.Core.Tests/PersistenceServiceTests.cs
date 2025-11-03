@@ -12,10 +12,10 @@ public class PersistenceServiceTests : IDisposable
 
     public PersistenceServiceTests()
     {
-        _service = new PersistenceService();
-        _testSessionDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "TextEdit", "Session");
+        // Create a unique temp directory per test run to avoid touching real user config
+        _testSessionDir = Path.Combine(Path.GetTempPath(), "scrappy-tests", Guid.NewGuid().ToString());
+        Directory.CreateDirectory(_testSessionDir);
+        _service = new PersistenceService(_testSessionDir);
     }
 
     [Fact]
@@ -271,6 +271,10 @@ public class PersistenceServiceTests : IDisposable
         try
         {
             _service.ClearAllSessions();
+            if (Directory.Exists(_testSessionDir))
+            {
+                Directory.Delete(_testSessionDir, recursive: true);
+            }
         }
         catch
         {

@@ -16,14 +16,9 @@ public class PreferencesRepository : IPreferencesRepository
 
     public PreferencesRepository()
     {
-        // Get OS-specific app data directory
-        var appDataDir = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var scrappyDir = Path.Combine(appDataDir, "Scrappy");
-        
-        // Ensure directory exists
-        Directory.CreateDirectory(scrappyDir);
-        
-        _preferencesPath = Path.Combine(scrappyDir, "preferences.json");
+        // Centralized location for preferences
+        Directory.CreateDirectory(AppPaths.BaseDir);
+        _preferencesPath = AppPaths.PreferencesPath;
         
         _jsonOptions = new JsonSerializerOptions
         {
