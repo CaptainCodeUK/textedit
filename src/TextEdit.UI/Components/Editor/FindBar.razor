@@ -9,9 +9,10 @@
 {
     <div class="findbar-container" @onkeydown="HandleKeyDown" style="position:absolute; top:10px; right:10px; z-index:60;">
         <div class="findbar" style="display:flex; align-items:center; gap:8px; padding:8px; border-radius:8px; background: var(--surface); color: var(--fg); border:1px solid var(--border); box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
-            <input @ref="_searchInput"
+         <input @ref="_searchInput"
                    placeholder="Find"
                    aria-label="Find"
+             aria-controls="@EditorElementId"
                    value="@_term"
                    @oninput="OnTermChanged"
                    style="min-width:200px; padding:6px 8px; border:1px solid var(--border); background:var(--bg); color:var(--fg); border-radius:6px; outline:none;" />
@@ -26,9 +27,20 @@
             <div style="font-size:12px; color: var(--muted); min-width:64px; text-align:center;">
                 @(_result?.Matches.Count > 0 ? ($"{_currentDisplay}/{_result.Matches.Count}") : "0/0")
             </div>
+            <!-- Accessible live region for screen readers announcing match status -->
+            <div role="status" aria-live="polite" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;">
+                @if (_result?.Matches?.Count > 0 && _currentIndex >= 0)
+                {
+                    <span>Match @(_currentDisplay) of @_result.Matches.Count</span>
+                }
+                else if (!string.IsNullOrEmpty(_term))
+                {
+                    <span>No matches</span>
+                }
+            </div>
             <div style="display:flex; gap:6px;">
-                <button class="btn" @onclick="Prev" title="Find previous (Shift+F3)" style="padding:6px 8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); border-radius:6px;">◀</button>
-                <button class="btn" @onclick="Next" title="Find next (F3 or Enter)" style="padding:6px 8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); border-radius:6px;">▶</button>
+                <button class="btn" @onclick="Prev" aria-label="Find previous" title="Find previous (Shift+F3)" style="padding:6px 8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); border-radius:6px;">◀</button>
+                <button class="btn" @onclick="Next" aria-label="Find next" title="Find next (F3 or Enter)" style="padding:6px 8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); border-radius:6px;">▶</button>
             </div>
             <button class="btn" @onclick="Close" aria-label="Close find" title="Close" style="padding:6px 8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); border-radius:6px;">×</button>
         </div>

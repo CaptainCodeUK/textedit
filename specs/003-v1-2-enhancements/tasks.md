@@ -87,3 +87,27 @@
 ---
 
 > **All tasks are atomic, parallelizable, and independently testable. Each user story can be validated in isolation.**
+
+---
+
+## Future Work / Investigation: Alternative Text Editor Component
+
+Rationale: The current textarea-based editor has inherent limitations (selection visibility requires focus, limited styling/highlighting control, and overlay complexity for multi-match highlights). Investigate adopting a richer editor component that better supports our UX requirements and accessibility goals.
+
+- [ ] Evaluate candidate editors for Blazor/Electron.NET integration
+	- Monaco Editor (via WebView/JS interop)
+	- CodeMirror 6 (Blazor wrappers or direct interop)
+	- ACE Editor
+	- Rich textarea alternatives (e.g., contenteditable with selection API)
+- [ ] Define acceptance criteria
+	- Selection highlight visible without stealing focus from search input
+	- Efficient multi-match highlighting (thousands of matches)
+	- IME support, bidi text, and emoji
+	- Accessibility (WCAG 2.1 AA): screen readers, caret announcements, ARIA roles
+	- Performance: large files (≥10MB) read-only rendering without jank
+	- Undo/redo hooks compatible with our `IUndoRedoService`
+	- Markdown-friendly (monospace, wrapping, code fences)
+- [ ] Spike: build minimal POC with search highlight + next/prev navigation
+- [ ] Assess packaging/footprint and offline compatibility in Electron
+- [ ] Draft migration plan (feature parity checklist, risks, rollout guard)
+
