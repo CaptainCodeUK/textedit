@@ -23,6 +23,7 @@
 ### CustomDictionary
 - words: List<string>
 - filePath: string (location in app data dir)
+- format: enum (PlainText, HunspellDic) // Plain text (one word per line) or Hunspell .dic format
 
 ### WindowState
 - x: int

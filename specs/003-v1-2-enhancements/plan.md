@@ -19,7 +19,7 @@ Technical approach leverages the existing .NET 8, Blazor Server, Electron.NET ar
 ## Technical Context
 
 **Language/Version**: C# 12, .NET 8.0
-**Primary Dependencies**: Electron.NET 23.6.2, Blazor Server, Markdig, Squirrel (for auto-update), WeCantSpell.Hunspell (for spell checking), GitHub Actions
+**Primary Dependencies**: Electron.NET 23.6.2, Blazor Server, Markdig, Squirrel (or equivalent if Squirrel unsuitable), WeCantSpell.Hunspell (for spell checking), GitHub Actions
 **Storage**: JSON files in OS app data directories (preferences, session, custom dictionary)
 **Testing**: xUnit, NSubstitute, FluentAssertions, BenchmarkDotNet
 
@@ -41,7 +41,7 @@ Technical approach leverages the existing .NET 8, Blazor Server, Electron.NET ar
 Verify alignment with TextEdit Constitution principles:
 
 - [x] **Code Quality Standards**: Linting/static analysis via .NET analyzers, code review via PRs, XML docs for public APIs
-- [x] **Testing Standards**: xUnit tests, 80%+ coverage, test-first for new features, CI runs all tests
+- [x] **Testing Standards**: xUnit tests, 80% minimum line coverage per constitution, test-first for new features, CI runs all tests
 - [x] **UX Consistency**: Blazor components use design system, accessibility (WCAG 2.1 AA), responsive layouts, error/loading states
 - [x] **Performance Requirements**: Benchmarks for core services, startup/shutdown/markdown/file open targets, resource constraints, monitoring via logs/metrics
 

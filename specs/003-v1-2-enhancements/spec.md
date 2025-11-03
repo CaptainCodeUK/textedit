@@ -224,7 +224,7 @@ The development team needs to efficiently create distributable packages (install
 - **FR-026**: System MUST periodically check for application updates by querying a configured update server endpoint
 - **FR-027**: System MUST check for updates on application startup and every 24 hours while running
 - **FR-028**: System MUST download updates in background without blocking user interface or editor functionality
-- **FR-029**: System MUST display non-intrusive notification when update is ready to install, with options to "Restart and Update" or "Remind Me Later"
+- **FR-029**: System MUST display non-intrusive notification (toast/banner style) when update is ready to install, with options to "Restart and Update" or "Remind Me Later"
 - **FR-030**: System MUST apply pending updates on next application launch before main window appears
 - **FR-031**: System MUST maintain current application version if update installation fails and log error details
 - **FR-032**: System MUST provide Options dialog section for update preferences including "Check for updates now" and "Automatically download updates" toggle
@@ -240,7 +240,7 @@ The development team needs to efficiently create distributable packages (install
 - **FR-039**: System MUST upload completed build artifacts to GitHub release as attachments
 - **FR-040**: System MUST generate release notes from commit messages since previous release
 - **FR-041**: System MUST fail workflow and notify team if any platform build fails or tests fail
-- **FR-042**: System MUST produce artifacts that are compatible with the auto-updater update detection and installation mechanism
+- **FR-042**: System MUST produce artifacts that are compatible with the auto-updater update detection and installation mechanism (Squirrel update manifest format per FR-026-033)
 
 ### Key Entities *(include if feature involves data)*
 
@@ -261,42 +261,39 @@ The development team needs to efficiently create distributable packages (install
 - **SC-001**: Users can locate any text in a document within 5 seconds of opening Find dialog
 - **SC-002**: Users can perform bulk text replacements (10+ occurrences) in under 10 seconds including dialog interaction
 - **SC-003**: Find operations on documents up to 50,000 words complete with visible highlighting within 2 seconds
-- **SC-004**: 90% of users successfully use Find and Replace features on first attempt without consulting help documentation
 
 **Spell Checking**:
 
-- **SC-005**: Spell checking identifies at least 95% of common English misspellings with appropriate suggestions
+- **SC-005**: Spell checking identifies at least 95% of common English misspellings (validated against Birkbeck spelling error corpus) with appropriate suggestions
 - **SC-006**: Spell checking completes for documents up to 10,000 words within 3 seconds without impacting editor responsiveness
 - **SC-007**: Custom dictionary operations (add, remove word) complete instantly with immediate visual feedback
-- **SC-008**: Users report 40% reduction in spelling errors in published documents compared to pre-spell-check usage
 
 **Window State Persistence**:
 
-- **SC-009**: Window state restoration success rate exceeds 98% across normal startup scenarios
-- **SC-010**: Users report zero manual window resizing/repositioning needed after application restart in 95% of sessions
-- **SC-011**: Window state restoration completes within 100ms of application launch, imperceptible to users
+- **SC-008**: Window state restoration success rate exceeds 98% across normal startup scenarios
+- **SC-009**: Window state restoration completes within 100ms of application launch, imperceptible to users
 
 **Auto-Updater**:
 
-- **SC-012**: 80% of users install updates within 48 hours of release through auto-update mechanism
-- **SC-013**: Update detection occurs within 5 minutes of application startup or every 24 hours
-- **SC-014**: Update downloads complete in under 5 minutes on broadband connections (5+ Mbps)
-- **SC-015**: Update installation success rate exceeds 95%, with automatic rollback on failure
-- **SC-016**: Support tickets related to "how to update" or "outdated version" issues decrease by 70%
+- **SC-010**: 80% of users install updates within 48 hours of release through auto-update mechanism
+- **SC-011**: Update detection occurs within 5 minutes of application startup or every 24 hours
+- **SC-012**: Update downloads complete in under 5 minutes on broadband connections (5+ Mbps)
+- **SC-013**: Update installation success rate exceeds 95%, with automatic rollback on failure
 
 **Automated Release Builds**:
 
-- **SC-017**: Build workflow completes all platform builds in under 30 minutes from commit push to artifact availability
-- **SC-018**: Build success rate on main branch exceeds 95% over 3-month period
-- **SC-019**: Time from feature merge to release availability decreases from hours/days to under 1 hour
-- **SC-020**: Zero manual build steps required for standard releases after initial workflow setup
+- **SC-014**: Build workflow completes all platform builds in under 30 minutes from commit push to artifact availability
+- **SC-015**: Build success rate on main branch exceeds 95% over 3-month period
+- **SC-016**: Zero manual build steps required for standard releases after initial workflow setup
 
 ### Quality Criteria
 
-- **SC-021**: All find/replace operations maintain undo/redo history integrity with no data corruption
-- **SC-022**: Spell checking produces zero false positives for words in built-in dictionary
-- **SC-023**: Window state data survives application crashes and is resilient to corruption
-- **SC-024**: Update mechanism fails safely - never results in non-functional application after failed update
-- **SC-025**: Build artifacts pass all automated tests before publication to release channel
-- **SC-026**: All features maintain accessibility standards including keyboard navigation and screen reader support
-- **SC-027**: Features add less than 5MB to application download size and less than 200ms to startup time
+- **SC-017**: All find/replace operations maintain undo/redo history integrity with no data corruption
+- **SC-018**: Spell checking produces zero false positives for words in built-in dictionary
+- **SC-019**: Window state data survives application crashes and is resilient to corruption
+- **SC-020**: Update mechanism fails safely - never results in non-functional application after failed update
+- **SC-021**: Build artifacts pass all automated tests before publication to release channel
+- **SC-022**: All features maintain accessibility standards including keyboard navigation and screen reader support
+- **SC-023**: Features add less than 5MB to application download size and less than 200ms to startup time
+
+```
