@@ -2,6 +2,62 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2025-11-11
+
+### Added
+- **Find and Replace** (US1/US2): Text search within documents with case-sensitive and whole-word options
+  - Non-modal Find/Replace bars (Ctrl+F, Ctrl+H)
+  - Next/Previous navigation through matches
+  - Single and bulk Replace operations with atomic undo/redo
+  - Integrated with document undo history
+- **Window State Persistence** (US5): Window position, size, and state restored on launch
+  - Multi-monitor support with bounds validation
+  - Maximized and fullscreen state restoration
+  - Event-driven state capture to handle window lifecycle correctly
+- **Automatic Application Updates** (US6): Built-in auto-updater with GitHub Releases integration
+  - Check for updates on startup (configurable)
+  - Periodic update checks (default: 24 hours, configurable)
+  - Background download of updates
+  - Update notification dialog with release notes
+  - Critical update support (blocking prompt for security updates)
+  - Options dialog integration: Check now, auto-download toggle, status display
+  - Electron.AutoUpdater with Squirrel format (Windows/macOS) and AppImage (Linux)
+- **Automated Release Builds** (US7): GitHub Actions CI/CD workflows
+  - Multi-platform builds: Windows (.exe/.nupkg), macOS (.dmg/.zip), Linux (.AppImage/.deb)
+  - Automatic version extraction from git tags
+  - Auto-generated release notes from commit history
+  - Build artifact uploads to GitHub Releases
+  - Test coverage enforcement (65% threshold)
+  - Build failure notifications via GitHub issues
+
+### Performance
+- Find/Replace operations optimized with minimal re-renders
+- Update download progress tracking with real-time status updates
+
+### Reliability
+- Replace operations properly flush pending undo snapshots before execution
+- Window state cached during lifecycle events to avoid "destroyed window" errors
+- Auto-updater gracefully handles errors without disrupting user experience
+
+### Changed
+- Version bumped to 1.2.0 (displayed in About dialog and Options dialog)
+- Enhanced Options dialog with Automatic Updates section
+
+### Fixed
+- Replace undo corruption caused by pending typed edits not being flushed
+- Window close error during session persistence (cached state instead of querying destroyed window)
+
+### Known Issues
+- Tab insertion undo granularity (FIXME-TAB-UNDO): Tab characters not isolated as separate undo units
+- Ctrl+Tab navigation intercepted by browser/OS: Use Ctrl+PageDown/PageUp as workaround
+
+### Deferred
+- Spell checking (US3/US4) deferred pending alternate text editor component evaluation
+- Find/Replace polish (match count, accessibility audits) deferred pending editor evaluation
+- Update rollback mechanism deferred (requires version tracking and crash detection)
+
+---
+
 ## [1.1.0] - 2025-11-02
 
 ### Added

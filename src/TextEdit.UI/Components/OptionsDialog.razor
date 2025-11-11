@@ -153,7 +153,7 @@
     private ElementReference _dialogRef;
     private DotNetObjectReference<OptionsDialog>? _dotNetRef;
     private bool _trapAttached;
-    private string _currentVersion = "1.1.0"; // TODO: Get from assembly version
+    private string _currentVersion = GetVersion();
     private string _updateStatus = "Idle";
     private bool _isCheckingForUpdates = false;
     
@@ -167,6 +167,20 @@
     {
         AutoUpdateService.StatusChanged += OnUpdateStatusChanged;
         UpdateStatusDisplay();
+    }
+    
+    private static string GetVersion()
+    {
+        try
+        {
+            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            var version = assembly.GetName().Version;
+            return version != null ? $"{version.Major}.{version.Minor}.{version.Build}" : "1.2.0";
+        }
+        catch
+        {
+            return "1.2.0";
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

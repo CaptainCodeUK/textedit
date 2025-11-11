@@ -75,16 +75,16 @@
 - [ ] Manual test: Mock update server with GitHub release, failure scenarios _(pending - needs test release)_
 
 ## User Story 7: Automated Release Builds
-- [ ] Create GitHub Actions workflow for CI/CD
-- [ ] Build Windows (.exe/.msi), macOS (.dmg), Linux (.deb/.AppImage) artifacts
-- [ ] Extract version from project config, embed in artifacts
-- [ ] Upload artifacts to GitHub release
-- [ ] Configure GitHub Actions to auto-generate release notes from commit history
-- [ ] Cancel in-progress builds on new push
-- [ ] Notify team on build/test failure
-- [ ] Configure GitHub Actions secrets for release artifact uploads (GITHUB_TOKEN)
-- [ ] Ensure artifacts compatible with auto-updater
-- [ ] Test: Push to main triggers build, produces all artifacts
+- [x] Create GitHub Actions workflow for CI/CD (release.yml for tags, ci.yml for branches/PRs)
+- [x] Build Windows (.exe/.nupkg + RELEASES), macOS (.dmg/.zip), Linux (.AppImage) artifacts via electronize
+- [x] Extract version from git tags (v*.*.*)
+- [x] Upload artifacts to GitHub release via softprops/action-gh-release
+- [x] Configure GitHub Actions to auto-generate release notes from commit history
+- [x] Cancel in-progress builds on new push (concurrency groups)
+- [x] Notify team on build/test failure (create GitHub issue with build-failure label)
+- [x] Configure GitHub Actions secrets for release artifact uploads (uses GITHUB_TOKEN)
+- [x] Ensure artifacts compatible with auto-updater (Squirrel format for Windows/Mac, AppImage for Linux)
+- [ ] Test: Create test tag to trigger workflow, verify all platforms build and artifacts upload _(manual testing pending)_
 
 ---
 

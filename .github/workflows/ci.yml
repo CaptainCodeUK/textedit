@@ -1,0 +1,122 @@
+name: CI Build
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - '**-enhancements'
+  pull_request:
+    branches:
+      - main
+      - develop
+
+# Cancel in-progress builds when new push to same PR/branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      
+      - name: Cache NuGet packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-path: |
+            ~/.nuget/packages
+      
+      - name: Restore dependencies
+        run: dotnet restore textedit.sln
+      
+      - name: Build solution
+        run: dotnet build textedit.sln --configuration Release --no-restore
+      
+      - name: Run tests
+        run: dotnet test textedit.sln --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+      
+      - name: Test coverage
+        run: |
+          dotnet test textedit.sln \
+            --configuration Release \
+            --no-build \
+            /p:CollectCoverage=true \
+            /p:CoverletOutputFormat=cobertura \
+            /p:CoverletOutput=./TestResults/ \
+            /p:Threshold=65 \
+            /p:ThresholdType=line \
+            /p:ThresholdStat=total
+      
+      - name: Publish test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: '**/TestResults/*.trx'
+          retention-days: 30
+      
+      - name: Publish coverage results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-results
+          path: '**/TestResults/*.cobertura.xml'
+          retention-days: 30
+      
+      - name: Comment PR with test results
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request' && always()
+        with:
+          script: |
+            const fs = require('fs');
+            const glob = require('glob');
+            
+            // Find test result files
+            const testFiles = glob.sync('**/TestResults/*.trx');
+            if (testFiles.length === 0) {
+              console.log('No test result files found');
+              return;
+            }
+            
+            // Simple comment with status
+            const comment = `## 🧪 Test Results
+            
+            Build and tests completed. Check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+      
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = context.eventName === 'pull_request' 
+              ? `🔴 CI build failed for PR #${context.issue.number}`
+              : `🔴 CI build failed for ${context.ref}`;
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: `CI build failed. Check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.`,
+              labels: ['build-failure', 'ci']
+            })

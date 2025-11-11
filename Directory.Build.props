@@ -2,5 +2,17 @@
   <PropertyGroup>
     <!-- Per-project coverage thresholds configured in individual test projects -->
     <!-- Global threshold removed to allow per-project control -->
+    
+    <!-- Version information for all projects (v1.2 with auto-updater and CI/CD) -->
+    <Version>1.2.0</Version>
+    <AssemblyVersion>1.2.0.0</AssemblyVersion>
+    <FileVersion>1.2.0.0</FileVersion>
+    <InformationalVersion>1.2.0</InformationalVersion>
+    
+    <!-- Company and product information -->
+    <Company>CaptainCodeUK</Company>
+    <Product>TextEdit</Product>
+    <Copyright>Copyright © 2025 CaptainCodeUK - MIT License</Copyright>
+    <Authors>CaptainCodeUK</Authors>
   </PropertyGroup>
 </Project>
