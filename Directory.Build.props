@@ -3,11 +3,11 @@
     <!-- Per-project coverage thresholds configured in individual test projects -->
     <!-- Global threshold removed to allow per-project control -->
     
-    <!-- Version information for all projects (v1.2 with auto-updater and CI/CD) -->
-    <Version>1.2.0</Version>
-    <AssemblyVersion>1.2.0.0</AssemblyVersion>
-    <FileVersion>1.2.0.0</FileVersion>
-    <InformationalVersion>1.2.0</InformationalVersion>
+  <!-- Version information for all projects (v1.2.1 patch: updater fixes for CI compatibility) -->
+  <Version>1.2.1</Version>
+  <AssemblyVersion>1.2.1.0</AssemblyVersion>
+  <FileVersion>1.2.1.0</FileVersion>
+  <InformationalVersion>1.2.1</InformationalVersion>
     
     <!-- Company and product information -->
     <Company>CaptainCodeUK</Company>
