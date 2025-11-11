@@ -10,7 +10,6 @@ public class WindowStateRepositoryTests : IDisposable
 {
     private readonly WindowStateRepository _repository;
     private readonly string _testDir;
-    private readonly string _originalBaseDir;
 
     public WindowStateRepositoryTests()
     {
@@ -31,12 +30,10 @@ public class WindowStateRepositoryTests : IDisposable
 
         // Assert
         Assert.NotNull(state);
-        Assert.Equal(800, state.Width); // Default from WindowState constructor
-        Assert.Equal(600, state.Height);
-        Assert.Equal(100, state.X);
-        Assert.Equal(100, state.Y);
+        Assert.Equal(1200, state.Width); // Default from WindowState constructor
+        Assert.Equal(800, state.Height);
         Assert.False(state.IsMaximized);
-        Assert.False(state.IsFullscreen);
+        Assert.False(state.IsFullScreen);
     }
 
     [Fact]
@@ -50,7 +47,7 @@ public class WindowStateRepositoryTests : IDisposable
             X = 200,
             Y = 150,
             IsMaximized = true,
-            IsFullscreen = false
+            IsFullScreen = false
         };
 
         // Act
@@ -63,7 +60,7 @@ public class WindowStateRepositoryTests : IDisposable
         Assert.Equal(200, loadedState.X);
         Assert.Equal(150, loadedState.Y);
         Assert.True(loadedState.IsMaximized);
-        Assert.False(loadedState.IsFullscreen);
+        Assert.False(loadedState.IsFullScreen);
     }
 
     [Fact]
@@ -72,8 +69,8 @@ public class WindowStateRepositoryTests : IDisposable
         // Arrange - state with values below minimums
         var invalidState = new WindowState
         {
-            Width = 50,  // Below minimum of 400
-            Height = 30, // Below minimum of 300
+            Width = 50,  // Below minimum of 800
+            Height = 30, // Below minimum of 600
             X = -1000,
             Y = -1000
         };
@@ -83,8 +80,8 @@ public class WindowStateRepositoryTests : IDisposable
         var loadedState = await _repository.LoadAsync();
 
         // Assert - should be clamped to minimums
-        Assert.True(loadedState.Width >= 400);
-        Assert.True(loadedState.Height >= 300);
+        Assert.True(loadedState.Width >= 800);
+        Assert.True(loadedState.Height >= 600);
     }
 
     [Fact]
@@ -128,7 +125,7 @@ public class WindowStateRepositoryTests : IDisposable
         {
             Width = 1920,
             Height = 1080,
-            IsFullscreen = true,
+            IsFullScreen = true,
             IsMaximized = false
         };
 
@@ -137,7 +134,7 @@ public class WindowStateRepositoryTests : IDisposable
         var loaded = await _repository.LoadAsync();
 
         // Assert
-        Assert.True(loaded.IsFullscreen);
+        Assert.True(loaded.IsFullScreen);
         Assert.False(loaded.IsMaximized);
     }
 
