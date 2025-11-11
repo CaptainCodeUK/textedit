@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Reflection;
 using System.Linq;
 using TextEdit.Core.Abstractions;
 using TextEdit.Core.Updates;
@@ -181,14 +182,26 @@ public class AutoUpdateService
             {
                 try
                 {
-                    // Electron updater will download automatically if configured by packager
-                    Electron.AutoUpdater.CheckForUpdates();
-                    _logger?.LogInformation("Update check initiated via Electron.AutoUpdater (CheckForUpdates)");
+                    // Call whichever API exists in this ElectronNET version: CheckForUpdates or CheckForUpdatesAndNotify
+                    var updater = Electron.AutoUpdater;
+                    var updaterType = updater.GetType();
+                    var method = updaterType.GetMethod("CheckForUpdates", Type.EmptyTypes)
+                                 ?? updaterType.GetMethod("CheckForUpdatesAndNotify", Type.EmptyTypes);
+
+                    if (method is not null)
+                    {
+                        method.Invoke(updater, null);
+                        _logger?.LogInformation("Update check initiated via Electron.AutoUpdater ({Method})", method.Name);
+                    }
+                    else
+                    {
+                        _logger?.LogWarning("No suitable update check method found on Electron.AutoUpdater");
+                    }
                     // Status will be updated via event handlers
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogWarning(ex, "Electron.AutoUpdater.CheckForUpdates failed");
+                    _logger?.LogWarning(ex, "Electron.AutoUpdater update check invocation failed");
                     SetStatus(UpdateStatus.Error, null);
                     _lastError = ex.Message;
                 }
