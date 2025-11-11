@@ -71,7 +71,7 @@ public class AutoUpdateService
 
                     Electron.AutoUpdater.OnUpdateAvailable += (UpdateInfo info) =>
                     {
-                        _logger?.LogInformation("[AutoUpdater] Update available: {Version}. Downloading...", info?.Version);
+                        _logger?.LogInformation("[AutoUpdater] Update available: {Version}. Downloading...", info?.Version ?? string.Empty);
                         SetStatus(UpdateStatus.Downloading, null);
                     };
 
@@ -98,7 +98,7 @@ public class AutoUpdateService
 
                     Electron.AutoUpdater.OnUpdateDownloaded += (UpdateInfo info) =>
                     {
-                        _logger?.LogInformation("[AutoUpdater] Update downloaded: {Version}", info?.Version);
+                        _logger?.LogInformation("[AutoUpdater] Update downloaded: {Version}", info?.Version ?? string.Empty);
                         // ReleaseNotes is an array; concatenate into a single string
                         string releaseNotes = string.Empty;
                         try
@@ -108,7 +108,7 @@ public class AutoUpdateService
                                 releaseNotes = string.Join("\n\n", notes.Select(n =>
                                 {
                                     var title = string.IsNullOrWhiteSpace(n?.Version) ? string.Empty : $"{n!.Version}\n";
-                                    var body = n?.ReleaseNotes ?? n?.Note ?? string.Empty;
+                                    var body = n?.Note ?? string.Empty;
                                     return $"{title}{body}".Trim();
                                 }).Where(s => !string.IsNullOrWhiteSpace(s)));
                             }
@@ -131,7 +131,7 @@ public class AutoUpdateService
 
                     Electron.AutoUpdater.OnError += (message) =>
                     {
-                        _logger?.LogError("[AutoUpdater] Error: {Message}", message);
+                        _logger?.LogError("[AutoUpdater] Error: {Message}", message ?? string.Empty);
                         SetStatus(UpdateStatus.Error, null);
                         _lastError = message;
                     };
@@ -181,14 +181,14 @@ public class AutoUpdateService
             {
                 try
                 {
-                    // Electron updater will download automatically (no separate step)
-                    Electron.AutoUpdater.CheckForUpdatesAndNotify();
-                    _logger?.LogInformation("Update check initiated via Electron.AutoUpdater (CheckForUpdatesAndNotify)");
+                    // Electron updater will download automatically if configured by packager
+                    Electron.AutoUpdater.CheckForUpdates();
+                    _logger?.LogInformation("Update check initiated via Electron.AutoUpdater (CheckForUpdates)");
                     // Status will be updated via event handlers
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogWarning(ex, "Electron.AutoUpdater.CheckForUpdatesAndNotify failed");
+                    _logger?.LogWarning(ex, "Electron.AutoUpdater.CheckForUpdates failed");
                     SetStatus(UpdateStatus.Error, null);
                     _lastError = ex.Message;
                 }
