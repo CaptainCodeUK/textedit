@@ -54,9 +54,9 @@ jobs:
       - name: Run tests
         run: dotnet test textedit.sln --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
       
-      - name: Test coverage
+      - name: Test coverage (unit tests only)
         run: |
-          dotnet test textedit.sln \
+          dotnet test tests/unit/TextEdit.Core.Tests/TextEdit.Core.Tests.csproj \
             --configuration Release \
             --no-build \
             /p:CollectCoverage=true \
