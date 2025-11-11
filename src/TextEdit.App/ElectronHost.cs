@@ -680,7 +680,7 @@ public static partial class ElectronHost
             // Channel: theme:setThemeSource (Renderer -> Main)
             // Sets Electron nativeTheme.themeSource to align native menus with app theme
             Electron.IpcMain.RemoveAllListeners("theme:setThemeSource");
-            Electron.IpcMain.On("theme:setThemeSource", async (args) =>
+            Electron.IpcMain.On("theme:setThemeSource", (args) =>
             {
                 try
                 {
