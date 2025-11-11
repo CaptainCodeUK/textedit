@@ -1,5 +1,9 @@
+using System.Globalization;
+using System.Linq;
 using TextEdit.Core.Abstractions;
 using TextEdit.Core.Updates;
+using ElectronNET.API;
+using ElectronNET.API.Entities;
 
 namespace TextEdit.Infrastructure.Updates;
 
@@ -39,7 +43,7 @@ public class AutoUpdateService
     /// Initialize the auto-updater with update server URL (e.g., GitHub releases feed).
     /// Must be called before checking for updates.
     /// </summary>
-    /// <param name="feedUrl">Update server URL (platform-specific manifest location)</param>
+    /// <param name="feedUrl">Update server URL (platform-specific manifest location). Note: with Electron.NET, feed configuration is typically handled by the packager; this parameter is informational.</param>
     public void Initialize(string feedUrl)
     {
         if (string.IsNullOrWhiteSpace(feedUrl))
@@ -54,53 +58,78 @@ public class AutoUpdateService
             
             // Wire up Electron.AutoUpdater events if in Electron context
 #if !DEBUG
-            if (ElectronNET.API.HybridSupport.IsElectronActive)
+            if (HybridSupport.IsElectronActive)
             {
                 try
                 {
-                    ElectronNET.API.Electron.AutoUpdater.SetFeedURL(new ElectronNET.API.Entities.FeedURLOptions
-                    {
-                        Url = feedUrl
-                    });
-
-                    ElectronNET.API.Electron.AutoUpdater.OnCheckingForUpdate += () =>
+                    // Wire events; feed URL is typically provided by packaging config (GitHub provider)
+                    Electron.AutoUpdater.OnCheckingForUpdate += () =>
                     {
                         _logger?.LogInformation("[AutoUpdater] Checking for updates...");
                         SetStatus(UpdateStatus.Checking, null);
                     };
 
-                    ElectronNET.API.Electron.AutoUpdater.OnUpdateAvailable += () =>
+                    Electron.AutoUpdater.OnUpdateAvailable += (UpdateInfo info) =>
                     {
-                        _logger?.LogInformation("[AutoUpdater] Update available, downloading...");
+                        _logger?.LogInformation("[AutoUpdater] Update available: {Version}. Downloading...", info?.Version);
                         SetStatus(UpdateStatus.Downloading, null);
                     };
 
-                    ElectronNET.API.Electron.AutoUpdater.OnUpdateNotAvailable += () =>
+                    Electron.AutoUpdater.OnUpdateNotAvailable += (UpdateInfo info) =>
                     {
                         _logger?.LogInformation("[AutoUpdater] No update available");
                         SetStatus(UpdateStatus.UpToDate, null);
                     };
 
-                    ElectronNET.API.Electron.AutoUpdater.OnDownloadProgress += (info) =>
+                    Electron.AutoUpdater.OnDownloadProgress += (ProgressInfo info) =>
                     {
-                        _logger?.LogDebug("[AutoUpdater] Download progress: {Percent}%", info.Percent);
-                        _downloadPercent = (int)info.Percent;
-                        DownloadProgress?.Invoke((int)info.Percent);
+                        // Percent may be a string; parse defensively
+                        var percentStr = info?.Percent?.ToString() ?? "0";
+                        if (!int.TryParse(percentStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed))
+                        {
+                            if (double.TryParse(percentStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var dbl))
+                                parsed = (int)System.Math.Round(dbl);
+                        }
+                        parsed = System.Math.Clamp(parsed, 0, 100);
+                        _downloadPercent = parsed;
+                        _logger?.LogDebug("[AutoUpdater] Download progress: {Percent}%", parsed);
+                        DownloadProgress?.Invoke(parsed);
                     };
 
-                    ElectronNET.API.Electron.AutoUpdater.OnUpdateDownloaded += (info) =>
+                    Electron.AutoUpdater.OnUpdateDownloaded += (UpdateInfo info) =>
                     {
-                        _logger?.LogInformation("[AutoUpdater] Update downloaded: {Version}", info.Version);
+                        _logger?.LogInformation("[AutoUpdater] Update downloaded: {Version}", info?.Version);
+                        // ReleaseNotes is an array; concatenate into a single string
+                        string releaseNotes = string.Empty;
+                        try
+                        {
+                            if (info?.ReleaseNotes is ReleaseNoteInfo[] notes && notes.Length > 0)
+                            {
+                                releaseNotes = string.Join("\n\n", notes.Select(n =>
+                                {
+                                    var title = string.IsNullOrWhiteSpace(n?.Version) ? string.Empty : $"{n!.Version}\n";
+                                    var body = n?.ReleaseNotes ?? n?.Note ?? string.Empty;
+                                    return $"{title}{body}".Trim();
+                                }).Where(s => !string.IsNullOrWhiteSpace(s)));
+                            }
+                            else if (info?.ReleaseNotes != null)
+                            {
+                                // Fallback: if serialized to string somehow
+                                releaseNotes = info.ReleaseNotes.ToString() ?? string.Empty;
+                            }
+                        }
+                        catch { /* ignore formatting errors */ }
+
                         var metadata = new UpdateMetadata
                         {
-                            Version = info.Version,
-                            ReleaseNotes = info.ReleaseNotes ?? "",
+                            Version = info?.Version ?? string.Empty,
+                            ReleaseNotes = releaseNotes,
                             ReleasedAt = DateTimeOffset.UtcNow // Electron doesn't provide this
                         };
                         SetStatus(UpdateStatus.Ready, metadata);
                     };
 
-                    ElectronNET.API.Electron.AutoUpdater.OnError += (message) =>
+                    Electron.AutoUpdater.OnError += (message) =>
                     {
                         _logger?.LogError("[AutoUpdater] Error: {Message}", message);
                         SetStatus(UpdateStatus.Error, null);
@@ -148,18 +177,18 @@ public class AutoUpdateService
             _logger?.LogInformation("Checking for updates (autoDownload={AutoDownload})...", autoDownload);
 
 #if !DEBUG
-            if (ElectronNET.API.HybridSupport.IsElectronActive)
+            if (HybridSupport.IsElectronActive)
             {
                 try
                 {
-                    // Electron's autoUpdater automatically downloads if update found (no separate download step)
-                    ElectronNET.API.Electron.AutoUpdater.CheckForUpdates();
-                    _logger?.LogInformation("Update check initiated via Electron.AutoUpdater");
+                    // Electron updater will download automatically (no separate step)
+                    Electron.AutoUpdater.CheckForUpdatesAndNotify();
+                    _logger?.LogInformation("Update check initiated via Electron.AutoUpdater (CheckForUpdatesAndNotify)");
                     // Status will be updated via event handlers
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogWarning(ex, "Electron.AutoUpdater.CheckForUpdates failed");
+                    _logger?.LogWarning(ex, "Electron.AutoUpdater.CheckForUpdatesAndNotify failed");
                     SetStatus(UpdateStatus.Error, null);
                     _lastError = ex.Message;
                 }
@@ -200,10 +229,10 @@ public class AutoUpdateService
         {
             _logger?.LogInformation("Quitting and installing update...");
 #if !DEBUG
-            if (ElectronNET.API.HybridSupport.IsElectronActive)
+            if (HybridSupport.IsElectronActive)
             {
                 // Electron autoUpdater will quit the app and install the update
-                ElectronNET.API.Electron.AutoUpdater.QuitAndInstall();
+                Electron.AutoUpdater.QuitAndInstall();
             }
             else
             {
