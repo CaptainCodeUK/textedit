@@ -60,6 +60,11 @@ window.editorFocus = {
         document.addEventListener('mousedown', function(e) {
             const target = e.target;
             const editor = document.getElementById(editorId);
+            // If the click is inside the Find/Replace bars, never interfere
+            const inFindReplaceBar = !!(target.closest && (target.closest('.findbar') || target.closest('.findbar-container')));
+            if (inFindReplaceBar) {
+                return; // allow normal focus behavior for bar controls
+            }
             
             // If clicking on something that's not the editor and not an interactive element
             if (editor && 

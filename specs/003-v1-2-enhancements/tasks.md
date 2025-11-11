@@ -5,59 +5,59 @@
 ---
 
 ## User Story 1: Text Search within Document (Find)
-- [ ] Implement `FindQuery` domain model in Core
-- [ ] Add Find dialog UI (Ctrl+F/Cmd+F) in Blazor
-- [ ] Ensure Find dialog is non-modal (allow editing while open)
-- [ ] Highlight all matches in editor component
-- [ ] Implement navigation (Next/Previous) between matches
-- [ ] Add case-sensitive and whole-word options
-- [ ] Integrate Find with undo/redo history
-- [ ] Unit tests: Find logic, match highlighting, navigation
-- [ ] Accessibility: Verify WCAG 2.1 AA compliance (keyboard navigation, screen reader labels, contrast)
+- [x] Implement `FindQuery` domain model in Core
+- [x] Add Find dialog UI (Ctrl+F/Cmd+F) in Blazor
+- [x] Ensure Find dialog is non-modal (allow editing while open)
+- [ ] Highlight all matches in editor component _(deferred – textarea limitations; see "Alternative Text Editor Component")_
+- [x] Implement navigation (Next/Previous) between matches
+- [x] Add case-sensitive and whole-word options
+- [ ] Integrate Find with undo/redo history _(covered under Replace operations in User Story 2)_
+- [x] Unit tests: Find logic and navigation (xUnit)
+- [ ] Accessibility: Verify WCAG 2.1 AA compliance _(deferred – will revisit after alternate editor evaluation)_
 
 ## User Story 2: Find and Replace Text
-- [ ] Implement `ReplaceOperation` domain model in Core
-- [ ] Add Replace dialog UI (Ctrl+H/Cmd+H) in Blazor
-- [ ] Ensure Replace dialog is non-modal (allow editing while open)
-- [ ] Implement single and bulk (Replace All) operations
-- [ ] Show replacement count/status after Replace All
-- [ ] Integrate Replace with undo/redo (atomic Replace All)
-- [ ] Unit tests: Replace logic, undo/redo, status reporting
-- [ ] Accessibility: Verify WCAG 2.1 AA compliance (keyboard navigation, screen reader labels, contrast)
+- [x] Implement `ReplaceOperation` domain model in Core
+- [x] Add Replace dialog UI (Ctrl+H/Cmd+H) in Blazor
+- [x] Ensure Replace dialog is non-modal (allow editing while open)
+- [x] Implement single and bulk (Replace All) operations
+- [ ] Show replacement count/status after Replace All _(deferred – avoid duplicate work before editor change)_
+- [x] Integrate Replace with undo/redo (atomic Replace All)
+- [x] Unit tests: Replace logic and undo/redo
+- [ ] Accessibility: Verify WCAG 2.1 AA compliance _(deferred – will revisit after alternate editor evaluation)_
 
 ## User Story 3: Spell Checking with Built-in Dictionary
-- [ ] Integrate WeCantSpell.Hunspell NuGet package (Infrastructure)
-- [ ] Bundle English Hunspell dictionary files (.dic/.aff) in application resources
-- [ ] Load built-in English Hunspell dictionary (.dic/.aff)
-- [ ] Handle spell check initialization errors gracefully (log, disable feature if dictionary missing)
-- [ ] Implement spell check engine in Core using WeCantSpell.Hunspell (real-time, debounced)
-- [ ] Add red wavy underline for misspelled words in editor
-- [ ] Show suggestions from Hunspell in right-click context menu
-- [ ] Replace word with suggestion on click
-- [ ] Toggle spell check in Options dialog
-- [ ] Exclude code blocks/markdown fenced sections from spell check
-- [ ] Unit tests: Spell check engine, UI indicators, suggestions
-- [ ] Performance test: 10,000 words < 3s
+- [ ] Integrate WeCantSpell.Hunspell NuGet package (Infrastructure) _(deferred – after editor evaluation)_
+- [ ] Bundle English Hunspell dictionary files (.dic/.aff) in application resources _(deferred)_
+- [ ] Load built-in English Hunspell dictionary (.dic/.aff) _(deferred)_
+- [ ] Handle spell check initialization errors gracefully (log, disable feature if dictionary missing) _(deferred)_
+- [ ] Implement spell check engine in Core using WeCantSpell.Hunspell (real-time, debounced) _(deferred)_
+- [ ] Add red wavy underline for misspelled words in editor _(deferred)_
+- [ ] Show suggestions from Hunspell in right-click context menu _(deferred)_
+- [ ] Replace word with suggestion on click _(deferred)_
+- [ ] Toggle spell check in Options dialog _(deferred)_
+- [ ] Exclude code blocks/markdown fenced sections from spell check _(deferred)_
+- [ ] Unit tests: Spell check engine, UI indicators, suggestions _(deferred)_
+- [ ] Performance test: 10,000 words < 3s _(deferred)_
 
 ## User Story 4: Custom Dictionary Management
-- [ ] Implement `CustomDictionary` model (Hunspell .dic or plain text, per user)
-- [ ] Integrate custom dictionary with WeCantSpell.Hunspell
-- [ ] Add "Add to Dictionary" to context menu
-- [ ] Add/remove words via Options dialog
-- [ ] Persist custom dictionary in app data dir (Hunspell .dic format)
-- [ ] Load custom dictionary on app start and merge with built-in
-- [ ] Unit tests: Add/remove, persistence, UI
-- [ ] Manual test: Unicode/non-ASCII support
+- [ ] Implement `CustomDictionary` model (Hunspell .dic or plain text, per user) _(deferred)_
+- [ ] Integrate custom dictionary with WeCantSpell.Hunspell _(deferred)_
+- [ ] Add "Add to Dictionary" to context menu _(deferred)_
+- [ ] Add/remove words via Options dialog _(deferred)_
+- [ ] Persist custom dictionary in app data dir (Hunspell .dic format) _(deferred)_
+- [ ] Load custom dictionary on app start and merge with built-in _(deferred)_
+- [ ] Unit tests: Add/remove, persistence, UI _(deferred)_
+- [ ] Manual test: Unicode/non-ASCII support _(deferred)_
 
 ## User Story 5: Window State Persistence
-- [ ] Implement `WindowState` model (position, size, state, monitor)
-- [ ] Save window state on close (ElectronHost)
-- [ ] Restore window state on launch (validate bounds)
-- [ ] Handle multi-monitor and resolution changes
-- [ ] Fallback to defaults if state invalid/corrupt
-- [ ] Unit tests: State save/restore, edge cases
-- [ ] Integration test: Verify window state persists across application restarts (Electron)
-- [ ] Manual test: Multi-monitor, resolution change
+- [x] Implement `WindowState` model (position, size, state, monitor)
+- [x] Save window state on close (ElectronHost)
+- [x] Restore window state on launch (validate bounds)
+- [x] Handle multi-monitor and resolution changes
+- [x] Fallback to defaults if state invalid/corrupt
+- [ ] Unit tests: State save/restore, edge cases _(deferred - manual testing sufficient for now)_
+- [ ] Integration test: Verify window state persists across application restarts (Electron) _(deferred - manual testing sufficient)_
+- [x] Manual test: Multi-monitor, resolution change
 
 ## User Story 6: Automatic Application Updates
 - [ ] Evaluate and select auto-updater library (Squirrel recommended, document choice in research.md)
@@ -110,4 +110,30 @@ Rationale: The current textarea-based editor has inherent limitations (selection
 - [ ] Spike: build minimal POC with search highlight + next/prev navigation
 - [ ] Assess packaging/footprint and offline compatibility in Electron
 - [ ] Draft migration plan (feature parity checklist, risks, rollout guard)
+
+## Known issues
+
+### Tab insertion undo granularity (FIXME)
+
+- Summary: When inserting a tab character in the editor and then typing more text, undo currently removes the subsequent text but does not remove the tab or earlier text as separate undo units.
+- Repro steps:
+	1. Create a new document.
+	2. Type "hello" and pause (>300ms).
+	3. Press Tab.
+	4. Type "world" and pause (>300ms).
+	5. Press Ctrl+Z: "world" is removed.
+	6. Press Ctrl+Z again: the tab character is not removed.
+	7. Press Ctrl+Z again: "hello" is not removed.
+- Expected: Each of these edits should be undoable step-by-step: world → tab → hello → empty.
+- Actual: Only the last typed text is undone; the tab and the earlier text remain.
+- Scope: Blazor Server + Electron.NET on Linux (likely cross-platform). Involves the editor's undo coalescing and our JS→.NET interop path for Tab insertion.
+- Impact: Edge case affecting undo granularity; core editing remains functional.
+- Workarounds: None reliable at present.
+- Proposed fix (deferred):
+	- Replace JS-driven synthetic events with a unified editor command pipeline for structural edits (InsertTab, InsertNewline, etc.) that:
+		- Flushes pending debounced typing undo.
+		- Pushes an immediate snapshot for the structural edit via DocumentService (atomic) to ensure its own undo unit.
+		- Resets edit-burst tracking to start a new burst for subsequent typing.
+	- Add unit tests covering: tab alone, tab + typing, selection replacement with tab, and successive undos reaching baseline.
+- Status: Deferred to a later patch. Track with tag: FIXME-TAB-UNDO.
 

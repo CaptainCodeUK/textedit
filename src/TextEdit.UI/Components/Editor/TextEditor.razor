@@ -16,16 +16,24 @@
               @ref="textareaElement"
               @bind="Content"
               @bind:event="oninput"
-                            @onkeydown:stopPropagation="true"
               @onfocus="UpdateCaretPosition"
               @onmouseup="UpdateCaretPosition"
               @onkeyup="UpdateCaretPosition"
-              @onblur="OnBlur"></textarea>
-
-      <FindBar 
+              @onblur="OnBlur"></textarea>      <FindBar 
         @ref="_findBar"
         IsVisible="@_showFind"
         Text="@Content"
       OnClose="@OnFindClosed"
         EditorElementId="main-editor-textarea" />
+
+      <ReplaceBar
+        @ref="_replaceBar"
+        IsVisible="@_showReplace"
+        MatchCase="@_replaceMatchCase"
+        MatchCaseChanged="@(v => { _replaceMatchCase = v; StateHasChanged(); })"
+        WholeWord="@_replaceWholeWord"
+        WholeWordChanged="@(v => { _replaceWholeWord = v; StateHasChanged(); })"
+        OnReplaceNext="@OnReplaceNextRequested"
+        OnReplaceAll="@OnReplaceAllRequested"
+        OnClose="@OnReplaceClosed" />
 </main>

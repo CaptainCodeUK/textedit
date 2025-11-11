@@ -17,6 +17,7 @@ public class DocumentService
 {
     private readonly IFileSystem _fs;
     private readonly IUndoRedoService _undo;
+    private readonly TextEdit.Core.Searching.ReplaceService? _replace;
     private readonly IAppLogger? _logger;
     private const long LargeFileThreshold = 10 * 1024 * 1024; // 10MB
 
@@ -26,11 +27,12 @@ public class DocumentService
     /// <param name="fs">File system abstraction for I/O operations.</param>
     /// <param name="undo">Undo/redo service to attach to documents.</param>
     /// <param name="logger">Optional logger for diagnostic output.</param>
-    public DocumentService(IFileSystem fs, IUndoRedoService undo, IAppLogger? logger = null)
+    public DocumentService(IFileSystem fs, IUndoRedoService undo, IAppLogger? logger = null, TextEdit.Core.Searching.ReplaceService? replace = null)
     {
         _fs = fs;
         _undo = undo;
         _logger = logger;
+        _replace = replace; // optional to keep backward compatibility in tests
     }
 
     /// <summary>
@@ -114,6 +116,48 @@ public class DocumentService
         if (doc.Content == content) return;
         doc.SetContent(content);
         _undo.Push(doc, content);
+    }
+
+    /// <summary>
+    /// Applies a Replace All operation to the document content as a single atomic change (one undo step).
+    /// </summary>
+    /// <param name="doc">Target document.</param>
+    /// <param name="operation">Replace operation.</param>
+    /// <returns>The number of replacements made.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if ReplaceService was not provided.</exception>
+    public int ReplaceAll(Document doc, TextEdit.Core.Searching.ReplaceOperation operation)
+    {
+        if (_replace is null) throw new InvalidOperationException("ReplaceService is not available.");
+        var (newText, count) = _replace.ReplaceAll(doc.Content, operation);
+        if (count > 0)
+        {
+            UpdateContent(doc, newText);
+        }
+        return count;
+    }
+
+    /// <summary>
+    /// Replaces the next match at or after the given caret position as a single atomic change.
+    /// </summary>
+    /// <param name="doc">Target document.</param>
+    /// <param name="operation">Replace operation.</param>
+    /// <param name="caretPosition">Caret index to start searching from.</param>
+    /// <param name="newCaretPosition">Outputs the caret index after the replacement (at end of inserted replacement).</param>
+    /// <returns>True when a replacement was performed; otherwise false.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if ReplaceService was not provided.</exception>
+    public bool ReplaceNext(Document doc, TextEdit.Core.Searching.ReplaceOperation operation, int caretPosition, out int newCaretPosition)
+    {
+        if (_replace is null) throw new InvalidOperationException("ReplaceService is not available.");
+        var (newText, replacedIndex, replacedLength) = _replace.ReplaceNextAtOrAfter(doc.Content, operation, caretPosition);
+        if (replacedIndex < 0)
+        {
+            newCaretPosition = caretPosition;
+            return false;
+        }
+
+        UpdateContent(doc, newText);
+        newCaretPosition = replacedIndex + operation.Replacement.Length;
+        return true;
     }
 
     /// <summary>

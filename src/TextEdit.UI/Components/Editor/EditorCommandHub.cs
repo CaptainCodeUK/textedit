@@ -26,6 +26,8 @@ public static class EditorCommandHub
     public static Func<Task>? FindRequested { get; set; }
     public static Func<Task>? FindNextRequested { get; set; }
     public static Func<Task>? FindPreviousRequested { get; set; }
+    // Replace commands (US2)
+    public static Func<Task>? ReplaceRequested { get; set; }
     
     // Format menu commands
     public static Func<Task>? FormatHeading1Requested { get; set; }

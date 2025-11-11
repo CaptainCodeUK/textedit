@@ -16,6 +16,7 @@ window.editorFocus = {
         setTimeout(() => {
             const element = document.getElementById(elementId);
             if (element) {
+                console.log('[editorFocus] focusDelayed called on:', elementId);
                 element.focus();
             }
         }, delayMs);
@@ -68,21 +69,35 @@ window.editorFocus = {
             const target = e.target;
             const editor = document.getElementById(editorId);
             
+            // CRITICAL: If the click is inside the Find/Replace bars OR is an INPUT/BUTTON/etc, 
+            // do NOT interfere with focus at all
+            const inFindReplaceBar = target.closest && (target.closest('.findbar') || target.closest('.findbar-container'));
+            if (inFindReplaceBar) {
+                console.log('[editorFocus] Click inside findbar/replaceBar, ignoring');
+                return; // allow normal focus behavior for bar controls
+            }
+            
+            // Also bail out for any interactive element
+            if (target.tagName === 'BUTTON' || 
+                target.tagName === 'INPUT' ||
+                target.tagName === 'TEXTAREA' ||
+                target.tagName === 'SELECT' ||
+                target.tagName === 'A' ||
+                target.closest('button') ||
+                target.closest('input') ||
+                target.closest('textarea') ||
+                target.closest('select') ||
+                target.closest('a')) {
+                console.log('[editorFocus] Click on interactive element, ignoring:', target.tagName);
+                return; // allow normal focus
+            }
+            
             // If clicking on something that's not the editor and not an interactive element
             if (editor && 
                 target !== editor && 
-                !editor.contains(target) &&
-                target.tagName !== 'BUTTON' && 
-                target.tagName !== 'INPUT' &&
-                target.tagName !== 'TEXTAREA' &&
-                target.tagName !== 'SELECT' &&
-                target.tagName !== 'A' &&
-                !target.closest('button') &&
-                !target.closest('input') &&
-                !target.closest('textarea') &&
-                !target.closest('select') &&
-                !target.closest('a')) {
+                !editor.contains(target)) {
                 
+                console.log('[editorFocus] Click outside editor, restoring focus');
                 // Prevent the click from taking focus
                 e.preventDefault();
                 
@@ -99,11 +114,12 @@ window.editorFocus = {
         function insertTab(editor) {
             const start = editor.selectionStart ?? 0;
             const end = editor.selectionEnd ?? start;
-            const value = editor.value ?? '';
-            editor.value = value.substring(0, start) + '\t' + value.substring(end);
-            const newPos = start + 1;
-            editor.setSelectionRange(newPos, newPos);
-            editor.dispatchEvent(new Event('input', { bubbles: true }));
+            
+            // Call C# directly to insert tab with proper undo integration
+            if (window.DotNet) {
+                window.DotNet.invokeMethodAsync('TextEdit.UI', 'HandleTabInsertionFromJS', start, end)
+                    .catch(err => console.error('[editorFocus] Tab insertion failed:', err));
+            }
         }
 
         // Insert TAB characters in textarea instead of moving focus
@@ -162,6 +178,20 @@ window.editorFocus = {
         observer.observe(document.body, { childList: true, subtree: true });
     }
 };
+
+// Handle Ctrl+Tab and Ctrl+Shift+Tab for tab navigation (needs to be at document level)
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Tab' && e.ctrlKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        // Notify Blazor via custom event that can be picked up by interop
+        if (e.shiftKey) {
+            document.dispatchEvent(new CustomEvent('blazor-prev-tab'));
+        } else {
+            document.dispatchEvent(new CustomEvent('blazor-next-tab'));
+        }
+    }
+}, true); // capture phase to catch before anything else
 
 // Auto-initialize when DOM is ready
 if (document.readyState === 'loading') {

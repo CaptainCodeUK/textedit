@@ -69,10 +69,8 @@ public class UndoRedoService : IUndoRedoService
     {
         _undo[doc.Id] = new Stack<string>();
         _redo[doc.Id] = new Stack<string>();
-        if (initialContent is not null)
-        {
-            _undo[doc.Id].Push(initialContent);
-        }
+        // Always push the initial content to establish a baseline for undo
+        _undo[doc.Id].Push(initialContent);
     }
 
     /// <summary>

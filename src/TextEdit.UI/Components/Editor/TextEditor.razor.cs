@@ -35,6 +35,11 @@ public partial class TextEditor : ComponentBase, IDisposable
     // Find UI state (US1)
     private bool _showFind;
     private FindBar? _findBar;
+    // Replace UI state (US2)
+    private bool _showReplace;
+    private ReplaceBar? _replaceBar;
+    private bool _replaceMatchCase;
+    private bool _replaceWholeWord;
 
     protected string Content
     {
@@ -65,6 +70,9 @@ public partial class TextEditor : ComponentBase, IDisposable
 
     protected override void OnInitialized()
     {
+        // Set current instance for JSInvokable static methods
+        _currentInstance = this;
+        
         // Don't create a document here - App.razor's RestoreSessionAsync handles initialization
         AppState.Changed += OnAppStateChanged;
         // Register handlers for application menu integration
@@ -88,6 +96,8 @@ public partial class TextEditor : ComponentBase, IDisposable
     EditorCommandHub.FindRequested = HandleFindRequested;
     EditorCommandHub.FindNextRequested = HandleFindNextRequested;
     EditorCommandHub.FindPreviousRequested = HandleFindPreviousRequested;
+        // Replace
+        EditorCommandHub.ReplaceRequested = HandleReplaceRequested;
         
         // Format menu commands
         EditorCommandHub.FormatHeading1Requested = () => HandleFormatCommand(MarkdownFormattingService.MarkdownFormat.H1);
@@ -101,6 +111,8 @@ public partial class TextEditor : ComponentBase, IDisposable
 
     private async Task HandleFindRequested()
     {
+        // Make bars mutually exclusive
+        _showReplace = false;
         _showFind = true;
         await InvokeAsync(StateHasChanged);
         try { await _findBar?.ShowAsync()!; } catch { /* ignore */ }
@@ -118,6 +130,15 @@ public partial class TextEditor : ComponentBase, IDisposable
         try { await _findBar?.PrevAsync()!; } catch { /* ignore */ }
     }
 
+    private async Task HandleReplaceRequested()
+    {
+        // Make bars mutually exclusive
+        _showFind = false;
+        _showReplace = true;
+        await InvokeAsync(StateHasChanged);
+        try { await _replaceBar?.ShowAsync()!; } catch { /* ignore */ }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -126,6 +147,11 @@ public partial class TextEditor : ComponentBase, IDisposable
             try
             {
                 await JSRuntime.InvokeVoidAsync("editorFocus.initialize", "main-editor-textarea");
+                // Set up listeners for Ctrl+Tab navigation
+                await JSRuntime.InvokeVoidAsync("eval", @"
+                    document.addEventListener('blazor-next-tab', () => DotNet.invokeMethodAsync('TextEdit.UI', 'HandleNextTabFromJS'));
+                    document.addEventListener('blazor-prev-tab', () => DotNet.invokeMethodAsync('TextEdit.UI', 'HandlePrevTabFromJS'));
+                ");
             }
             catch { /* ignore */ }
             
@@ -138,8 +164,12 @@ public partial class TextEditor : ComponentBase, IDisposable
         if (_pendingCaretSync)
         {
             _pendingCaretSync = false;
-            // After a tab switch/render, focus, restore caret, and update status
-            await FocusEditorAsync();
+            // After a tab switch/render, restore caret and update status.
+            // Only force-focus the editor if no bars are currently visible to avoid stealing focus from inputs.
+            if (!_showFind && !_showReplace)
+            {
+                await FocusEditorAsync();
+            }
             if (CurrentDoc is not null)
             {
                 var docId = CurrentDoc.Id;
@@ -185,6 +215,12 @@ public partial class TextEditor : ComponentBase, IDisposable
 
     private async Task FocusEditorAsync()
     {
+        // Don't steal focus from Find/Replace bars when they're visible
+        if (_showFind || _showReplace)
+        {
+            return;
+        }
+        
         try
         {
             await JSRuntime.InvokeVoidAsync("editorFocus.focusDelayed", "main-editor-textarea", 10);
@@ -454,6 +490,65 @@ public partial class TextEditor : ComponentBase, IDisposable
         return Task.CompletedTask;
     }
 
+    private async Task OnReplaceClosed()
+    {
+        _showReplace = false;
+        await FocusEditorAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnReplaceNextRequested(TextEdit.Core.Searching.ReplaceOperation op)
+    {
+        if (CurrentDoc is null) return;
+        
+        // Flush any pending typed edits before performing replace operation
+        FlushPendingUndoPush();
+        
+        try
+        {
+            var caret = await JSRuntime.InvokeAsync<int>("eval", "document.getElementById('main-editor-textarea')?.selectionEnd ?? 0");
+            var replaced = DocumentService.ReplaceNext(CurrentDoc, op, caret, out var newCaret);
+            if (replaced)
+            {
+                // Clear pending edit tracking since ReplaceNext already pushed undo state
+                _lastEditedDocId = null;
+                _beforeEditContent = null;
+                
+                // Sync UI
+                AppState.NotifyDocumentUpdated();
+                await InvokeAsync(StateHasChanged);
+                // Update selection/caret only; do not change focus
+                await JSRuntime.InvokeVoidAsync("eval", $"{{ const el = document.getElementById('main-editor-textarea'); if (el) {{ try {{ el.setSelectionRange({newCaret}, {newCaret}); }} catch(e){{}} }} }}");
+                await UpdateCaretPosition();
+            }
+        }
+        catch { /* ignore */ }
+    }
+
+    private async Task OnReplaceAllRequested(TextEdit.Core.Searching.ReplaceOperation op)
+    {
+        if (CurrentDoc is null) return;
+        
+        // Flush any pending typed edits before performing replace operation
+        FlushPendingUndoPush();
+        
+        try
+        {
+            var count = DocumentService.ReplaceAll(CurrentDoc, op);
+            if (count > 0)
+            {
+                // Clear pending edit tracking since ReplaceAll already pushed undo state
+                _lastEditedDocId = null;
+                _beforeEditContent = null;
+                
+                AppState.NotifyDocumentUpdated();
+                await InvokeAsync(StateHasChanged);
+                await UpdateCaretPosition();
+            }
+        }
+        catch { /* ignore */ }
+    }
+
     protected async Task OnFocus(FocusEventArgs _)
     {
         // When editor gains focus, update caret and counts immediately
@@ -500,10 +595,72 @@ public partial class TextEditor : ComponentBase, IDisposable
         return Task.CompletedTask;
     }
 
+    [Microsoft.JSInterop.JSInvokable]
+    public static Task HandleNextTabFromJS()
+    {
+        return EditorCommandHub.InvokeSafe(EditorCommandHub.NextTabRequested);
+    }
+
+    [Microsoft.JSInterop.JSInvokable]
+    public static Task HandlePrevTabFromJS()
+    {
+        return EditorCommandHub.InvokeSafe(EditorCommandHub.PrevTabRequested);
+    }
+
+        private static TextEditor? _currentInstance;
+    
+    [Microsoft.JSInterop.JSInvokable]
+    public static async Task HandleTabInsertionFromJS(int selectionStart, int selectionEnd)
+    {
+        if (_currentInstance?.CurrentDoc == null) return;
+        
+        var instance = _currentInstance;
+        var doc = instance.CurrentDoc;
+        
+        // Flush any pending undo push before inserting tab (makes tab its own undo unit)
+        instance.FlushPendingUndoPush();
+        
+        // Insert tab at caret position, replacing any selected text
+        var content = doc.Content ?? "";
+        var newContent = content.Substring(0, selectionStart) + "\t" + content.Substring(selectionEnd);
+        
+        // Push IMMEDIATELY to undo stack (not debounced)
+        instance.UndoRedo.Push(doc, newContent);
+        
+        // Update Content property with suppression flag (updates UI but doesn't schedule undo)
+        // FIXME-TAB-UNDO: This workaround still fails to isolate the tab as a standalone undo unit on Linux.
+        // Root Cause (current hypothesis): The preceding typing burst's state tracking (_beforeEditContent)
+        // remains "hello" and subsequent typing after tab coalesces unexpectedly.
+        // Planned Remediation: Refactor undo model to:
+        //   1. Introduce explicit IEditorCommand pipeline (InsertText, InsertTab, ReplaceSelection).
+        //   2. Each structural command performs: FlushDebounce → ImmediatePush(before) → Apply → ImmediatePush(after).
+        //   3. Typing continues to use debounced grouping; structural edits become atomic.
+        // Testing Needed: Multi-step sequence (text, tab, text) yields 3 distinct undo points.
+        // Tracking Tag: FIXME-TAB-UNDO
+        instance._suppressUndoPush = true;
+        instance.Content = newContent;
+        instance._suppressUndoPush = false;
+        
+        // Clear edit tracking so next edit starts fresh undo unit
+        instance._lastEditedDocId = null;
+        instance._beforeEditContent = null;
+        
+        // Update UI and caret
+        await instance.InvokeAsync(instance.StateHasChanged);
+        
+        try
+        {
+            var newCaretPos = selectionStart + 1;
+            await instance.JSRuntime.InvokeVoidAsync("editorFocus.setCaretPosition", "main-editor-textarea", newCaretPos);
+        }
+        catch { /* ignore */ }
+    }
+
     public void Dispose()
     {
         FlushPendingUndoPush();
         AppState.Changed -= OnAppStateChanged;
+        if (_currentInstance == this) _currentInstance = null;
     }
 
     private class CaretPosition

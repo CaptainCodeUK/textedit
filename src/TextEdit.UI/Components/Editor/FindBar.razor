@@ -7,14 +7,18 @@
 
 @if (IsVisible)
 {
-    <div class="findbar-container" @onkeydown="HandleKeyDown" style="position:absolute; top:10px; right:10px; z-index:60;">
-        <div class="findbar" style="display:flex; align-items:center; gap:8px; padding:8px; border-radius:8px; background: var(--surface); color: var(--fg); border:1px solid var(--border); box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
-         <input @ref="_searchInput"
+    <div class="findbar-container" @onkeydown="HandleKeyDown" @onclick:stopPropagation="true" @onmousedown:stopPropagation="true" style="position:absolute; top:10px; right:10px; z-index:60;">
+        <div class="findbar" @onclick:stopPropagation="true" @onmousedown:stopPropagation="true" style="display:flex; align-items:center; gap:8px; padding:8px; border-radius:8px; background: var(--surface); color: var(--fg); border:1px solid var(--border); box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+            <!-- Focus trap sentinel (start) -->
+            <span tabindex="0" aria-hidden="true" @onfocus="TrapFocusToLast" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;"></span>
+       <input @ref="_searchInput"
                    placeholder="Find"
                    aria-label="Find"
              aria-controls="@EditorElementId"
                    value="@_term"
-                   @oninput="OnTermChanged"
+         @oninput="OnTermChanged"
+         @onkeydown="OnInputKeyDown"
+         @onkeydown:stopPropagation
                    style="min-width:200px; padding:6px 8px; border:1px solid var(--border); background:var(--bg); color:var(--fg); border-radius:6px; outline:none;" />
             <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted);">
                 <input type="checkbox" checked="@_matchCase" @onchange="ToggleMatchCase" />
@@ -39,10 +43,12 @@
                 }
             </div>
             <div style="display:flex; gap:6px;">
-                <button class="btn" @onclick="Prev" aria-label="Find previous" title="Find previous (Shift+F3)" style="padding:6px 8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); border-radius:6px;">◀</button>
-                <button class="btn" @onclick="Next" aria-label="Find next" title="Find next (F3 or Enter)" style="padding:6px 8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); border-radius:6px;">▶</button>
+                <button type="button" class="btn" @onmousedown:preventDefault @onclick="PrevWithFocus" aria-label="Find previous" title="Find previous (Shift+F3)" style="padding:6px 8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); border-radius:6px;">◀</button>
+                <button type="button" class="btn" @onmousedown:preventDefault @onclick="NextWithFocus" aria-label="Find next" title="Find next (F3 or Enter)" style="padding:6px 8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); border-radius:6px;">▶</button>
             </div>
-            <button class="btn" @onclick="Close" aria-label="Close find" title="Close" style="padding:6px 8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); border-radius:6px;">×</button>
+            <button @ref="_closeBtn" type="button" class="btn" @onmousedown:preventDefault @onclick="CloseWithFocus" aria-label="Close find" title="Close" style="padding:6px 8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); border-radius:6px;">×</button>
+            <!-- Focus trap sentinel (end) -->
+            <span tabindex="0" aria-hidden="true" @onfocus="TrapFocusToFirst" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;"></span>
         </div>
     </div>
 }
@@ -60,6 +66,8 @@
     private int _currentIndex = -1;
     private int _currentDisplay => _currentIndex < 0 ? 0 : _currentIndex + 1;
     private ElementReference _searchInput;
+    private ElementReference _closeBtn;
+    private bool _focusOnShow;
 
     protected override void OnParametersSet()
     {
@@ -82,8 +90,9 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (IsVisible)
+        if (_focusOnShow)
         {
+            _focusOnShow = false; // Clear immediately to prevent re-firing
             try 
             {
                 await _searchInput.FocusAsync();
@@ -114,12 +123,32 @@
         var m = _result.Matches[_currentIndex];
         try
         {
-            // Set selection without stealing focus from the find input
-            var js = $"{{ const el = document.getElementById('{EditorElementId}'); if (el) {{ el.setSelectionRange({m.Start}, {m.Start + m.Length}); }} }}";
+            // Set selection without changing focus
+            var js = $"{{ const el = document.getElementById('{EditorElementId}'); if (el) {{ try {{ el.setSelectionRange({m.Start}, {m.Start + m.Length}); }} catch(e){{}} }} }}";
             await JS.InvokeVoidAsync("eval", js);
             // keepFindFocus retained for signature compatibility (no-op here)
         }
         catch { /* ignore */ }
+    }
+
+    private async Task OnInputKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" || e.Code == "Enter" || e.Code == "NumpadEnter")
+        {
+            if (e.ShiftKey)
+            {
+                await Prev();
+            }
+            else
+            {
+                await Next();
+            }
+            try { await Task.Delay(10); await _searchInput.FocusAsync(); } catch { }
+        }
+        else if (e.Key == "Escape")
+        {
+            await Close();
+        }
     }
 
     private async Task Next()
@@ -140,6 +169,12 @@
         StateHasChanged();
     }
 
+    private async Task NextWithFocus()
+    {
+        await Next();
+        try { await Task.Delay(10); await _searchInput.FocusAsync(); } catch { }
+    }
+
     private async Task Prev()
     {
         if (_result is null)
@@ -158,6 +193,12 @@
         StateHasChanged();
     }
 
+    private async Task PrevWithFocus()
+    {
+        await Prev();
+        try { await Task.Delay(10); await _searchInput.FocusAsync(); } catch { }
+    }
+
     private async void OnTermChanged(ChangeEventArgs e)
     {
         _term = e.Value?.ToString() ?? string.Empty;
@@ -166,6 +207,8 @@
         {
             _currentIndex = 0; // jump to first match only
             await SelectCurrentAsync(keepFindFocus: true);
+            // Ensure the find input retains focus after selecting in the editor
+            try { await Task.Delay(10); await _searchInput.FocusAsync(); } catch { }
         }
         else
         {
@@ -181,6 +224,8 @@
         {
             _currentIndex = 0;
             await SelectCurrentAsync(keepFindFocus: true);
+            // Preserve focus on the find input after updating selection
+            try { await Task.Delay(10); await _searchInput.FocusAsync(); } catch { }
         }
         else
         {
@@ -196,6 +241,8 @@
         {
             _currentIndex = 0;
             await SelectCurrentAsync(keepFindFocus: true);
+            // Preserve focus on the find input after updating selection
+            try { await Task.Delay(10); await _searchInput.FocusAsync(); } catch { }
         }
         else
         {
@@ -217,12 +264,10 @@
 
     public Task ShowAsync()
     {
-        if (!IsVisible)
-        {
-            IsVisible = true;
-            _selectAllOnOpen = true;
-            StateHasChanged();
-        }
+        // Parent controls visibility; always request focus when asked to show
+        _selectAllOnOpen = true;
+        _focusOnShow = true;
+        StateHasChanged();
         return Task.CompletedTask;
     }
 
@@ -241,6 +286,20 @@
         IsVisible = false;
         await OnClose.InvokeAsync();
         try { await JS.InvokeVoidAsync("editorFocus.focus", EditorElementId); } catch { }
+    }
+
+    private async Task TrapFocusToFirst(FocusEventArgs _)
+    {
+        try { await _searchInput.FocusAsync(); } catch { }
+    }
+
+    private async Task TrapFocusToLast(FocusEventArgs _)
+    {
+        try { await _closeBtn.FocusAsync(); } catch { }
+    }
+    private async Task CloseWithFocus()
+    {
+        await Close();
     }
 
     

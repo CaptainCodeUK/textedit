@@ -58,6 +58,10 @@ public class Startup
             });
         });
         
+        // Text search/replace (US1/US2)
+        services.AddSingleton<FindService>();
+        services.AddSingleton<ReplaceService>(sp => new ReplaceService(sp.GetRequiredService<FindService>()));
+        
         // DocumentService with logger
         services.AddSingleton<DocumentService>(sp => 
         {
@@ -65,7 +69,8 @@ public class Startup
             var undo = sp.GetRequiredService<IUndoRedoService>();
             var loggerFactory = sp.GetRequiredService<IAppLoggerFactory>();
             var logger = loggerFactory.CreateLogger<DocumentService>();
-            return new DocumentService(fs, undo, logger);
+            var replace = sp.GetRequiredService<ReplaceService>();
+            return new DocumentService(fs, undo, logger, replace);
         });
         
         services.AddSingleton<TabService>();
@@ -77,11 +82,11 @@ public class Startup
         services.AddSingleton<PerformanceLogger>();
         // Markdown rendering
         services.AddSingleton<MarkdownRenderer>();
-    // Text search (US1)
-    services.AddSingleton<FindService>();
+    // moved above to group with ReplaceService
         
         // Phase 2 (v1.1): Preferences and theming infrastructure
         services.AddSingleton<IPreferencesRepository, PreferencesRepository>();
+    services.AddSingleton<WindowStateRepository>();
         services.AddSingleton<ThemeDetectionService>();
         services.AddSingleton<ThemeManager>();
         services.AddSingleton<MarkdownFormattingService>();

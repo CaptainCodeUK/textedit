@@ -1,4 +1,4 @@
-# Scrappy Text Editor - A Modern Desktop Text Editor
+﻿# Scrappy Text Editor - A Modern Desktop Text Editor
 
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/8.0)
 <!-- Electron.NET badge intentionally without version to avoid drift -->

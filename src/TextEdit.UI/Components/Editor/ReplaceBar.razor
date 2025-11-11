@@ -1,0 +1,181 @@
+@using TextEdit.Core.Searching
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+
+@if (IsVisible)
+{
+    <div class="findbar-container" @onkeydown="HandleKeyDown" @onclick:stopPropagation="true" @onmousedown:stopPropagation="true" style="position:absolute; top:10px; right:10px; z-index:60;">
+        <div class="findbar" @onclick:stopPropagation="true" @onmousedown:stopPropagation="true" style="display:flex; align-items:center; gap:8px; padding:8px; border-radius:8px; background: var(--surface); color: var(--fg); border:1px solid var(--border); box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+            <!-- Focus trap sentinel (start) -->
+            <span tabindex="0" aria-hidden="true" @onfocus="TrapFocusToLast" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;"></span>
+         <input @ref="_findInput"
+                   placeholder="Find"
+                   aria-label="Find"
+                   value="@_term"
+             @oninput="OnTermChanged"
+             @onkeydown="OnInputKeyDown"
+                   style="min-width:180px; padding:6px 8px; border:1px solid var(--border); background:var(--bg); color:var(--fg); border-radius:6px; outline:none;" />
+            <span style="opacity:.6;">→</span>
+         <input placeholder="Replace"
+                   aria-label="Replace"
+                   value="@_replacement"
+             @oninput="OnReplacementChanged"
+             @onkeydown="OnInputKeyDown"
+                   style="min-width:180px; padding:6px 8px; border:1px solid var(--border); background:var(--bg); color:var(--fg); border-radius:6px; outline:none;" />
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted);">
+                <input type="checkbox" checked="@MatchCase" @onchange="e => SetMatchCase((bool)(e.Value ?? false))" />
+                <span>Match case</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted);">
+                <input type="checkbox" checked="@WholeWord" @onchange="e => SetWholeWord((bool)(e.Value ?? false))" />
+                <span>Whole word</span>
+            </label>
+            <div style="display:flex; gap:6px;">
+                <button type="button" class="btn" accesskey="r" @onmousedown:preventDefault @onclick="ReplaceOneWithFocus" aria-label="Replace next" title="Replace next (Enter, Alt+R)" style="padding:6px 8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); border-radius:6px;">Replace</button>
+                <button type="button" class="btn" accesskey="a" @onmousedown:preventDefault @onclick="ReplaceAllWithFocus" aria-label="Replace all" title="Replace all (Alt+A)" style="padding:6px 8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); border-radius:6px;">Replace All</button>
+            </div>
+            <button @ref="_closeBtn" type="button" class="btn" @onmousedown:preventDefault @onclick="CloseWithFocus" aria-label="Close replace" title="Close" style="padding:6px 8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); border-radius:6px;">×</button>
+            <!-- Focus trap sentinel (end) -->
+            <span tabindex="0" aria-hidden="true" @onfocus="TrapFocusToFirst" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;"></span>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<ReplaceOperation> OnReplaceNext { get; set; }
+    [Parameter] public EventCallback<ReplaceOperation> OnReplaceAll { get; set; }
+    [Parameter] public bool MatchCase { get; set; }
+    [Parameter] public EventCallback<bool> MatchCaseChanged { get; set; }
+    [Parameter] public bool WholeWord { get; set; }
+    [Parameter] public EventCallback<bool> WholeWordChanged { get; set; }
+
+    private ElementReference _findInput;
+    private ElementReference _closeBtn;
+    private bool _focusOnShow;
+    private string _term = string.Empty;
+    private string _replacement = string.Empty;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusOnShow)
+        {
+            _focusOnShow = false; // Clear immediately to prevent re-firing
+            try 
+            {
+                await _findInput.FocusAsync();
+            }
+            catch { }
+        }
+    }
+
+    private void OnTermChanged(ChangeEventArgs e)
+    {
+        _term = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private void OnReplacementChanged(ChangeEventArgs e)
+    {
+        _replacement = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private Task SetMatchCase(bool value)
+    {
+        MatchCase = value;
+        return MatchCaseChanged.InvokeAsync(value);
+    }
+
+    private Task SetWholeWord(bool value)
+    {
+        WholeWord = value;
+        return WholeWordChanged.InvokeAsync(value);
+    }
+
+    private Task ReplaceOne()
+    {
+        var op = new ReplaceOperation(new FindQuery(_term ?? string.Empty, MatchCase, WholeWord), _replacement ?? string.Empty);
+        return OnReplaceNext.InvokeAsync(op);
+    }
+
+    private async Task ReplaceOneWithFocus()
+    {
+        await ReplaceOne();
+        try { await Task.Delay(10); await _findInput.FocusAsync(); } catch { }
+    }
+
+    private Task ReplaceAll()
+    {
+        var op = new ReplaceOperation(new FindQuery(_term ?? string.Empty, MatchCase, WholeWord), _replacement ?? string.Empty);
+        return OnReplaceAll.InvokeAsync(op);
+    }
+
+    private async Task ReplaceAllWithFocus()
+    {
+        await ReplaceAll();
+        try { await Task.Delay(10); await _findInput.FocusAsync(); } catch { }
+    }
+
+    private Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            return ReplaceOne();
+        }
+        else if (e.Key == "Escape")
+        {
+            return Close();
+        }
+        else if (e.AltKey && (e.Key == "r" || e.Key == "R"))
+        {
+            return ReplaceOne();
+        }
+        else if (e.AltKey && (e.Key == "a" || e.Key == "A"))
+        {
+            return ReplaceAll();
+        }
+        return Task.CompletedTask;
+    }
+
+    private Task OnInputKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            return ReplaceOne();
+        }
+        else if (e.Key == "Escape")
+        {
+            return Close();
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task ShowAsync()
+    {
+        IsVisible = true;
+        _focusOnShow = true;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    public async Task Close()
+    {
+        IsVisible = false;
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task TrapFocusToFirst(FocusEventArgs _)
+    {
+        try { await _findInput.FocusAsync(); } catch { }
+    }
+
+    private async Task TrapFocusToLast(FocusEventArgs _)
+    {
+        try { await _closeBtn.FocusAsync(); } catch { }
+    }
+
+    private async Task CloseWithFocus()
+    {
+        await Close();
+    }
+}

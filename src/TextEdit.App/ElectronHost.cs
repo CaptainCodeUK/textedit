@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using TextEdit.Infrastructure.Ipc;
+using TextEdit.Core.Preferences;
 
 namespace TextEdit.App;
 
@@ -160,11 +161,21 @@ public static partial class ElectronHost
         {
             var swStartup = Stopwatch.StartNew();
             _logger?.LogInformation("Creating main Electron window");
-            
-            var window = await Electron.WindowManager.CreateWindowAsync(new BrowserWindowOptions
+            // Load previous window state (non-blocking fallback to defaults)
+            WindowState priorState;
+            try
             {
-                Width = 1200,
-                Height = 800,
+                using var scope = _app!.Services.CreateScope();
+                var repo = scope.ServiceProvider.GetRequiredService<TextEdit.Infrastructure.Persistence.WindowStateRepository>();
+                priorState = await repo.LoadAsync();
+            }
+            catch { priorState = new WindowState(); }
+            priorState.ClampToMinimums();
+
+            var opts = new BrowserWindowOptions
+            {
+                Width = priorState.Width,
+                Height = priorState.Height,
                 MinWidth = 800,
                 MinHeight = 600,
                 Title = "Scrappy Text Editor",
@@ -173,10 +184,62 @@ public static partial class ElectronHost
                     NodeIntegration = false,
                     ContextIsolation = true
                 }
-            });
+            };
+            if (priorState.X > 0 || priorState.Y > 0)
+            {
+                opts.X = priorState.X;
+                opts.Y = priorState.Y;
+            }
+            var window = await Electron.WindowManager.CreateWindowAsync(opts);
+
+            // Apply maximized/fullscreen state after creation
+            try
+            {
+                if (priorState.IsMaximized)
+                {
+                    window.Maximize();
+                }
+                else if (priorState.IsFullScreen)
+                {
+                    window.SetFullScreen(true);
+                }
+            }
+            catch { /* ignore */ }
 
             // Store window reference for shutdown
             _mainWindow = window;
+
+            // Track current window state for persistence (captured before close to avoid "destroyed" errors)
+            WindowState? currentWindowState = null;
+            
+            // Helper to capture state safely
+            async Task CaptureWindowStateAsync()
+            {
+                try
+                {
+                    var bounds = await window.GetBoundsAsync();
+                    var isMax = await window.IsMaximizedAsync();
+                    var isFs = await window.IsFullScreenAsync();
+                    currentWindowState = new WindowState
+                    {
+                        X = bounds.X,
+                        Y = bounds.Y,
+                        Width = bounds.Width,
+                        Height = bounds.Height,
+                        IsMaximized = isMax,
+                        IsFullScreen = isFs
+                    };
+                }
+                catch { /* window may be closing */ }
+            }
+
+            // Capture window state on move/resize/maximize events
+            window.OnMoved += () => { _ = CaptureWindowStateAsync(); };
+            window.OnResize += () => { _ = CaptureWindowStateAsync(); };
+            window.OnMaximize += () => { _ = CaptureWindowStateAsync(); };
+            window.OnUnmaximize += () => { _ = CaptureWindowStateAsync(); };
+            window.OnEnterFullScreen += () => { _ = CaptureWindowStateAsync(); };
+            window.OnLeaveFullScreen += () => { _ = CaptureWindowStateAsync(); };
 
             // Track if we're in a shutdown sequence to prevent recursive closes
             var isShuttingDown = false;
@@ -200,6 +263,21 @@ public static partial class ElectronHost
                         
                         // Always persist session
                         PersistSession();
+
+                        // Persist window state (use cached state to avoid accessing destroyed window)
+                        if (currentWindowState != null)
+                        {
+                            try
+                            {
+                                using var scope = _app!.Services.CreateScope();
+                                var repo = scope.ServiceProvider.GetRequiredService<TextEdit.Infrastructure.Persistence.WindowStateRepository>();
+                                await repo.SaveAsync(currentWindowState);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger?.LogWarning(ex, "Failed to persist window state");
+                            }
+                        }
                         
                         // Check how long window has been open
                         var startupTime = swStartup.Elapsed;
@@ -299,6 +377,8 @@ public static partial class ElectronHost
                 new MenuItem { Label = "Find…", Accelerator = "CmdOrCtrl+F", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.FindRequested); } },
                 new MenuItem { Label = "Find Next", Accelerator = "F3", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.FindNextRequested); } },
                 new MenuItem { Label = "Find Previous", Accelerator = "Shift+F3", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.FindPreviousRequested); } },
+                // Replace commands (US2)
+                new MenuItem { Label = "Replace…", Accelerator = "CmdOrCtrl+H", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.ReplaceRequested); } },
                 new MenuItem { Type = MenuType.separator },
                 new MenuItem { Label = OperatingSystem.IsMacOS() ? "Preferences…" : "Options…", Accelerator = OperatingSystem.IsMacOS() ? "Cmd+," : "Ctrl+,", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.OptionsRequested); } },
             }
