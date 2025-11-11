@@ -60,17 +60,19 @@
 - [x] Manual test: Multi-monitor, resolution change
 
 ## User Story 6: Automatic Application Updates
-- [ ] Evaluate and select auto-updater library (Squirrel recommended, document choice in research.md)
-- [ ] Integrate Squirrel (or selected alternative) auto-updater
-- [ ] Implement update check on startup and 24h interval
-- [ ] Download updates in background
-- [ ] Show notification when update ready (restart/remind)
-- [ ] Apply update on restart, handle failures
-- [ ] Implement update rollback on installation failure
-- [ ] Options dialog: Check now, auto-download toggle
-- [ ] Critical update prompt (blocking, urgent messaging)
-- [ ] Unit tests: Update check, notification, error handling
-- [ ] Manual test: Mock update server, failure scenarios
+- [x] Evaluate and select auto-updater library (Electron.AutoUpdater chosen, documented in research.md)
+- [x] Create Core domain models: UpdateMetadata, UpdateStatus, UpdatePreferences
+- [x] Integrate Electron.AutoUpdater in AutoUpdateService (Infrastructure)
+- [x] Implement update check on startup (if CheckOnStartup enabled)
+- [x] Implement periodic update check (every CheckIntervalHours)
+- [x] Download updates in background (automatic if AutoDownload enabled)
+- [x] Show UpdateNotificationDialog when update ready (restart/remind buttons)
+- [x] Apply update on restart via QuitAndInstall
+- [ ] Implement update rollback on installation failure _(deferred - requires version tracking and crash detection)_
+- [x] Options dialog: Check now button, auto-download toggle, CheckOnStartup toggle, status display
+- [x] Critical update prompt (blocking dialog, red icon, no dismiss)
+- [ ] Unit tests: Update check, notification, error handling _(deferred - Electron API mocking complex)_
+- [ ] Manual test: Mock update server with GitHub release, failure scenarios _(pending - needs test release)_
 
 ## User Story 7: Automated Release Builds
 - [ ] Create GitHub Actions workflow for CI/CD

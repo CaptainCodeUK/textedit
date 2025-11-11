@@ -86,11 +86,19 @@ public class Startup
         
         // Phase 2 (v1.1): Preferences and theming infrastructure
         services.AddSingleton<IPreferencesRepository, PreferencesRepository>();
-    services.AddSingleton<WindowStateRepository>();
+        services.AddSingleton<WindowStateRepository>();
         services.AddSingleton<ThemeDetectionService>();
         services.AddSingleton<ThemeManager>();
         services.AddSingleton<MarkdownFormattingService>();
         services.AddSingleton<ElectronIpcListener>();
+        
+        // Phase 3 (v1.2): Auto-updates
+        services.AddSingleton<TextEdit.Infrastructure.Updates.AutoUpdateService>(sp =>
+        {
+            var loggerFactory = sp.GetRequiredService<IAppLoggerFactory>();
+            var logger = loggerFactory.CreateLogger<TextEdit.Infrastructure.Updates.AutoUpdateService>();
+            return new TextEdit.Infrastructure.Updates.AutoUpdateService(logger);
+        });
         
         // UI state
         services.AddSingleton<AppState>();

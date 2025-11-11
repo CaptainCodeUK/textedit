@@ -1,3 +1,5 @@
+using TextEdit.Core.Updates;
+
 namespace TextEdit.UI.App;
 
 /// <summary>
@@ -15,6 +17,9 @@ public class DialogService
     
     public bool ShowAbout { get; private set; } // T054: About dialog state
     public bool ShowOptions { get; private set; } // T079: Options dialog state
+    
+    public bool ShowUpdateNotification { get; private set; } // US6: Update notification state
+    public UpdateMetadata? UpdateMetadata { get; private set; } // US6: Update metadata
     
     private TaskCompletionSource<bool>? _confirmTcs;
 
@@ -97,6 +102,26 @@ public class DialogService
     public void HideOptionsDialog()
     {
         ShowOptions = false;
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Show the Update Notification dialog (US6)
+    /// </summary>
+    public void ShowUpdateNotificationDialog(UpdateMetadata metadata)
+    {
+        UpdateMetadata = metadata;
+        ShowUpdateNotification = true;
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Hide the Update Notification dialog
+    /// </summary>
+    public void HideUpdateNotificationDialog()
+    {
+        ShowUpdateNotification = false;
+        UpdateMetadata = null;
         Changed?.Invoke();
     }
 }

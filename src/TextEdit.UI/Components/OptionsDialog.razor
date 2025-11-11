@@ -91,6 +91,54 @@
                     </div>
                 </section>
                 
+                <section style="margin-bottom: 20px;">
+                    <h3 style="font-size: 13px; font-weight: 600; margin: 0 0 8px 0; color: var(--fg);">Automatic Updates</h3>
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <label style="display:flex; gap:8px; align-items:center; cursor:pointer; color: var(--fg);">
+                            <input type="checkbox" 
+                                   checked="@AppState.Preferences.Updates.CheckOnStartup" 
+                                   @onchange="ToggleCheckOnStartup" />
+                            <span>Check for updates on startup</span>
+                        </label>
+                        <label style="display:flex; gap:8px; align-items:center; cursor:pointer; color: var(--fg);">
+                            <input type="checkbox" 
+                                   checked="@AppState.Preferences.Updates.AutoDownload" 
+                                   @onchange="ToggleAutoDownload" />
+                            <span>Download updates automatically</span>
+                        </label>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <label style="font-size:12px; color:var(--muted);">Check every</label>
+                            <input type="number" 
+                                   min="1" 
+                                   max="168"
+                                   value="@AppState.Preferences.Updates.CheckIntervalHours" 
+                                   @onchange="UpdateCheckInterval"
+                                   style="width:60px; padding:4px 8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); border-radius:4px;" />
+                            <label style="font-size:12px; color:var(--muted);">hours</label>
+                        </div>
+                        <div style="padding:8px; background:var(--surface); border:1px solid var(--border); border-radius:6px; font-size:12px;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                                <span style="color:var(--muted);">Current version:</span>
+                                <span style="color:var(--fg); font-weight:500;">@_currentVersion</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                                <span style="color:var(--muted);">Last check:</span>
+                                <span style="color:var(--fg);">@FormatLastCheckTime()</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between;">
+                                <span style="color:var(--muted);">Status:</span>
+                                <span style="color:var(--fg);">@_updateStatus</span>
+                            </div>
+                        </div>
+                        <button @onclick="CheckForUpdatesNow" 
+                                disabled="@_isCheckingForUpdates"
+                                aria-label="Check for updates now"
+                                style="padding:6px 12px; background: var(--surface); color: var(--fg); border:1px solid var(--border); border-radius:4px; cursor:@(_isCheckingForUpdates ? "not-allowed" : "pointer"); font-size:12px;">
+                            @(_isCheckingForUpdates ? "Checking..." : "Check for Updates Now")
+                        </button>
+                    </div>
+                </section>
+                
                 <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
                     <button @onclick="OnClose" style="padding:6px 12px; background: var(--surface); color: var(--fg); border:1px solid var(--border); border-radius:6px; cursor:pointer;">Close</button>
                 </div>
@@ -99,16 +147,27 @@
     </div>
 }
 
+@inject TextEdit.Infrastructure.Updates.AutoUpdateService AutoUpdateService
+
 @code {
     private ElementReference _dialogRef;
     private DotNetObjectReference<OptionsDialog>? _dotNetRef;
     private bool _trapAttached;
+    private string _currentVersion = "1.1.0"; // TODO: Get from assembly version
+    private string _updateStatus = "Idle";
+    private bool _isCheckingForUpdates = false;
     
     [Parameter]
     public bool IsVisible { get; set; }
 
     [Parameter]
     public EventCallback OnClose { get; set; }
+
+    protected override void OnInitialized()
+    {
+        AutoUpdateService.StatusChanged += OnUpdateStatusChanged;
+        UpdateStatusDisplay();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -145,6 +204,7 @@
     
     public void Dispose()
     {
+        AutoUpdateService.StatusChanged -= OnUpdateStatusChanged;
         _ = JS.InvokeVoidAsync("textEditFocusTrap.release", "#options-dialog");
         _trapAttached = false;
         _dotNetRef?.Dispose();
@@ -247,6 +307,90 @@
         catch
         {
             // Silently fail if folder can't be opened
+        }
+    }
+
+    // Auto-update event handlers and methods (US6)
+    
+    private void OnUpdateStatusChanged(TextEdit.Core.Updates.UpdateStatus status, TextEdit.Core.Updates.UpdateMetadata? metadata)
+    {
+        InvokeAsync(() =>
+        {
+            UpdateStatusDisplay();
+            StateHasChanged();
+        });
+    }
+
+    private void UpdateStatusDisplay()
+    {
+        _updateStatus = AutoUpdateService.CurrentStatus switch
+        {
+            TextEdit.Core.Updates.UpdateStatus.Idle => "Idle",
+            TextEdit.Core.Updates.UpdateStatus.Checking => "Checking...",
+            TextEdit.Core.Updates.UpdateStatus.Available => "Update available",
+            TextEdit.Core.Updates.UpdateStatus.Downloading => $"Downloading... {AutoUpdateService.DownloadPercent}%",
+            TextEdit.Core.Updates.UpdateStatus.Ready => "Ready to install",
+            TextEdit.Core.Updates.UpdateStatus.Error => "Error",
+            TextEdit.Core.Updates.UpdateStatus.UpToDate => "Up to date",
+            _ => "Unknown"
+        };
+    }
+
+    private async Task ToggleCheckOnStartup(ChangeEventArgs e)
+    {
+        AppState.Preferences.Updates.CheckOnStartup = (bool)(e.Value ?? false);
+        await AppState.SavePreferencesAsync();
+    }
+
+    private async Task ToggleAutoDownload(ChangeEventArgs e)
+    {
+        AppState.Preferences.Updates.AutoDownload = (bool)(e.Value ?? false);
+        await AppState.SavePreferencesAsync();
+    }
+
+    private async Task UpdateCheckInterval(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var hours) && hours >= 1 && hours <= 168)
+        {
+            AppState.Preferences.Updates.CheckIntervalHours = hours;
+            await AppState.SavePreferencesAsync();
+        }
+    }
+
+    private string FormatLastCheckTime()
+    {
+        var lastCheck = AppState.Preferences.Updates.LastCheckTime;
+        if (!lastCheck.HasValue)
+            return "Never";
+        
+        var elapsed = DateTimeOffset.UtcNow - lastCheck.Value;
+        if (elapsed.TotalMinutes < 1)
+            return "Just now";
+        if (elapsed.TotalHours < 1)
+            return $"{(int)elapsed.TotalMinutes} minutes ago";
+        if (elapsed.TotalDays < 1)
+            return $"{(int)elapsed.TotalHours} hours ago";
+        if (elapsed.TotalDays < 7)
+            return $"{(int)elapsed.TotalDays} days ago";
+        
+        return lastCheck.Value.ToLocalTime().ToString("MMM d, yyyy");
+    }
+
+    private async Task CheckForUpdatesNow()
+    {
+        _isCheckingForUpdates = true;
+        StateHasChanged();
+        
+        try
+        {
+            await AutoUpdateService.CheckForUpdatesAsync(AppState.Preferences.Updates.AutoDownload);
+            AppState.Preferences.Updates.LastCheckTime = DateTimeOffset.UtcNow;
+            await AppState.SavePreferencesAsync();
+        }
+        finally
+        {
+            _isCheckingForUpdates = false;
+            StateHasChanged();
         }
     }
 }

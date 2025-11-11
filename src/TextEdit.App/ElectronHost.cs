@@ -327,6 +327,19 @@ public static partial class ElectronHost
                     _logger?.LogError(ex, "Failed to process initial CLI arguments");
                 }
             });
+
+            // Initialize auto-updater (US6)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await InitializeAutoUpdaterAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "Failed to initialize auto-updater");
+                }
+            });
         }
         catch (Exception ex)
         {
@@ -770,6 +783,75 @@ internal static class CliArgProcessor
 
 public static partial class ElectronHost
 {
+    /// <summary>
+    /// Initialize auto-updater with GitHub Releases feed and start periodic checks (US6)
+    /// </summary>
+    private static async Task InitializeAutoUpdaterAsync()
+    {
+        if (_app is null || _appState is null) return;
+        
+        try
+        {
+            _logger?.LogInformation("Initializing auto-updater");
+            
+            using var scope = _app.Services.CreateScope();
+            var autoUpdateService = scope.ServiceProvider.GetRequiredService<TextEdit.Infrastructure.Updates.AutoUpdateService>();
+            
+            // Initialize with GitHub Releases feed URL
+            // TODO: Update owner/repo when repository is created
+            autoUpdateService.Initialize("https://github.com/CaptainCodeUK/textedit/releases");
+            
+            // Check for updates on startup if enabled
+            if (_appState.Preferences.Updates.CheckOnStartup)
+            {
+                _logger?.LogInformation("Checking for updates on startup");
+                await autoUpdateService.CheckForUpdatesAsync(_appState.Preferences.Updates.AutoDownload);
+                
+                // Update last check time
+                _appState.Preferences.Updates.LastCheckTime = DateTimeOffset.UtcNow;
+                await _appState.SavePreferencesAsync();
+            }
+            
+            // Start periodic check timer (every 15 minutes, check if interval elapsed)
+            _ = Task.Run(async () =>
+            {
+                while (!TextEdit.Infrastructure.Lifecycle.AppShutdown.IsShuttingDown)
+                {
+                    try
+                    {
+                        await Task.Delay(TimeSpan.FromMinutes(15));
+                        
+                        if (TextEdit.Infrastructure.Lifecycle.AppShutdown.IsShuttingDown) break;
+                        
+                        var elapsed = DateTimeOffset.UtcNow - _appState.Preferences.Updates.LastCheckTime;
+                        var interval = TimeSpan.FromHours(_appState.Preferences.Updates.CheckIntervalHours);
+                        
+                        if (elapsed >= interval)
+                        {
+                            _logger?.LogInformation("Periodic update check triggered (interval: {Hours}h)", 
+                                _appState.Preferences.Updates.CheckIntervalHours);
+                            
+                            await autoUpdateService.CheckForUpdatesAsync(_appState.Preferences.Updates.AutoDownload);
+                            
+                            _appState.Preferences.Updates.LastCheckTime = DateTimeOffset.UtcNow;
+                            await _appState.SavePreferencesAsync();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogError(ex, "Error in periodic update check");
+                    }
+                }
+            });
+            
+            _logger?.LogInformation("Auto-updater initialized successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to initialize auto-updater");
+        }
+    }
+
     private static Task ProcessInitialCliArgsAsync()
     {
         if (_app is null) return Task.CompletedTask;

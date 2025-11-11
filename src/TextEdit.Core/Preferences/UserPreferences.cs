@@ -33,6 +33,11 @@ public class UserPreferences
 
     public bool ToolbarVisible { get; set; } = true;
 
+    /// <summary>
+    /// Auto-update preferences (check frequency, auto-download, etc).
+    /// </summary>
+    public TextEdit.Core.Updates.UpdatePreferences Updates { get; set; } = new();
+
     public UserPreferences()
     {
     }

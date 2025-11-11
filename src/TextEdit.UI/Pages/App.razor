@@ -12,6 +12,7 @@
 @inject DialogService DialogService
 @inject ElectronIpcListener IpcListener
 @inject TextEdit.UI.Services.ThemeManager ThemeManager
+@inject TextEdit.Infrastructure.Updates.AutoUpdateService AutoUpdateService
 @inject IJSRuntime JS
 
 <LayoutView Layout="typeof(TextEdit.UI.Shared.MainLayout)">
@@ -56,11 +57,18 @@
     IsVisible="@DialogService.ShowOptions"
     OnClose="@(() => DialogService.HideOptionsDialog())" />
 
+<UpdateNotificationDialog
+    IsVisible="@DialogService.ShowUpdateNotification"
+    UpdateMetadata="@DialogService.UpdateMetadata"
+    OnInstall="@HandleUpdateInstall"
+    OnRemindLater="@HandleUpdateRemindLater" />
+
 @code {
     protected override void OnInitialized()
     {
         AppState.Changed += OnAppStateChanged;
         DialogService.Changed += OnDialogServiceChanged;
+        AutoUpdateService.StatusChanged += OnUpdateStatusChanged;
     }
 
     private void OnAppStateChanged()
@@ -75,6 +83,26 @@
     private void OnDialogServiceChanged()
     {
         InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Handle update status changes - show notification when Ready (US6)
+    /// </summary>
+    private void OnUpdateStatusChanged(TextEdit.Core.Updates.UpdateStatus status, TextEdit.Core.Updates.UpdateMetadata? metadata)
+    {
+        InvokeAsync(() =>
+        {
+            if (status == TextEdit.Core.Updates.UpdateStatus.Ready && metadata != null)
+            {
+                // Show update notification dialog
+                DialogService.ShowUpdateNotificationDialog(metadata);
+            }
+            else if (status == TextEdit.Core.Updates.UpdateStatus.Error)
+            {
+                // Log error but don't show to user (per FR-033)
+                // Errors are logged in AutoUpdateService
+            }
+        });
     }
 
     // Run restore only once on the client after the circuit is established to avoid
@@ -113,7 +141,32 @@
     {
         AppState.Changed -= OnAppStateChanged;
         DialogService.Changed -= OnDialogServiceChanged;
+        AutoUpdateService.StatusChanged -= OnUpdateStatusChanged;
         // No OS theme watcher to unhook (deferred)
+    }
+
+    /// <summary>
+    /// Handle install button click - trigger quit and install (US6)
+    /// </summary>
+    private void HandleUpdateInstall()
+    {
+        try
+        {
+            DialogService.HideUpdateNotificationDialog();
+            AutoUpdateService.QuitAndInstall();
+        }
+        catch (Exception ex)
+        {
+            DialogService.ShowErrorDialog("Update Error", $"Failed to install update: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Handle remind later button click - dismiss dialog (US6)
+    /// </summary>
+    private void HandleUpdateRemindLater()
+    {
+        DialogService.HideUpdateNotificationDialog();
     }
 
     private int _lastAppliedThemeVersion = -1;
