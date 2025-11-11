@@ -11,6 +11,12 @@ on:
       - main
       - develop
 
+# Minimal permissions plus writes needed for PR comments and failure issues
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 # Cancel in-progress builds when new push to same PR/branch
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -33,12 +39,11 @@ jobs:
           dotnet-version: '8.0.x'
       
       - name: Cache NuGet packages
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-          restore-path: |
-            ~/.nuget/packages
+
       
       - name: Restore dependencies
         run: dotnet restore textedit.sln

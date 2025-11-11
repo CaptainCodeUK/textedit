@@ -6,6 +6,11 @@ on:
       - 'v*.*.*'  # Trigger on version tags (e.g., v1.2.0)
   workflow_dispatch:  # Allow manual trigger for testing
 
+# Permissions required to create releases and optionally open issues
+permissions:
+  contents: write
+  issues: write
+
 # Cancel in-progress builds when new push to same ref
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -52,12 +57,11 @@ jobs:
         run: dotnet tool install ElectronNET.CLI -g
       
       - name: Cache NuGet packages
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-          restore-path: |
-            ~/.nuget/packages
+
       
       - name: Restore dependencies
         run: dotnet restore textedit.sln
