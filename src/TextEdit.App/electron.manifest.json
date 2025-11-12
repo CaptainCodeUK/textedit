@@ -14,7 +14,7 @@
     "buildVersion": "1.0.0",
     "compression": "maximum",
     "directories": {
-      "output": "../../../bin/Desktop"
+      "output": "bin/Desktop"
     },
     "extraResources": [
       {
@@ -30,6 +30,29 @@
         "filter": [ "**/*" ]
       },
       "**/*"
-    ]
+    ],
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "win": {
+      "target": [
+        {
+          "target": "squirrel",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "squirrelWindows": {
+      "iconUrl": "https://raw.githubusercontent.com/CaptainCodeUK/textedit/main/src/TextEdit.App/wwwroot/icons/icon.png"
+    },
+    "mac": {
+      "target": ["dmg"],
+      "category": "public.app-category.productivity"
+    },
+    "dmg": {
+      "backgroundColor": "#ffffff"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Utility"
+    }
   }
 }
