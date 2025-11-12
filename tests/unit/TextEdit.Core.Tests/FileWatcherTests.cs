@@ -31,7 +31,7 @@ public class FileWatcherTests : IDisposable
         _watcher.ChangedExternally += path =>
         {
             changeDetected = true;
-            tcs.SetResult(path);
+            tcs.TrySetResult(path); // Use TrySetResult to handle multiple file system events
         };
 
         _watcher.Watch(testFile);

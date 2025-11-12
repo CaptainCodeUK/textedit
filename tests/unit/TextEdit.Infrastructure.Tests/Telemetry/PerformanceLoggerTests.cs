@@ -304,20 +304,28 @@ public class PerformanceLoggerTests
     [Fact]
     public void BeginOperation_MeasuresElapsedTime()
     {
-        // Arrange
-        var logger = new PerformanceLogger();
+        // Arrange: Use a mock stopwatch for deterministic timing
+        var fakeStopwatch = new FakeStopwatch(123);
+        var logger = new PerformanceLogger(() => fakeStopwatch);
 
         // Act
         using (logger.BeginOperation("TimedOp"))
         {
-            Thread.Sleep(50); // Sleep for a known duration
+            // No sleep needed; fake stopwatch controls elapsed time
         }
 
         // Assert
         var stats = logger.GetStats("TimedOp");
-    Assert.NotNull(stats);
-    Assert.True(stats!.AverageDurationMs >= 50);
-    Assert.True(stats.AverageDurationMs < 100); // Reasonable upper bound
+        Assert.NotNull(stats);
+        Assert.Equal(123, stats!.AverageDurationMs);
+    }
+
+    private class FakeStopwatch : IStopwatch
+    {
+        private readonly long _elapsedMs;
+        public FakeStopwatch(long elapsedMs) { _elapsedMs = elapsedMs; }
+        public long ElapsedMilliseconds => _elapsedMs;
+        public void Stop() { }
     }
 
     [Fact]

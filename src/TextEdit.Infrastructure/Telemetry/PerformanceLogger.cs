@@ -2,7 +2,6 @@ namespace TextEdit.Infrastructure.Telemetry;
 
 using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 
 /// <summary>
 /// Structured performance logging for telemetry and monitoring.
@@ -12,10 +11,16 @@ public class PerformanceLogger
 {
     private readonly ConcurrentDictionary<string, OperationStats> _stats = new();
     private readonly object _consoleLock = new();
+    private readonly Func<IStopwatch> _stopwatchFactory;
+
+    public PerformanceLogger(Func<IStopwatch>? stopwatchFactory = null)
+    {
+        _stopwatchFactory = stopwatchFactory ?? (() => new StopwatchAdapter());
+    }
 
     public IDisposable BeginOperation(string operationName)
     {
-        return new OperationScope(this, operationName);
+        return new OperationScope(this, operationName, _stopwatchFactory);
     }
 
     public void LogOperation(string operationName, long durationMs, bool success = true)
@@ -44,14 +49,14 @@ public class PerformanceLogger
     {
         private readonly PerformanceLogger _logger;
         private readonly string _operationName;
-        private readonly Stopwatch _stopwatch;
+        private readonly IStopwatch _stopwatch;
         private bool _disposed;
 
-        public OperationScope(PerformanceLogger logger, string operationName)
+        public OperationScope(PerformanceLogger logger, string operationName, Func<IStopwatch> stopwatchFactory)
         {
             _logger = logger;
             _operationName = operationName;
-            _stopwatch = Stopwatch.StartNew();
+            _stopwatch = stopwatchFactory();
         }
 
         public void Dispose()
