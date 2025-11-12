@@ -43,10 +43,16 @@ jobs:
         with:
           fetch-depth: 0  # Full history for version extraction
       
-      - name: Setup .NET
+
+      - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+
+      - name: Setup .NET 6 (for ElectronNET CLI)
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
