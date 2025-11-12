@@ -51,13 +51,11 @@ public class FileSystemService : IFileSystem
         using var reader = new StreamReader(stream, encoding, detectEncodingFromByteOrderMarks: true, ChunkSize);
 
         int charsRead;
-        bool reported = false;
 
         // Always report 0% at the start if progress is provided
         if (progress != null)
         {
             progress.Report(0);
-            reported = true;
         }
 
         while ((charsRead = await reader.ReadAsync(buffer, 0, buffer.Length)) > 0)
@@ -71,12 +69,11 @@ public class FileSystemService : IFileSystem
             {
                 var percentage = (int)((stream.Position * 100) / fileSize);
                 progress.Report(Math.Min(percentage, 100));
-                reported = true;
             }
         }
 
         // Always report 100% at the end if progress is provided
-        if (progress != null && (!reported || sb.Length > 0))
+        if (progress != null)
         {
             progress.Report(100);
         }
