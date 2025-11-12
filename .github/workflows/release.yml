@@ -139,11 +139,9 @@ jobs:
         run: |
           mkdir -p installer-artifacts
           ROOT=.
-          # Windows: Squirrel artifacts (RELEASES + .nupkg) and any Setup exe if generated
+          # Windows: NSIS Setup.exe
           if [ "${{ matrix.target }}" = "win" ]; then
-            find "$ROOT" -type f -name "*Setup*.exe" -exec cp -v {} installer-artifacts/ \; 2>/dev/null || true
-            find "$ROOT" -type f -name "RELEASES" -exec cp -v {} installer-artifacts/ \; 2>/dev/null || true
-            find "$ROOT" -type f -name "*.nupkg" -exec cp -v {} installer-artifacts/ \; 2>/dev/null || true
+            find "$ROOT" -type f \( -name "*Setup*.exe" -o -name "*.exe" \) ! -path "*/node_modules/*" -exec cp -v {} installer-artifacts/ \; 2>/dev/null || true
           fi
           # macOS: dmg (fallback to zip if dmg missing)
           if [ "${{ matrix.target }}" = "osx" ]; then
