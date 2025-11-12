@@ -57,8 +57,7 @@
           "target": "nsis",
           "arch": ["x64"]
         }
-      ],
-      "publisherName": "TextEdit"
+      ]
     }
   }
 }
