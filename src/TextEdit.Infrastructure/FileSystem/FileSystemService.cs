@@ -42,31 +42,44 @@ public class FileSystemService : IFileSystem
         var fileInfo = new FileInfo(path);
         if (!fileInfo.Exists)
             throw new FileNotFoundException("File not found", path);
-        
+
         var fileSize = fileInfo.Length;
         var buffer = new char[ChunkSize];
         var sb = new StringBuilder((int)Math.Min(fileSize, int.MaxValue / 2));
-        
+
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, ChunkSize, useAsync: true);
         using var reader = new StreamReader(stream, encoding, detectEncodingFromByteOrderMarks: true, ChunkSize);
-        
+
         int charsRead;
-        
+        bool reported = false;
+
+        // Always report 0% at the start if progress is provided
+        if (progress != null)
+        {
+            progress.Report(0);
+            reported = true;
+        }
+
         while ((charsRead = await reader.ReadAsync(buffer, 0, buffer.Length)) > 0)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            
+
             sb.Append(buffer, 0, charsRead);
-            
+
             // Report progress as percentage
             if (progress != null && fileSize > 0)
             {
-                    var percentage = (int)((stream.Position * 100) / fileSize);
+                var percentage = (int)((stream.Position * 100) / fileSize);
                 progress.Report(Math.Min(percentage, 100));
+                reported = true;
             }
         }
-        
-        progress?.Report(100);
+
+        // Always report 100% at the end if progress is provided
+        if (progress != null && (!reported || sb.Length > 0))
+        {
+            progress.Report(100);
+        }
         return sb.ToString();
     }
 
