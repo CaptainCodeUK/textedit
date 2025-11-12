@@ -94,7 +94,7 @@ jobs:
       
       - name: Build Electron app for ${{ matrix.os }}
         working-directory: src/TextEdit.App
-        run: electronize build /target ${{ matrix.target }} /Release /package-json | tee electronize-build-${{ matrix.os }}.log
+        run: electronize build /target ${{ matrix.target }} /Release | tee electronize-build-${{ matrix.os }}.log
 
       - name: Upload build log
         uses: actions/upload-artifact@v4
@@ -123,7 +123,7 @@ jobs:
         run: |
           mkdir -p installer-artifacts
           ROOT=.
-          # Windows: Squirrel artifacts (nupkg + RELEASES) OR Setup.exe if present
+          # Windows: Squirrel artifacts (RELEASES + .nupkg) and any Setup exe if generated
           if [ "${{ matrix.target }}" = "win" ]; then
             find "$ROOT" -type f -name "*Setup*.exe" -exec cp -v {} installer-artifacts/ \; 2>/dev/null || true
             find "$ROOT" -type f -name "RELEASES" -exec cp -v {} installer-artifacts/ \; 2>/dev/null || true
