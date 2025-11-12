@@ -19,10 +19,11 @@ public class WindowStateRepository
         ReadCommentHandling = JsonCommentHandling.Skip
     };
 
-    public WindowStateRepository()
+    public WindowStateRepository(string? baseDir = null)
     {
-        Directory.CreateDirectory(AppPaths.BaseDir);
-        _path = Path.Combine(AppPaths.BaseDir, "window-state.json");
+        var dir = baseDir ?? AppPaths.BaseDir;
+        Directory.CreateDirectory(dir);
+        _path = Path.Combine(dir, "window-state.json");
     }
 
     public async Task<WindowState> LoadAsync()

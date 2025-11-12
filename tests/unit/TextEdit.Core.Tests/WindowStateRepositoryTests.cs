@@ -16,15 +16,15 @@ public class WindowStateRepositoryTests : IDisposable
         // Create isolated test directory
         _testDir = Path.Combine(Path.GetTempPath(), $"WindowStateTests_{Guid.NewGuid()}");
         Directory.CreateDirectory(_testDir);
-        
-        _repository = new WindowStateRepository();
+
+        _repository = new WindowStateRepository(_testDir);
     }
 
     [Fact]
     public async Task LoadAsync_WhenFileDoesNotExist_ReturnsDefaultState()
     {
-        // Arrange - fresh repository with no saved state
-        var statePath = Path.Combine(AppPaths.BaseDir, "window-state.json");
+        // Arrange - fresh repository with no saved state in isolated dir
+        var statePath = Path.Combine(_testDir, "window-state.json");
         if (File.Exists(statePath))
         {
             File.Delete(statePath);
