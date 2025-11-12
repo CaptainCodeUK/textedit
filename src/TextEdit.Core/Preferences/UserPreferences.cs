@@ -52,7 +52,8 @@ public class UserPreferences
         foreach (var ext in FileExtensions)
         {
             if (string.IsNullOrWhiteSpace(ext)) continue;
-            var e = ext.StartsWith(".") ? ext : "." + ext;
+            var e = ext.Trim();
+            e = e.StartsWith(".") ? e : "." + e;
             e = e.ToLowerInvariant();
             set.Add(e);
         }

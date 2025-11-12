@@ -73,10 +73,10 @@ public class PreferencesRepositoryTests : IDisposable
     [Fact]
     public async Task SaveAsync_WithInvalidExtension_ThrowsArgumentException()
     {
-        // Arrange - extension without leading dot
+        // Arrange - extension containing invalid character '!' to fail validation after normalization
         var invalidPrefs = new UserPreferences
         {
-            FileExtensions = new List<string> { "md" } // Missing dot
+            FileExtensions = new List<string> { ".md!" }
         };
 
         // Act & Assert

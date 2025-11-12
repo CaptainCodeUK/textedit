@@ -93,6 +93,12 @@ public class PreferencesRepository : IPreferencesRepository
         var tempPath = _preferencesPath + ".tmp";
         try
         {
+            // Ensure directory exists for both temp and final paths
+            var dir = Path.GetDirectoryName(_preferencesPath)!;
+            if (!Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
             var json = JsonSerializer.Serialize(preferences, _jsonOptions);
             await File.WriteAllTextAsync(tempPath, json);
             

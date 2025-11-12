@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<coverage line-rate="0.5976" branch-rate="0.5824" version="1.9" timestamp="1762890317" lines-covered="300" lines-valid="502" branches-covered="113" branches-valid="194">
+<coverage line-rate="0.5976" branch-rate="0.5824" version="1.9" timestamp="1762890915" lines-covered="300" lines-valid="502" branches-covered="113" branches-valid="194">
   <sources>
     <source>/home/dave/Documents/source/demo/textedit/src/</source>
   </sources>
@@ -1391,7 +1391,7 @@
             </method>
             <method name="OnChanged" signature="(System.Object,System.IO.FileSystemEventArgs)" line-rate="1" branch-rate="0.5" complexity="2">
               <lines>
-                <line number="40" hits="5" branch="True" condition-coverage="50% (1/2)">
+                <line number="40" hits="6" branch="True" condition-coverage="50% (1/2)">
                   <conditions>
                     <condition number="7" type="jump" coverage="50%" />
                   </conditions>
@@ -1451,7 +1451,7 @@
             <line number="35" hits="5" branch="False" />
             <line number="36" hits="5" branch="False" />
             <line number="38" hits="8" branch="False" />
-            <line number="40" hits="5" branch="True" condition-coverage="50% (1/2)">
+            <line number="40" hits="6" branch="True" condition-coverage="50% (1/2)">
               <conditions>
                 <condition number="7" type="jump" coverage="50%" />
               </conditions>

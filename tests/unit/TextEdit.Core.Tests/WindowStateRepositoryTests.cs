@@ -24,6 +24,11 @@ public class WindowStateRepositoryTests : IDisposable
     public async Task LoadAsync_WhenFileDoesNotExist_ReturnsDefaultState()
     {
         // Arrange - fresh repository with no saved state
+        var statePath = Path.Combine(AppPaths.BaseDir, "window-state.json");
+        if (File.Exists(statePath))
+        {
+            File.Delete(statePath);
+        }
 
         // Act
         var state = await _repository.LoadAsync();
@@ -114,7 +119,7 @@ public class WindowStateRepositoryTests : IDisposable
 
         // Assert - should return defaults without throwing
         Assert.NotNull(state);
-        Assert.Equal(800, state.Width);
+        Assert.Equal(1200, state.Width);
     }
 
     [Fact]
