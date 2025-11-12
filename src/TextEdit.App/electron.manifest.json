@@ -3,7 +3,7 @@
   "splashscreen": {
     "imageFile": ""
   },
-  "name": "Scrappy Text Editor",
+  "name": "scrappy-text-editor",
   "author": "",
   "singleInstance": false,
   "environment": "Production",
