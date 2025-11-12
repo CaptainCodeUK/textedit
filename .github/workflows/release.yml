@@ -100,37 +100,53 @@ jobs:
         shell: bash
         working-directory: src/TextEdit.App
         run: |
-          echo "=== Build output structure ==="
+          echo "=== Build output structure (bin/Desktop) ==="
           ls -R bin/Desktop/ || echo "bin/Desktop not found"
           echo ""
-          echo "=== Searching for distributable files ==="
-          find bin/Desktop -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.zip" -o -name "*.deb" -o -name "*.nupkg" -o -name "RELEASES" \) || echo "No distributable files found"
-      
-      - name: Check if artifacts exist
-        id: check_artifacts
+          echo "=== Candidate installer files ==="
+          find bin/Desktop -type f \( -name "*Setup*.exe" -o -name "*.nupkg" -o -name "RELEASES" -o -name "*.dmg" -o -name "*.zip" -o -name "*.AppImage" -o -name "*.deb" \) || true
+
+      - name: Stage installable artifacts only
         shell: bash
+        id: stage
         working-directory: src/TextEdit.App
         run: |
-          if [ ! -d "bin/Desktop" ]; then
-            echo "Error: bin/Desktop directory not found" >&2
+          mkdir -p installer-artifacts
+          if [ ! -d bin/Desktop ]; then
+            echo "Error: bin/Desktop missing" >&2
             exit 1
           fi
-          
-          # Count files that match our patterns
-          FILE_COUNT=$(find bin/Desktop -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.zip" -o -name "*.deb" -o -name "*.nupkg" -o -name "RELEASES" \) | wc -l)
-          
-          if [ "$FILE_COUNT" -eq 0 ]; then
-            echo "Error: No distributable files found in bin/Desktop" >&2
+          # Windows: prefer *Setup*.exe, include Squirrel pieces
+          if [ "${{ matrix.target }}" = "win" ]; then
+            find bin/Desktop -type f -name "*Setup*.exe" -exec cp {} installer-artifacts/ \; || true
+            find bin/Desktop -type f -name "RELEASES" -exec cp {} installer-artifacts/ \; || true
+            find bin/Desktop -type f -name "*.nupkg" -exec cp {} installer-artifacts/ \; || true
+          fi
+          # macOS: dmg (fallback to zip if dmg missing)
+          if [ "${{ matrix.target }}" = "osx" ]; then
+            if ls bin/Desktop/**/**/*.dmg 1>/dev/null 2>&1; then
+              find bin/Desktop -type f -name "*.dmg" -exec cp {} installer-artifacts/ \; || true
+            else
+              find bin/Desktop -type f -name "*.zip" -exec cp {} installer-artifacts/ \; || true
+            fi
+          fi
+          # Linux: AppImage (include deb if present)
+          if [ "${{ matrix.target }}" = "linux" ]; then
+            find bin/Desktop -type f -name "*.AppImage" -exec cp {} installer-artifacts/ \; || true
+            find bin/Desktop -type f -name "*.deb" -exec cp {} installer-artifacts/ \; || true
+          fi
+          echo "Staged files:"; ls -1 installer-artifacts || true
+          COUNT=$(ls -1 installer-artifacts 2>/dev/null | wc -l | xargs)
+          if [ "$COUNT" = "0" ]; then
+            echo "Error: No installable artifacts staged for target ${{ matrix.target }}" >&2
             exit 1
           fi
-          
-          echo "Found $FILE_COUNT distributable files"
-      
-      - name: Upload artifacts
+
+      - name: Upload installable artifacts
         uses: actions/upload-artifact@v4
         with:
           name: textedit-${{ matrix.os }}-${{ steps.version.outputs.version }}
-          path: src/TextEdit.App/bin/Desktop/
+          path: src/TextEdit.App/installer-artifacts/
           retention-days: 30
   
   release:
