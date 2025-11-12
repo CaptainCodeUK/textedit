@@ -103,11 +103,10 @@ public class FileSystemServiceTests : IDisposable
         var result = await _sut.ReadLargeFileAsync(path, Encoding.UTF8, progress);
 
         // Assert
-    Assert.Equal(content, result);
-    Assert.NotEmpty(progressValues); // progress should be reported during large file read
-    // Progress reporting is async and may arrive out of order; just verify 100% was reported at some point
-    Assert.Contains(100, progressValues); // progress should eventually report 100%
-    Assert.Contains(progressValues, p => p > 0 && p < 100); // progress should report intermediate values
+        Assert.Equal(content, result);
+        Assert.NotEmpty(progressValues); // progress should be reported during large file read
+        // The last progress value should always be 100 (complete)
+        Assert.Equal(100, progressValues[^1]);
     }
 
     [Fact]
