@@ -100,11 +100,14 @@ jobs:
         shell: bash
         working-directory: src/TextEdit.App
         run: |
-          echo "=== Build output structure (bin/Desktop) ==="
-          ls -R bin/Desktop/ || echo "bin/Desktop not found"
-          echo ""
-          echo "=== Candidate installer files ==="
-          find bin/Desktop -type f \( -name "*Setup*.exe" -o -name "*.nupkg" -o -name "RELEASES" -o -name "*.dmg" -o -name "*.zip" -o -name "*.AppImage" -o -name "*.deb" \) || true
+          echo "=== Search common output roots ==="
+          for d in bin/Desktop obj desktop dist; do
+            if [ -d "$d" ]; then
+              echo "-- $d --"; ls -R "$d" || true; echo "";
+            fi
+          done
+          echo "=== Candidate installer files (project scan) ==="
+          find . -type f \( -name "*Setup*.exe" -o -name "*.nupkg" -o -name "RELEASES" -o -name "*.dmg" -o -name "*.zip" -o -name "*.AppImage" -o -name "*.deb" \) 2>/dev/null | sed 's#^./##' || true
 
       - name: Stage installable artifacts only
         shell: bash
@@ -112,33 +115,30 @@ jobs:
         working-directory: src/TextEdit.App
         run: |
           mkdir -p installer-artifacts
-          if [ ! -d bin/Desktop ]; then
-            echo "Error: bin/Desktop missing" >&2
-            exit 1
-          fi
           # Windows: prefer *Setup*.exe, include Squirrel pieces
           if [ "${{ matrix.target }}" = "win" ]; then
-            find bin/Desktop -type f -name "*Setup*.exe" -exec cp {} installer-artifacts/ \; || true
-            find bin/Desktop -type f -name "RELEASES" -exec cp {} installer-artifacts/ \; || true
-            find bin/Desktop -type f -name "*.nupkg" -exec cp {} installer-artifacts/ \; || true
+            find . -type f -name "*Setup*.exe" -exec cp {} installer-artifacts/ \; 2>/dev/null || true
+            find . -type f -name "RELEASES" -exec cp {} installer-artifacts/ \; 2>/dev/null || true
+            find . -type f -name "*.nupkg" -exec cp {} installer-artifacts/ \; 2>/dev/null || true
           fi
           # macOS: dmg (fallback to zip if dmg missing)
           if [ "${{ matrix.target }}" = "osx" ]; then
-            if ls bin/Desktop/**/**/*.dmg 1>/dev/null 2>&1; then
-              find bin/Desktop -type f -name "*.dmg" -exec cp {} installer-artifacts/ \; || true
+            if find . -type f -name "*.dmg" | grep -q ".dmg"; then
+              find . -type f -name "*.dmg" -exec cp {} installer-artifacts/ \; 2>/dev/null || true
             else
-              find bin/Desktop -type f -name "*.zip" -exec cp {} installer-artifacts/ \; || true
+              find . -type f -name "*.zip" -exec cp {} installer-artifacts/ \; 2>/dev/null || true
             fi
           fi
           # Linux: AppImage (include deb if present)
           if [ "${{ matrix.target }}" = "linux" ]; then
-            find bin/Desktop -type f -name "*.AppImage" -exec cp {} installer-artifacts/ \; || true
-            find bin/Desktop -type f -name "*.deb" -exec cp {} installer-artifacts/ \; || true
+            find . -type f -name "*.AppImage" -exec cp {} installer-artifacts/ \; 2>/dev/null || true
+            find . -type f -name "*.deb" -exec cp {} installer-artifacts/ \; 2>/dev/null || true
           fi
           echo "Staged files:"; ls -1 installer-artifacts || true
           COUNT=$(ls -1 installer-artifacts 2>/dev/null | wc -l | xargs)
           if [ "$COUNT" = "0" ]; then
             echo "Error: No installable artifacts staged for target ${{ matrix.target }}" >&2
+            echo "Hint: Check the debug section above to see where electron-builder wrote files." >&2
             exit 1
           fi
 
