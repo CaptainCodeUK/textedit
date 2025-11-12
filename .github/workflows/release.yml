@@ -146,13 +146,15 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
+          pattern: textedit-*
           path: artifacts
           merge-multiple: true
 
       - name: Fail if no artifacts found
         run: |
-          if [ ! -d artifacts ] || [ $(find artifacts -type f | wc -l) -eq 0 ]; then
+          if [ ! -d artifacts ] || [ -z "$(ls -A artifacts 2>/dev/null)" ]; then
             echo "No artifacts downloaded. Ensure build job uploaded artifacts with expected names." >&2
+            echo "Expected artifacts matching pattern: textedit-*" >&2
             exit 1
           fi
       
