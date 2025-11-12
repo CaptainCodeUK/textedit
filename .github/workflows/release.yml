@@ -108,7 +108,7 @@ jobs:
       - name: Print electronize build log
         shell: bash
         run: |
-          echo "=== electronize build log (${ { matrix.os } }) ===" | sed 's/ //g'
+          echo "=== electronize build log (${{ matrix.os }}) ==="
           if [ -f src/TextEdit.App/electronize-build-${{ matrix.os }}.log ]; then
             sed -n '1,400p' src/TextEdit.App/electronize-build-${{ matrix.os }}.log || true
           else
