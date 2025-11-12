@@ -16,13 +16,6 @@
     "directories": {
       "output": "bin/Desktop"
     },
-    "extraResources": [
-      {
-        "from": "./bin",
-        "to": "bin",
-        "filter": [ "**/*" ]
-      }
-    ],
     "files": [
       {
         "from": "./ElectronHostHook/node_modules",
@@ -30,6 +23,18 @@
         "filter": [ "**/*" ]
       },
       "**/*"
-    ]
+    ],
+    "mac": {
+      "target": ["dmg", "zip"],
+      "identity": null,
+      "category": "public.app-category.developer-tools"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Utility"
+    },
+    "win": {
+      "target": ["squirrel"]
+    }
   }
 }
