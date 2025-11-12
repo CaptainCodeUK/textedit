@@ -147,6 +147,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          merge-multiple: true
+
+      - name: Fail if no artifacts found
+        run: |
+          if [ ! -d artifacts ] || [ $(find artifacts -type f | wc -l) -eq 0 ]; then
+            echo "No artifacts downloaded. Ensure build job uploaded artifacts with expected names." >&2
+            exit 1
+          fi
       
       - name: List downloaded artifacts (debug)
         run: |
