@@ -139,9 +139,9 @@ jobs:
         run: |
           mkdir -p installer-artifacts
           ROOT=.
-          # Windows: NSIS Setup.exe
+          # Windows: NSIS Setup.exe (only the installer, avoid copying runtime/host executables)
           if [ "${{ matrix.target }}" = "win" ]; then
-            find "$ROOT" -type f \( -name "*Setup*.exe" -o -name "*.exe" \) ! -path "*/node_modules/*" -exec cp -v {} installer-artifacts/ \; 2>/dev/null || true
+            find "$ROOT" -type f -name "*Setup*.exe" ! -path "*/node_modules/*" -exec cp -v {} installer-artifacts/ \; 2>/dev/null || true
           fi
           # macOS: dmg (fallback to zip if dmg missing)
           if [ "${{ matrix.target }}" = "osx" ]; then
@@ -245,9 +245,9 @@ jobs:
           
           ### Installation
           
-          - **Windows**: Download and run \`TextEdit-Setup-${{ steps.version.outputs.version }}.exe\`
-          - **macOS**: Download and open \`TextEdit-${{ steps.version.outputs.version }}.dmg\`
-          - **Linux**: Download \`TextEdit-${{ steps.version.outputs.version }}.AppImage\`, make executable, and run
+          - **Windows**: Download and run \`Scrappy Text Editor Setup ${{ steps.version.outputs.version }}.exe\`
+          - **macOS**: Download and open \`Scrappy Text Editor-${{ steps.version.outputs.version }}.dmg\`
+          - **Linux**: Download \`Scrappy Text Editor-${{ steps.version.outputs.version }}.AppImage\`, make executable, and run
           
           ### Auto-Update
           If you're already using TextEdit, the app will automatically notify you of this update.
@@ -255,7 +255,7 @@ jobs:
           
           cat release_notes.md
       
-      - name: Create GitHub Release
+      - name: Create GitHub Release (no assets)
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.version.outputs.version }}
@@ -264,11 +264,18 @@ jobs:
           body_path: release_notes.md
           draft: false
           prerelease: false
-          files: |
-            artifacts/**/*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload release assets (overwrite)
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: v${{ steps.version.outputs.version }}
+          file: artifacts/**/*
+          file_glob: true
+          overwrite: true
       
       - name: Notify on failure
         if: failure()
