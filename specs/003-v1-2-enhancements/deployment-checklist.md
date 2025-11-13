@@ -47,7 +47,7 @@ This checklist guides the process of creating and testing a v1.2 release with au
   - [ ] Linux: `.AppImage` is executable and runs
 
 ### Test 3: Actual Release Build
-- [ ] Merge `003-v1-2-enhancements` to `main`
+- [ ] Merge `release/v1.2.x` to `main`
 - [ ] Create and push release tag:
   ```bash
   git checkout main
@@ -55,13 +55,13 @@ This checklist guides the process of creating and testing a v1.2 release with au
   git tag v1.2.0
   git push origin v1.2.0
   ```
-- [ ] Monitor GitHub Actions → Release Build workflow
-- [ ] Verify all platform builds complete successfully
-- [ ] Check GitHub Releases page for new v1.2.0 release
-- [ ] Verify all artifacts are attached to release:
-  - [ ] Windows: `TextEdit-Setup-1.2.0.exe`, `*.nupkg`, `RELEASES`
-  - [ ] macOS: `TextEdit-1.2.0.dmg`, `TextEdit-1.2.0.zip`
-  - [ ] Linux: `TextEdit-1.2.0.AppImage`, `TextEdit-1.2.0.deb`
+- [x] Monitor GitHub Actions → Release Build workflow
+- [x] Verify all platform builds complete successfully
+- [x] Check GitHub Releases page for new v1.2.0 release
+- [x] Verify all installer artifacts are attached to release:
+  - [x] Windows: NSIS Setup installer (`*Setup*.exe`)
+  - [x] macOS: `.dmg` (zip fallback when applicable)
+  - [x] Linux: `.AppImage` (and `.deb` when produced)
 
 ## Auto-Update Testing
 
@@ -164,7 +164,7 @@ Release is considered successful when:
 - **First Release:** v1.2.0 is the first release with auto-update support. Users on v1.1.0 or earlier won't auto-detect this update (requires manual download).
 - **Future Updates:** v1.3.0+ will auto-detect and notify users on v1.2.0+.
 - **GitHub Releases Feed:** `https://github.com/CaptainCodeUK/textedit/releases` (update if repo changes)
-- **Squirrel Limitations:** Windows/macOS use Squirrel format. Linux uses AppImage with zsync for delta updates.
+- **Installer formats:** Windows uses NSIS installer (Setup.exe); macOS uses DMG/ZIP; Linux uses AppImage (and .deb when configured). Release uploads are configured to overwrite on reruns to avoid duplicate-asset failures.
 
 ---
 
