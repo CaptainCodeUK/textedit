@@ -75,7 +75,9 @@
       ]
     },
     "squirrelWindows": {
-      "remoteReleases": "https://github.com/CaptainCodeUK/textedit/releases"
+      "remoteReleases": "https://github.com/CaptainCodeUK/textedit/releases",
+      "authors": "CaptainCodeUK",
+      "description": "Scrappy Text Editor – a cross-platform desktop text editor built with .NET 8, Blazor Server and Electron.NET"
     }
   }
 }
