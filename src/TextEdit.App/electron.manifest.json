@@ -11,7 +11,7 @@
     "appId": "com.scrappytexteditor.app",
     "productName": "Scrappy Text Editor",
     "copyright": "Copyright © 2025",
-    "buildVersion": "1.0.0",
+    "buildVersion": "1.2.3",
     "compression": "maximum",
     "directories": {
       "output": "bin/Desktop"
@@ -56,8 +56,13 @@
         {
           "target": "nsis",
           "arch": ["x64"]
+        },
+        {
+          "target": "squirrel",
+          "arch": ["x64"]
         }
-      ]
+      ],
+      "remoteReleases": "https://github.com/CaptainCodeUK/textedit/releases"
     }
   }
 }
