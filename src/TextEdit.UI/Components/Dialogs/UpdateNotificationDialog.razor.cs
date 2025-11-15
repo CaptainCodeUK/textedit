@@ -26,17 +26,45 @@ public partial class UpdateNotificationDialog : ComponentBase, IDisposable
     private bool _portalAttached = false;
     private ElementReference _portalAttachedElementRef;
 
-    private async Task<bool> TryAttachPortalAsync(ElementReference elementRef)
+    private async Task<bool> TryAttachPortalAsync(object selectorOrElement)
     {
         try
         {
-            var res = await JSRuntime.InvokeAsync<object>("textEditPortal.attach", elementRef);
-            return res is bool b && b;
+            await JSRuntime.InvokeVoidAsync("console.log", "textEditPortal: trying to attach", selectorOrElement);
+            var res = await JSRuntime.InvokeAsync<object>("textEditPortal.attach", selectorOrElement);
+            // Ensure the portal actually ended up attached.
+            // textEditPortal.attach may log a success in JS but return undefined to .NET
+            // (or a proxy object), so we double-check using isAttached.
+            var ok = false;
+            if (res is bool b && b) ok = true;
+            else
+            {
+                try
+                {
+                    ok = await JSRuntime.InvokeAsync<bool>("textEditPortal.isAttached", selectorOrElement);
+                }
+                catch
+                {
+                    ok = false;
+                }
+            }
+            await JSRuntime.InvokeVoidAsync("console.log", "textEditPortal: attach result", ok, selectorOrElement);
+            return ok;
         }
         catch
         {
             return false;
         }
+    }
+
+    private async Task<bool> TryAttachWithRetryAsync(object selectorOrElement, int retries = 3, int delayMs = 60)
+    {
+        for (int attempt = 0; attempt < retries; attempt++)
+        {
+            if (await TryAttachPortalAsync(selectorOrElement)) return true;
+            await Task.Delay(delayMs);
+        }
+        return false;
     }
 
     private async Task TryDetachPortalAsync(ElementReference elementRef)
@@ -58,20 +86,50 @@ public partial class UpdateNotificationDialog : ComponentBase, IDisposable
             if (!_portalAttached)
             {
                 await Task.Delay(50);
-                var attached = await TryAttachPortalAsync(_overlayRef);
+                var attached = await TryAttachWithRetryAsync(_overlayRef, retries: 5, delayMs: 80);
                 if (!attached)
                 {
-                    var fallback = await TryAttachPortalAsync(dialogElement);
+                    var fallback = await TryAttachWithRetryAsync(dialogElement, retries: 3, delayMs: 80);
                     if (fallback)
                     {
                         _portalAttachedElementRef = dialogElement;
                         _portalAttached = true;
+                    }
+                    else
+                    {
+                        // Last-ditch: try attaching by selector string to match id
+                        var selectorFallback = await TryAttachWithRetryAsync("#update-dialog", retries: 3, delayMs: 80);
+                        if (selectorFallback)
+                        {
+                            _portalAttachedElementRef = _overlayRef; // overlay moved
+                            _portalAttached = true;
+                        }
                     }
                 }
                 else
                 {
                     _portalAttached = true;
                     _portalAttachedElementRef = _overlayRef;
+                }
+            }
+
+            // Re-verify if the portal is attached (re-render may have replaced the node)
+            if (_portalAttached)
+            {
+                var stillAttached = await JSRuntime.InvokeAsync<bool>("textEditPortal.isAttached", _portalAttachedElementRef);
+                if (!stillAttached)
+                {
+                    // try to reattach after a short delay
+                    _portalAttached = false;
+                    await Task.Delay(50);
+                    var reattach = await TryAttachWithRetryAsync(_overlayRef, retries: 3, delayMs: 80);
+                    if (!reattach)
+                        reattach = await TryAttachWithRetryAsync(dialogElement, retries: 2, delayMs: 80);
+                    if (reattach)
+                    {
+                        _portalAttached = true;
+                        _portalAttachedElementRef = _overlayRef;
+                    }
                 }
             }
 
