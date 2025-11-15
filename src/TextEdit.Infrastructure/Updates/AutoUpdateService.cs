@@ -5,6 +5,9 @@ using TextEdit.Core.Abstractions;
 using TextEdit.Core.Updates;
 using ElectronNET.API;
 using ElectronNET.API.Entities;
+using System.Net.Http;
+using System.Text.Json;
+using System.Net.Http.Headers;
 
 namespace TextEdit.Infrastructure.Updates;
 
@@ -58,8 +61,12 @@ public class AutoUpdateService
             _logger?.LogInformation("AutoUpdateService initialized with feed URL: {FeedUrl}", feedUrl);
             
             // Wire up Electron.AutoUpdater events if in Electron context
-#if !DEBUG
-            if (HybridSupport.IsElectronActive)
+            // For testing purposes on this branch we enable the auto-updater even in Debug builds.
+            // This is a temporary, local-only change to allow testing of the AutoUpdater behavior while
+            // running the development app. It can be reverted before merging to the main branch.
+            bool enableAutoUpdaterInDebug = true; // set to false if you want the default Debug behaviour
+
+            if (HybridSupport.IsElectronActive && (enableAutoUpdaterInDebug || !System.Diagnostics.Debugger.IsAttached))
             {
                 try
                 {
@@ -144,13 +151,6 @@ public class AutoUpdateService
                     _logger?.LogWarning(ex, "Failed to register AutoUpdater events (may not be supported on this platform)");
                 }
             }
-            else
-            {
-                _logger?.LogDebug("Not in Electron context, AutoUpdater disabled");
-            }
-#else
-            _logger?.LogDebug("DEBUG build, AutoUpdater disabled");
-#endif
         }
         catch (Exception ex)
         {
@@ -177,8 +177,12 @@ public class AutoUpdateService
             SetStatus(UpdateStatus.Checking, null);
             _logger?.LogInformation("Checking for updates (autoDownload={AutoDownload})...", autoDownload);
 
-#if !DEBUG
-            if (HybridSupport.IsElectronActive)
+            // Allow update check in debug on local testing branch when enabled
+            // Allow the updater to be enabled in Debug via environment variable for testing without changing code.
+            // To enable: set ENABLE_AUTO_UPDATER_IN_DEBUG=true in your environment when running the dev shell.
+            var enableAutoUpdaterInDebugEnv = Environment.GetEnvironmentVariable("ENABLE_AUTO_UPDATER_IN_DEBUG");
+            bool enableAutoUpdaterInDebug = bool.TryParse(enableAutoUpdaterInDebugEnv, out var envVal) && envVal;
+            if (HybridSupport.IsElectronActive && (enableAutoUpdaterInDebug || !System.Diagnostics.Debugger.IsAttached))
             {
                 try
                 {
@@ -205,6 +209,28 @@ public class AutoUpdateService
                     SetStatus(UpdateStatus.Error, null);
                     _lastError = ex.Message;
                 }
+
+                // If running in DEBUG and the AutoUpdater doesn't call back (dev context), perform a lightweight
+                // GitHub Releases check as a fallback so devs can test update behavior without packaging.
+                if (enableAutoUpdaterInDebug)
+                {
+                    try
+                    {
+                        // Wait briefly to allow the native auto-updater to respond if it will
+                        await Task.Delay(TimeSpan.FromSeconds(5));
+
+                        if (_status == UpdateStatus.Checking)
+                        {
+                            _logger?.LogInformation("AutoUpdater native check timed out; performing GitHub fallback check");
+                            await QueryGitHubLatestReleaseAsync("CaptainCodeUK", "textedit");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogWarning(ex, "GitHub fallback update check failed");
+                        // Do not override normal Error flow; leave status as-is
+                    }
+                }
             }
             else
             {
@@ -212,17 +238,113 @@ public class AutoUpdateService
                 await Task.Delay(500);
                 SetStatus(UpdateStatus.UpToDate, null);
             }
-#else
-            _logger?.LogDebug("DEBUG build, simulating no updates available");
-            await Task.Delay(500);
-            SetStatus(UpdateStatus.UpToDate, null);
-#endif
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error checking for updates");
             SetStatus(UpdateStatus.Error, null);
             _lastError = ex.Message;
+        }
+    }
+
+    private async Task QueryGitHubLatestReleaseAsync(string owner, string repo)
+    {
+        try
+        {
+            using var http = new HttpClient();
+            http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("TextEditUpdater", "1.0"));
+            var url = $"https://api.github.com/repos/{owner}/{repo}/releases/latest";
+            _logger?.LogDebug("Querying GitHub Releases: {Url}", url);
+
+            var resp = await http.GetAsync(url);
+            if (!resp.IsSuccessStatusCode)
+            {
+                _logger?.LogWarning("GitHub release check returned {Status}", resp.StatusCode);
+                return;
+            }
+
+            using var stream = await resp.Content.ReadAsStreamAsync();
+            using var doc = await JsonDocument.ParseAsync(stream);
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("tag_name", out var tagElem))
+            {
+                _logger?.LogWarning("GitHub release JSON missing tag_name");
+                return;
+            }
+
+            var tag = tagElem.GetString() ?? string.Empty;
+            // Trim leading v if present
+            var tagVersion = tag.TrimStart('v', 'V');
+            Version? latestVer = null;
+            Version? currentVer = null;
+
+            try { Version.TryParse(tagVersion, out var v1); latestVer = v1; }
+            catch { }
+
+            try { var av = Assembly.GetEntryAssembly()?.GetName().Version; if (av != null) currentVer = av; } catch { }
+
+            // If a newer version is available, prefer a non-Windows asset for direct download (AppImage/DEB/DMG/ZIP).
+            if (latestVer != null && currentVer != null && latestVer.CompareTo(currentVer) > 0)
+            {
+                var updateMetadata = new UpdateMetadata
+                {
+                    Version = tagVersion,
+                    ReleaseNotes = root.TryGetProperty("body", out var body) ? body.GetString() ?? string.Empty : string.Empty,
+                    ReleasedAt = DateTimeOffset.UtcNow,
+                };
+
+                // Find preferred asset for non-Windows platforms
+                try
+                {
+                    if (root.TryGetProperty("assets", out var assets) && assets.ValueKind == JsonValueKind.Array)
+                    {
+                        string[] preferredExts = new[] { ".AppImage", ".deb", ".dmg", ".zip", ".tar.gz", ".tar.xz" };
+                        // Look for non-Windows assets
+                        foreach (var ext in preferredExts)
+                        {
+                            var matching = assets.EnumerateArray().FirstOrDefault(a =>
+                                a.TryGetProperty("name", out var n) && n.GetString()?.EndsWith(ext, StringComparison.OrdinalIgnoreCase) == true);
+
+                            if (!matching.Equals(default(JsonElement)))
+                            {
+                                if (matching.TryGetProperty("browser_download_url", out var downloadUrl))
+                                {
+                                    updateMetadata.DownloadUrl = downloadUrl.GetString() ?? string.Empty;
+                                }
+                                if (matching.TryGetProperty("size", out var sizeProp) && sizeProp.TryGetInt64(out var size))
+                                {
+                                    updateMetadata.FileSizeBytes = size;
+                                }
+                                break;
+                            }
+                        }
+                        // If no preferred ext found, fallback to the first non-.nupkg (avoid windows installers)
+                        if (string.IsNullOrWhiteSpace(updateMetadata.DownloadUrl))
+                        {
+                            var fallback = assets.EnumerateArray().FirstOrDefault(a =>
+                                a.TryGetProperty("name", out var n) && !(n.GetString()?.EndsWith(".nupkg", StringComparison.OrdinalIgnoreCase) == true));
+                            if (!fallback.Equals(default(JsonElement)) && fallback.TryGetProperty("browser_download_url", out var downloadUrl))
+                            {
+                                updateMetadata.DownloadUrl = downloadUrl.GetString() ?? string.Empty;
+                            }
+                        }
+                    }
+                }
+                catch { /* ignore asset parsing errors */ }
+
+                _logger?.LogInformation("GitHub fallback: update available {Version} > {Current}", tagVersion, currentVer);
+                SetStatus(UpdateStatus.Available, updateMetadata);
+            }
+            else
+            {
+                _logger?.LogInformation("GitHub fallback: no update available (latest: {Latest}, current: {Current})", tagVersion, currentVer?.ToString() ?? "?");
+                SetStatus(UpdateStatus.UpToDate, null);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "GitHub fallback check failed");
         }
     }
 

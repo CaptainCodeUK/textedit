@@ -3,6 +3,8 @@
 @using Microsoft.JSInterop
 @using TextEdit.Core.Updates
 @inject IJSRuntime JSRuntime
+@inject TextEdit.Infrastructure.Ipc.IpcBridge IpcBridge
+@using System.Runtime.InteropServices
 
 @if (IsVisible && UpdateMetadata != null)
 {
@@ -55,6 +57,16 @@
                         @if (UpdateMetadata.IsCritical)
                         {
                             <p class="text-red-600 font-semibold mt-2">This is a critical security update. Please install immediately.</p>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(UpdateMetadata.DownloadUrl) && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                        {
+                            <p class="mt-2">
+                                <a href="#" class="text-blue-600 underline" @onclick="OnDownloadClick">Download update</a>
+                                @if (UpdateMetadata.FileSizeBytes > 0)
+                                {
+                                    <span class="text-sm text-gray-500"> (@FormatFileSize(UpdateMetadata.FileSizeBytes))</span>
+                                }
+                            </p>
                         }
                     </div>
                 </div>
@@ -123,6 +135,16 @@
         await OnInstall.InvokeAsync();
     }
 
+    private async Task OnDownloadClick(MouseEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(UpdateMetadata?.DownloadUrl)) return;
+        try
+        {
+            await IpcBridge.OpenExternalAsync(UpdateMetadata.DownloadUrl);
+        }
+        catch { /* ignore failures */ }
+    }
+
     private async Task HandleRemindLater()
     {
         if (_isClosing) return;
@@ -152,5 +174,15 @@
         // Tab navigation is handled by browser by default
         // No custom logic needed
         return Task.CompletedTask;
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        if (bytes <= 0) return "0 B";
+        var sizes = new[] { "B", "KB", "MB", "GB", "TB" };
+        var order = (int)Math.Floor(Math.Log(bytes, 1024));
+        order = Math.Min(order, sizes.Length - 1);
+        var adjusted = bytes / Math.Pow(1024, order);
+        return $"{adjusted:0.##} {sizes[order]}";
     }
 }
