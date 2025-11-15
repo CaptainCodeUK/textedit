@@ -92,7 +92,7 @@
     {
         InvokeAsync(() =>
         {
-            if (status == TextEdit.Core.Updates.UpdateStatus.Ready && metadata != null)
+            if ((status == TextEdit.Core.Updates.UpdateStatus.Ready || status == TextEdit.Core.Updates.UpdateStatus.Available) && metadata != null)
             {
                 // Show update notification dialog
                 DialogService.ShowUpdateNotificationDialog(metadata);
