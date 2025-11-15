@@ -92,6 +92,8 @@
     {
         InvokeAsync(() =>
         {
+            // Show the modal update dialog when update is Available or Ready.
+            // Earlier we hid the dialog for Available; display it again but ensure it renders as a modal overlay.
             if ((status == TextEdit.Core.Updates.UpdateStatus.Ready || status == TextEdit.Core.Updates.UpdateStatus.Available) && metadata != null)
             {
                 // Show update notification dialog

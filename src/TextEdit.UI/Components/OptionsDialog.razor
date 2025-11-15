@@ -5,6 +5,8 @@
 @inject AppState AppState
 @inject IpcBridge IpcBridge
 @inject IJSRuntime JS
+@inject TextEdit.Infrastructure.Updates.AutoUpdateService AutoUpdateService
+@using System.Runtime.InteropServices
 
 @if (IsVisible)
 {
@@ -136,6 +138,16 @@
                                 style="padding:6px 12px; background: var(--surface); color: var(--fg); border:1px solid var(--border); border-radius:4px; cursor:@(_isCheckingForUpdates ? "not-allowed" : "pointer"); font-size:12px;">
                             @(_isCheckingForUpdates ? "Checking..." : "Check for Updates Now")
                         </button>
+                        @if (!string.IsNullOrWhiteSpace(AutoUpdateService.AvailableUpdate?.DownloadUrl) && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                        {
+                            <div class="mt-2" style="font-size:12px; color:var(--muted)">
+                                <a class="text-blue-600 underline" href="#" @onclick="() => IpcBridge.OpenExternalAsync(AutoUpdateService.AvailableUpdate.DownloadUrl)">Download update</a>
+                                @if (AutoUpdateService.AvailableUpdate.FileSizeBytes > 0)
+                                {
+                                    <span class="text-sm text-gray-500"> (@FormatFileSize(AutoUpdateService.AvailableUpdate.FileSizeBytes))</span>
+                                }
+                            </div>
+                        }
                     </div>
                 </section>
                 
@@ -406,5 +418,15 @@
             _isCheckingForUpdates = false;
             StateHasChanged();
         }
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        if (bytes <= 0) return "0 B";
+        var sizes = new[] { "B", "KB", "MB", "GB", "TB" };
+        var order = (int)Math.Floor(Math.Log(bytes, 1024));
+        order = Math.Min(order, sizes.Length - 1);
+        var adjusted = bytes / Math.Pow(1024, order);
+        return $"{adjusted:0.##} {sizes[order]}";
     }
 }

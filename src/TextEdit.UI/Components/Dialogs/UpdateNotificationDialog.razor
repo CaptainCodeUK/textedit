@@ -5,29 +5,40 @@
 @inject IJSRuntime JSRuntime
 @inject TextEdit.Infrastructure.Ipc.IpcBridge IpcBridge
 @using System.Runtime.InteropServices
+@* JS injected above as JSRuntime; duplicate removed *@
 
 @if (IsVisible && UpdateMetadata != null)
 {
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" 
+    var md = UpdateMetadata!;
+    <!-- Ensure the update overlay sits above any main UI element; use very high z-index to avoid being covered by editor or status elements -->
+    <div id="update-dialog" @ref="_overlayRef" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="position:fixed; inset:0; z-index:2147483646;"
          @onclick="HandleBackdropClick"
          @onkeydown="HandleKeyDown">
-        <div class="rounded-lg shadow-xl p-6 max-w-lg w-full mx-4" 
-             role="dialog" 
-             aria-labelledby="update-dialog-title" 
-             aria-describedby="update-dialog-message"
-             @onclick:stopPropagation="true"
-             @ref="dialogElement">
-            <div class="flex items-start mb-4">
+    <div id="update-dialog-content" class="rounded-lg shadow-xl p-6 max-w-md w-full mx-4" role="dialog" aria-modal="true" aria-labelledby="update-dialog-title" aria-describedby="update-dialog-message" tabindex="-1" @ref="dialogElement" @onclick:stopPropagation="true">
+
+            <!-- Title Bar (match AboutDialog) -->
+            <div style="background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;">
+                <h2 id="update-dialog-title" style="margin: 0; font-size: 14px; font-weight: 600; color: var(--fg);">@(md.IsCritical ? "Critical Update Available" : "Update Available")</h2>
+                <button @onclick="HandleRemindLater" 
+                        style="border: none; background: transparent; font-size: 20px; color: var(--muted); cursor: pointer; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: background-color 0.2s;"
+                        onmouseover="this.style.backgroundColor='var(--border)'"
+                        onmouseout="this.style.backgroundColor='transparent'"
+                        aria-label="Close">
+                    ×
+                </button>
+            </div>
+            @* Keep dialog layout consistent with other dialogs (max width via Tailwind/utility classes) *@
+            <div class="flex items-start mb-4" style="padding: 24px;">
                 <div class="flex-shrink-0">
-                    @if (UpdateMetadata.IsCritical)
-                    {
-                        <svg class="h-6 w-6 text-red-600" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    @if (md.IsCritical)
+                        {
+                        <svg class="h-6 w-6 text-red-600" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24" style="flex:none; width:24px; height:24px;">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
                     }
                     else
-                    {
-                        <svg class="h-6 w-6 text-blue-600" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        {
+                            <svg class="h-6 w-6 text-blue-600" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="24" height="24" style="flex:none; width:24px; height:24px;">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     }
@@ -44,35 +55,35 @@
                         }
                     </h3>
                     <div id="update-dialog-message" class="mt-2 text-sm space-y-2">
-                        <p>Version <strong>@UpdateMetadata.Version</strong> is ready to install.</p>
+                        <p>Version <strong>@md.Version</strong> is ready to install.</p>
                         
-                        @if (!string.IsNullOrWhiteSpace(UpdateMetadata.ReleaseNotes))
+                        @if (!string.IsNullOrWhiteSpace(md.ReleaseNotes))
                         {
                             <div class="mt-3 p-3 bg-gray-100 rounded text-xs max-h-32 overflow-y-auto">
                                 <p class="font-semibold mb-1">What's New:</p>
-                                <p class="whitespace-pre-wrap">@UpdateMetadata.ReleaseNotes</p>
+                                <p class="whitespace-pre-wrap">@md.ReleaseNotes</p>
                             </div>
                         }
                         
-                        @if (UpdateMetadata.IsCritical)
+                        @if (md.IsCritical)
                         {
                             <p class="text-red-600 font-semibold mt-2">This is a critical security update. Please install immediately.</p>
                         }
-                        @if (!string.IsNullOrWhiteSpace(UpdateMetadata.DownloadUrl) && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                        @if (!string.IsNullOrWhiteSpace(md.DownloadUrl) && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                         {
                             <p class="mt-2">
                                 <a href="#" class="text-blue-600 underline" @onclick="OnDownloadClick">Download update</a>
-                                @if (UpdateMetadata.FileSizeBytes > 0)
+                        @if (md.FileSizeBytes > 0)
                                 {
-                                    <span class="text-sm text-gray-500"> (@FormatFileSize(UpdateMetadata.FileSizeBytes))</span>
+                                    <span class="text-sm text-gray-500"> (@FormatFileSize(md.FileSizeBytes))</span>
                                 }
                             </p>
                         }
                     </div>
                 </div>
             </div>
-            <div class="flex justify-end space-x-3">
-                @if (!UpdateMetadata.IsCritical)
+                <div class="flex justify-end space-x-3">
+                @if (!md.IsCritical)
                 {
                     <button 
                         @ref="remindButtonElement"
@@ -110,13 +121,17 @@
     public EventCallback OnRemindLater { get; set; }
 
     private ElementReference dialogElement;
+    private ElementReference _overlayRef;
+    private DotNetObjectReference<UpdateNotificationDialog>? _dotNetRef;
     private ElementReference installButtonElement;
     private ElementReference remindButtonElement;
     private bool _isClosing = false;
+    private bool _portalAttached = false;
+    private ElementReference _portalAttachedElementRef;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (IsVisible && !_isClosing)
+    if (IsVisible && !_isClosing)
         {
             // Auto-focus the install button (primary action) when dialog opens
             await Task.Delay(10);
@@ -125,6 +140,44 @@
                 await JSRuntime.InvokeVoidAsync("eval", "document.querySelector('[role=\"dialog\"] button:last-child').focus()");
             }
             catch { /* Ignore focus errors */ }
+            // Attach to body to avoid stacking context issues in embedded editors
+            if (!_portalAttached)
+            {
+                // Give the browser a short moment for DOM readiness and static assets
+                await Task.Delay(50);
+                try
+                {
+                    await JSRuntime.InvokeVoidAsync("console.log", "portal: attach (before)", _overlayRef);
+                    var attached = await JSRuntime.InvokeAsync<bool>("textEditPortal.attach", _overlayRef);
+                    await JSRuntime.InvokeVoidAsync("console.log", "portal: attach (after)", attached, _overlayRef);
+                    if (!attached)
+                    {
+                        // fallback: try attaching the actual dialog content element if overlay couldn't be moved
+                        var fallbackAttached = await JSRuntime.InvokeAsync<bool>("textEditPortal.attach", dialogElement);
+                        await JSRuntime.InvokeVoidAsync("console.log", "portal: attach (fallback)", fallbackAttached, dialogElement);
+                        if (fallbackAttached)
+                        {
+                            _portalAttachedElementRef = dialogElement;
+                            _portalAttached = true;
+                        }
+                    }
+                    else
+                    {
+                        _portalAttachedElementRef = _overlayRef;
+                        _portalAttached = true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // swallow; portal attach failures shouldn't block the UI
+                    _ = JSRuntime.InvokeVoidAsync("console.debug", "portal.attach failed", ex?.Message);
+                }
+            }
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("textEditFocusTrap.trap", "#update-dialog", _dotNetRef, "HandleRemindLater");
+            
+            // Focus the dialog element after portal attach
+            try { await dialogElement.FocusAsync(); } catch { }
         }
     }
 
@@ -133,6 +186,12 @@
         if (_isClosing) return;
         _isClosing = true;
         await OnInstall.InvokeAsync();
+            if (_portalAttached)
+            {
+                try { await JSRuntime.InvokeVoidAsync("textEditFocusTrap.release", _overlayRef); } catch { }
+                try { await JSRuntime.InvokeAsync<bool>("textEditPortal.detach", _portalAttachedElementRef); } catch { }
+                _portalAttached = false;
+            }
     }
 
     private async Task OnDownloadClick(MouseEventArgs e)
@@ -150,6 +209,13 @@
         if (_isClosing) return;
         _isClosing = true;
         await OnRemindLater.InvokeAsync();
+        // Detach portal
+            if (_portalAttached)
+        {
+            try { await JSRuntime.InvokeVoidAsync("textEditFocusTrap.release", "#update-dialog"); } catch { }
+            try { await JSRuntime.InvokeAsync<bool>("textEditPortal.detach", _portalAttachedElementRef); } catch { }
+            _portalAttached = false;
+        }
     }
 
     private async Task HandleBackdropClick()
@@ -174,6 +240,21 @@
         // Tab navigation is handled by browser by default
         // No custom logic needed
         return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        if (_dotNetRef != null)
+        {
+            _dotNetRef.Dispose();
+            _dotNetRef = null;
+        }
+            if (_portalAttached)
+        {
+            _ = JSRuntime.InvokeVoidAsync("textEditFocusTrap.release", "#update-dialog");
+                _ = JSRuntime.InvokeAsync<bool>("textEditPortal.detach", _portalAttachedElementRef);
+            _portalAttached = false;
+        }
     }
 
     private string FormatFileSize(long bytes)

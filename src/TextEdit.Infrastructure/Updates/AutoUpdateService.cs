@@ -77,10 +77,30 @@ public class AutoUpdateService
                         SetStatus(UpdateStatus.Checking, null);
                     };
 
-                    Electron.AutoUpdater.OnUpdateAvailable += (UpdateInfo info) =>
+                    Electron.AutoUpdater.OnUpdateAvailable += async (UpdateInfo info) =>
                     {
                         _logger?.LogInformation("[AutoUpdater] Update available: {Version}. Downloading...", info?.Version ?? string.Empty);
                         SetStatus(UpdateStatus.Downloading, null);
+                        // Try to find a non-Windows download URL for the update (improves Dev UX)
+                        try
+                        {
+                            var latest = await GetLatestReleaseMetadataAsync("CaptainCodeUK", "textedit");
+                            if (latest != null && !string.IsNullOrWhiteSpace(latest.DownloadUrl))
+                            {
+                                _availableUpdate = new UpdateMetadata
+                                {
+                                    Version = info?.Version ?? latest.Version,
+                                    ReleaseNotes = latest.ReleaseNotes,
+                                    DownloadUrl = latest.DownloadUrl,
+                                    FileSizeBytes = latest.FileSizeBytes,
+                                    ReleasedAt = latest.ReleasedAt,
+                                    IsCritical = latest.IsCritical,
+                                };
+                                // Notify UI that update is available with metadata
+                                StatusChanged?.Invoke(UpdateStatus.Available, _availableUpdate);
+                            }
+                        }
+                        catch { /* ignore network errors */ }
                     };
 
                     Electron.AutoUpdater.OnUpdateNotAvailable += (UpdateInfo info) =>
@@ -104,7 +124,7 @@ public class AutoUpdateService
                         DownloadProgress?.Invoke(parsed);
                     };
 
-                    Electron.AutoUpdater.OnUpdateDownloaded += (UpdateInfo info) =>
+                    Electron.AutoUpdater.OnUpdateDownloaded += async (UpdateInfo info) =>
                     {
                         _logger?.LogInformation("[AutoUpdater] Update downloaded: {Version}", info?.Version ?? string.Empty);
                         // ReleaseNotes is an array; concatenate into a single string
@@ -134,6 +154,17 @@ public class AutoUpdateService
                             ReleaseNotes = releaseNotes,
                             ReleasedAt = DateTimeOffset.UtcNow // Electron doesn't provide this
                         };
+                        // If possible, augment metadata with a non-Windows download URL
+                        try
+                        {
+                            var latest = await GetLatestReleaseMetadataAsync("CaptainCodeUK", "textedit");
+                            if (latest != null && !string.IsNullOrWhiteSpace(latest.DownloadUrl))
+                            {
+                                metadata.DownloadUrl = latest.DownloadUrl;
+                                metadata.FileSizeBytes = latest.FileSizeBytes;
+                            }
+                        }
+                        catch { /* ignore */ }
                         SetStatus(UpdateStatus.Ready, metadata);
                     };
 
@@ -345,6 +376,62 @@ public class AutoUpdateService
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "GitHub fallback check failed");
+        }
+    }
+
+    private async Task<UpdateMetadata?> GetLatestReleaseMetadataAsync(string owner, string repo)
+    {
+        try
+        {
+            using var http = new HttpClient();
+            http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("TextEditUpdater", "1.0"));
+            var url = $"https://api.github.com/repos/{owner}/{repo}/releases/latest";
+            var resp = await http.GetAsync(url);
+            if (!resp.IsSuccessStatusCode) return null;
+
+            using var stream = await resp.Content.ReadAsStreamAsync();
+            using var doc = await JsonDocument.ParseAsync(stream);
+            var root = doc.RootElement;
+
+            var tag = root.GetProperty("tag_name").GetString() ?? string.Empty;
+            var tagVersion = tag.TrimStart('v', 'V');
+
+            var meta = new UpdateMetadata
+            {
+                Version = tagVersion,
+                ReleaseNotes = root.TryGetProperty("body", out var body) ? body.GetString() ?? string.Empty : string.Empty,
+                ReleasedAt = root.TryGetProperty("published_at", out var pub) && pub.ValueKind == JsonValueKind.String ? DateTimeOffset.Parse(pub.GetString()!) : DateTimeOffset.UtcNow
+            };
+
+            if (root.TryGetProperty("assets", out var assets) && assets.ValueKind == JsonValueKind.Array)
+            {
+                string[] preferredExts = new[] { ".AppImage", ".deb", ".dmg", ".zip", ".tar.gz", ".tar.xz" };
+                foreach (var ext in preferredExts)
+                {
+                    var matching = assets.EnumerateArray().FirstOrDefault(a => a.TryGetProperty("name", out var n) && n.GetString()?.EndsWith(ext, StringComparison.OrdinalIgnoreCase) == true);
+                    if (!matching.Equals(default(JsonElement)))
+                    {
+                        if (matching.TryGetProperty("browser_download_url", out var downloadUrl))
+                            meta.DownloadUrl = downloadUrl.GetString() ?? string.Empty;
+                        if (matching.TryGetProperty("size", out var sizeProp) && sizeProp.TryGetInt64(out var s))
+                            meta.FileSizeBytes = s;
+                        break;
+                    }
+                }
+                if (string.IsNullOrWhiteSpace(meta.DownloadUrl))
+                {
+                    var fallback = assets.EnumerateArray().FirstOrDefault(a => a.TryGetProperty("name", out var n) && !(n.GetString()?.EndsWith(".nupkg", StringComparison.OrdinalIgnoreCase) == true));
+                    if (!fallback.Equals(default(JsonElement)) && fallback.TryGetProperty("browser_download_url", out var downloadUrl2))
+                        meta.DownloadUrl = downloadUrl2.GetString() ?? string.Empty;
+                }
+            }
+
+            return meta;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "GetLatestReleaseMetadataAsync failed");
+            return null;
         }
     }
 
