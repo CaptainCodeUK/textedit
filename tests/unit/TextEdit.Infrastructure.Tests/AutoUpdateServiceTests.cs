@@ -45,6 +45,18 @@ public class AutoUpdateServiceTests
     }
 
     [Fact]
+    public async Task CheckForUpdatesAsync_SetsLastCheckWasManual_WhenInitiatedByUser()
+    {
+        var service = new AutoUpdateService();
+        service.Initialize("https://example.com/feed");
+        Assert.False(service.LastCheckWasManual);
+
+        await service.CheckForUpdatesAsync(autoDownload: true, initiatedByUser: true);
+
+        Assert.True(service.LastCheckWasManual);
+    }
+
+    [Fact]
     public void DownloadProgress_Event_CanBeSubscribed()
     {
         var service = new AutoUpdateService();

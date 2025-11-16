@@ -409,7 +409,7 @@
         
         try
         {
-            await AutoUpdateService.CheckForUpdatesAsync(AppState.Preferences.Updates.AutoDownload);
+            await AutoUpdateService.CheckForUpdatesAsync(AppState.Preferences.Updates.AutoDownload, initiatedByUser: true);
             AppState.Preferences.Updates.LastCheckTime = DateTimeOffset.UtcNow;
             await AppState.SavePreferencesAsync();
         }

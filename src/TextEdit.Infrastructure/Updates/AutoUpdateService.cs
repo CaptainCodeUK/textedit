@@ -195,8 +195,17 @@ public class AutoUpdateService
     /// Check for available updates. If auto-download is enabled, downloads automatically.
     /// </summary>
     /// <param name="autoDownload">Whether to download automatically if update found</param>
-    public async Task CheckForUpdatesAsync(bool autoDownload = true)
+    public bool LastCheckWasManual { get; private set; }
+
+    public void ClearLastCheckWasManual()
     {
+        LastCheckWasManual = false;
+    }
+
+    public async Task CheckForUpdatesAsync(bool autoDownload = true, bool initiatedByUser = false)
+    {
+        // Track whether this check was initiated explicitly by the user (via Options -> Check for Updates)
+        LastCheckWasManual = initiatedByUser;
         if (_status == UpdateStatus.Checking || _status == UpdateStatus.Downloading)
         {
             _logger?.LogDebug("Update check already in progress, skipping");

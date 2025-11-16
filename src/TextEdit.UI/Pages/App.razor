@@ -96,8 +96,19 @@
             // Earlier we hid the dialog for Available; display it again but ensure it renders as a modal overlay.
             if ((status == TextEdit.Core.Updates.UpdateStatus.Ready || status == TextEdit.Core.Updates.UpdateStatus.Available) && metadata != null)
             {
-                // Show update notification dialog
-                DialogService.ShowUpdateNotificationDialog(metadata);
+                // Only show update notification dialog if check-on-startup is enabled,
+                // or the check was initiated manually via the Options dialog.
+                if (AppState.Preferences.Updates.CheckOnStartup || AutoUpdateService.LastCheckWasManual)
+                {
+                    DialogService.ShowUpdateNotificationDialog(metadata);
+                    // Clear the manual flag so subsequent periodic checks don't use it
+                    try { AutoUpdateService.ClearLastCheckWasManual(); } catch { }
+                }
+                else
+                {
+                    // Update is available, but user has disabled automatic checks on startup; do not show.
+                    _ = Task.CompletedTask;
+                }
             }
             else if (status == TextEdit.Core.Updates.UpdateStatus.Error)
             {
