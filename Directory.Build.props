@@ -2,13 +2,13 @@
   <PropertyGroup>
     <!-- Per-project coverage thresholds configured in individual test projects -->
     <!-- Global threshold removed to allow per-project control -->
-    
-  <!-- Version information for all projects (v1.2.1 patch: updater fixes for CI compatibility) -->
-  <Version>1.2.2</Version>
-  <AssemblyVersion>1.2.2.0</AssemblyVersion>
-  <FileVersion>1.2.2.0</FileVersion>
-  <InformationalVersion>1.2.2</InformationalVersion>
-    
+
+  <!-- Version information for all projects (v1.2.3: add Squirrel packaging for auto-update support) -->
+  <Version>1.2.3</Version>
+  <AssemblyVersion>1.2.3.0</AssemblyVersion>
+  <FileVersion>1.2.3.0</FileVersion>
+  <InformationalVersion>1.2.3</InformationalVersion>
+
     <!-- Company and product information -->
     <Company>CaptainCodeUK</Company>
     <Product>TextEdit</Product>
