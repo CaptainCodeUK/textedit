@@ -1,6 +1,6 @@
 const manifestFileName = process.argv[2];
 // @ts-ignore
-const manifestFile = require('../../electron.manifest.json');
+const manifestFile = require('../electron.manifest.json');
 const dasherize = require('dasherize');
 const fs = require('fs');
 
