@@ -11,10 +11,10 @@
     "appId": "com.scrappytexteditor.app",
     "productName": "Scrappy Text Editor",
     "copyright": "Copyright © 2025",
-    "buildVersion": "1.2.3",
+  "buildVersion": "1.2.4",
     "compression": "maximum",
     "extraMetadata": {
-      "version": "1.2.3",
+  "version": "1.2.4",
       "description": "Scrappy Text Editor – a cross-platform desktop text editor built with .NET 8, Blazor Server and Electron.NET",
       "author": {
         "name": "CaptainCodeUK",
@@ -50,8 +50,7 @@
           "target": "zip",
           "arch": ["x64"]
         }
-      ],textEditPortal: attach result false <div id=​"update-dialog" class=​"fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style=​"position:​fixed !important;​ inset:​0 !important;​ z-index:​2147483647 !important;​ height:​100vh !important;​ width:​100% !important;​ top:​0 !important;​ left:​0 !important;​" _bl_c90a753a-0c96-4f2e-93ef-5ec79aff3b13>​…​</div>​
-
+      ],
       "identity": null,
       "category": "public.app-category.developer-tools"
     },

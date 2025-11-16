@@ -15,13 +15,13 @@ This checklist guides the process of creating and testing a v1.2 release with au
 ## Version Update
 
 - [ ] Update version in project files:
-  - [ ] `src/TextEdit.App/TextEdit.App.csproj` - `<Version>1.2.0</Version>`
+  - [ ] `src/TextEdit.App/TextEdit.App.csproj` - `<Version>1.2.4</Version>`
   - [ ] `src/TextEdit.Core/TextEdit.Core.csproj`
   - [ ] `src/TextEdit.Infrastructure/TextEdit.Infrastructure.csproj`
   - [ ] `src/TextEdit.UI/TextEdit.UI.csproj`
   - [ ] `src/TextEdit.Markdown/TextEdit.Markdown.csproj`
 
-- [ ] Update CHANGELOG.md with v1.2.0 changes
+- [ ] Update CHANGELOG.md with v1.2.4 changes
 - [ ] Update README.md version references if applicable
 
 ## GitHub Workflow Testing
@@ -52,12 +52,12 @@ This checklist guides the process of creating and testing a v1.2 release with au
   ```bash
   git checkout main
   git pull origin main
-  git tag v1.2.0
-  git push origin v1.2.0
+  git tag v1.2.4
+  git push origin v1.2.4
   ```
 - [x] Monitor GitHub Actions → Release Build workflow
 - [x] Verify all platform builds complete successfully
-- [x] Check GitHub Releases page for new v1.2.0 release
+- [x] Check GitHub Releases page for new v1.2.4 release
 - [x] Verify all installer artifacts are attached to release:
   - [x] Windows: NSIS Setup installer (`*Setup*.exe`)
   - [x] macOS: `.dmg` (zip fallback when applicable)
@@ -68,7 +68,7 @@ This checklist guides the process of creating and testing a v1.2 release with au
 ### Test 4: Update Detection
 - [ ] Install v1.1.0 (previous version) on clean test machine
 - [ ] Launch app and wait for startup update check
-- [ ] Verify update notification appears with v1.2.0 details
+  - [ ] Verify update notification appears with v1.2.4 details
 - [ ] Check Options → Automatic Updates shows:
   - [ ] Current version: 1.1.0
   - [ ] Status: "Update available" or "Downloading..."
@@ -83,7 +83,7 @@ This checklist guides the process of creating and testing a v1.2 release with au
 ### Test 6: Update Installation
 - [ ] Click "Restart and Update" in notification dialog
 - [ ] Verify app closes and restarts
-- [ ] After restart, verify version is now 1.2.0
+  - [ ] After restart, verify version is now 1.2.4
 - [ ] Check all features work correctly after update
 - [ ] Verify no data loss (open documents, preferences preserved)
 

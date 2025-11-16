@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.4] - 2025-11-16
+
+### Fixed
+- Portal/modal reparenting: ensure UpdateNotificationDialog stays attached to document.body and reattaches after Blazor re-renders (portal.js).
+- Update dialog centering and focus handling so ESC consistently closes the dialog and focus trap is applied correctly.
+- Automatic updates: `Check for updates on startup` preference is respected; manual checks still show notifications even when startup checks are disabled.
+
+### Changed
+- Bump project version to 1.2.4 (patch release: portal and updater fixes).
+
+---
+
 ## [1.2.0] - 2025-11-11
 
 ### Added

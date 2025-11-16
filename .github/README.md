@@ -58,8 +58,8 @@ This directory contains CI/CD workflows for the TextEdit project.
 
 ### Step 1: Tag the commit
 ```bash
-git tag v1.2.0
-git push origin v1.2.0
+git tag v1.2.4
+git push origin v1.2.4
 ```
 
 ### Step 2: Monitor workflow

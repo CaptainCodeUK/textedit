@@ -3,11 +3,11 @@
     <!-- Per-project coverage thresholds configured in individual test projects -->
     <!-- Global threshold removed to allow per-project control -->
 
-  <!-- Version information for all projects (v1.2.3: add Squirrel packaging for auto-update support) -->
-  <Version>1.2.3</Version>
-  <AssemblyVersion>1.2.3.0</AssemblyVersion>
-  <FileVersion>1.2.3.0</FileVersion>
-  <InformationalVersion>1.2.3</InformationalVersion>
+  <!-- Version information for all projects (v1.2.4: patch release with portal and updater fixes) -->
+  <Version>1.2.4</Version>
+  <AssemblyVersion>1.2.4.0</AssemblyVersion>
+  <FileVersion>1.2.4.0</FileVersion>
+  <InformationalVersion>1.2.4</InformationalVersion>
 
     <!-- Company and product information -->
     <Company>CaptainCodeUK</Company>
