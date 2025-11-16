@@ -113,10 +113,9 @@ jobs:
           else
             echo "No package.json in obj/Host; skipping npm install"
           fi
-          # Ensure the helper is available and run it; it writes ./obj/Host/bin/electron-builder.json
+          # Ensure the helper is available and run it; writes to ./obj/Host/bin/electron-builder.json
           mkdir -p ./obj/Host/bin
-          cp electron.manifest.json ./obj/Host/bin/electron.manifest.json || true
-          node ./obj/Host/build-helper.js electron.manifest.json $BUILD_VERSION || true
+          node ./tools/build-helper.js electron.manifest.json $BUILD_VERSION || true
           # Electronize expects config under obj/desktop/<platform>/bin — copy for the current matrix target
           PLATFORM_DIR="./obj/desktop/${{ matrix.target }}/bin"
           mkdir -p "$PLATFORM_DIR"
