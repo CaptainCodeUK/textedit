@@ -52,6 +52,18 @@ window.textEditFocusTrap = {
     document.addEventListener('keydown', trapHandler, true);
     this.activeTraps[dialogSelector] = trapHandler;
   },
+  focusDialog: function (dialogSelector) {
+    var dialog = document.querySelector(dialogSelector);
+    if (!dialog) return;
+    // If there are focusable controls, prefer the first one; else focus the dialog container so key events are captured
+    var focusable = dialog.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+    if (focusable && focusable.length) {
+      try { focusable[0].focus(); return; } catch (err) { /* ignore */ }
+    }
+    try {
+      dialog.tabIndex = -1; dialog.focus();
+    } catch (err) { }
+  },
   
   release: function (dialogSelector) {
     if (this.activeTraps[dialogSelector]) {

@@ -98,7 +98,7 @@ public partial class UpdateNotificationDialog : ComponentBase, IDisposable
                     else
                     {
                         // Last-ditch: try attaching by selector string to match id
-                        var selectorFallback = await TryAttachWithRetryAsync("#update-dialog", retries: 3, delayMs: 80);
+                        var selectorFallback = await TryAttachWithRetryAsync("#update-overlay", retries: 3, delayMs: 80);
                         if (selectorFallback)
                         {
                             _portalAttachedElementRef = _overlayRef; // overlay moved
@@ -134,7 +134,11 @@ public partial class UpdateNotificationDialog : ComponentBase, IDisposable
             }
 
             _dotNetRef ??= DotNetObjectReference.Create(this);
+            // Focus the content element before trapping - this matches the Options/About dialogs
+            try { await dialogElement.FocusAsync(); } catch { }
             await JSRuntime.InvokeVoidAsync("textEditFocusTrap.trap", "#update-dialog", _dotNetRef, "HandleRemindLater");
+            // Also attempt a JS-focus fallback if C# FocusAsync didn't work (cross-browser)
+            try { await JSRuntime.InvokeVoidAsync("textEditFocusTrap.focusDialog", "#update-dialog"); } catch { }
 
             try { await dialogElement.FocusAsync(); } catch { }
         }
@@ -158,6 +162,7 @@ public partial class UpdateNotificationDialog : ComponentBase, IDisposable
 
     public async Task OnDownloadClick(MouseEventArgs e) => await OnDownloadClickInternal(e);
 
+    [JSInvokable]
     public async Task HandleRemindLater() => await HandleRemindLaterInternalAsync();
 
     public async Task HandleBackdropClick() => await HandleBackdropClickInternalAsync();

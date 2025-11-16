@@ -10,9 +10,9 @@
 {
     var md = UpdateMetadata!;
 
-    <div id="update-dialog" @ref="_overlayRef" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="position:fixed !important; inset:0 !important; z-index:2147483647 !important; height:100vh !important; width:100% !important; top:0 !important; left:0 !important;"
+    <div id="update-overlay" @ref="_overlayRef" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="position:fixed; top:0; left:0; width:100vw; height:100vh; display:flex; align-items:center; justify-content:center; z-index:2147483647 !important;"
          @onclick="HandleBackdropClick" @onkeydown="HandleKeyDown">
-        <div id="update-dialog-content" role="dialog" aria-modal="true" aria-labelledby="update-dialog-title" aria-describedby="update-dialog-message" tabindex="-1" @ref="dialogElement" @onclick:stopPropagation="true"
+        <div id="update-dialog" role="dialog" aria-modal="true" aria-labelledby="update-dialog-title" aria-describedby="update-dialog-message" tabindex="-1" @ref="dialogElement" @onclick:stopPropagation="true" @onkeydown="HandleKeyDown"
              style="max-width:480px; width:100%; background:var(--bg); border-radius:8px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1); overflow:hidden; display:flex; flex-direction:column; max-height:600px; margin:0 16px;">
 
             <!-- Header -->
