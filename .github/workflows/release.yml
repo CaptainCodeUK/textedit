@@ -97,6 +97,44 @@ jobs:
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
+
+      - name: Generate electron-builder configuration for electronize
+        shell: bash
+        working-directory: src/TextEdit.App
+        env:
+          BUILD_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          echo "Generating electron-builder.json for version $BUILD_VERSION"
+          # Ensure the helper is available and run it; it writes ./obj/Host/bin/electron-builder.json
+          node ./obj/Host/build-helper.js electron.manifest.json $BUILD_VERSION || true
+          # Electronize expects config under obj/desktop/<platform>/bin — copy for the current matrix target
+          PLATFORM_DIR="./obj/desktop/${{ matrix.target }}/bin"
+          mkdir -p "$PLATFORM_DIR"
+          if [ -f ./obj/Host/bin/electron-builder.json ]; then
+            cp ./obj/Host/bin/electron-builder.json "$PLATFORM_DIR/"
+            echo "Copied electron-builder.json to $PLATFORM_DIR"
+          else
+            echo "Warning: obj/Host/bin/electron-builder.json not found; electronize may fail if configuration is required." >&2
+          fi
+
+      - name: Generate electron-builder configuration for electronize
+        shell: bash
+        working-directory: src/TextEdit.App
+        env:
+          BUILD_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          echo "Generating electron-builder.json for version $BUILD_VERSION"
+          # Ensure the helper is available and run it; it writes ./obj/Host/bin/electron-builder.json
+          node ./obj/Host/build-helper.js electron.manifest.json $BUILD_VERSION || true
+          # Electronize expects config under obj/desktop/<platform>/bin — copy for the current matrix target
+          PLATFORM_DIR="./obj/desktop/${{ matrix.target }}/bin"
+          mkdir -p "$PLATFORM_DIR"
+          if [ -f ./obj/Host/bin/electron-builder.json ]; then
+            cp ./obj/Host/bin/electron-builder.json "$PLATFORM_DIR/"
+            echo "Copied electron-builder.json to $PLATFORM_DIR/"
+          else
+            echo "Warning: obj/Host/bin/electron-builder.json not found; electronize may fail if configuration is required." >&2
+          fi
       
       - name: Build Electron app for ${{ matrix.os }}
         working-directory: src/TextEdit.App
