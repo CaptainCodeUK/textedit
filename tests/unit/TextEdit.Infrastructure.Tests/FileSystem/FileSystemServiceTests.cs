@@ -101,16 +101,20 @@ public class FileSystemServiceTests : IDisposable
 
         // Act
         var result = await _sut.ReadLargeFileAsync(path, Encoding.UTF8, progress);
-        // Allow any asynchronously posted progress callbacks to flush
-        await Task.Delay(50);
+        // Allow any asynchronously posted progress callbacks to flush — wait up to 5s for completion
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (!progressValues.Contains(100) && sw.ElapsedMilliseconds < 5000)
+        {
+            await Task.Delay(50);
+        }
 
         // Assert
         Assert.Equal(content, result);
         Assert.NotEmpty(progressValues); // progress should be reported during large file read
         // Ensure completion reported (may not be last due to async scheduling order)
         Assert.Contains(100, progressValues);
-    // 0% should be reported at least once; due to async scheduling, it may not be the first callback
-    Assert.Contains(0, progressValues);
+        // 0% should be reported at least once; due to async scheduling, it may not be the first callback
+        Assert.Contains(0, progressValues);
     }
 
     [Fact]
