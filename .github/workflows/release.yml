@@ -345,8 +345,14 @@ jobs:
             const release = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
             const assets = await github.rest.repos.listReleaseAssets({ owner, repo, release_id: release.data.id });
 
+            function normalize(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g, ''); }
             for (const fileName of files) {
-              const asset = assets.data.find(a => a.name === fileName);
+              // Try exact match first; otherwise match on a normalized token form to handle dots/spaces/hyphens
+              let asset = assets.data.find(a => a.name === fileName);
+              if(!asset) {
+                const normFile = normalize(fileName);
+                asset = assets.data.find(a => normalize(a.name) === normFile);
+              }
               if (asset) {
                 core.info(`Deleting existing release asset ${fileName} (id=${asset.id})`);
                 await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: asset.id });
