@@ -110,6 +110,10 @@ Rationale: The current textarea-based editor has inherent limitations (selection
 	- Undo/redo hooks compatible with our `IUndoRedoService`
 	- Markdown-friendly (monospace, wrapping, code fences)
 - [ ] Spike: build minimal POC with search highlight + next/prev navigation
+- [ ] T-ALT-001: Create feature branch and initial prototype (branch: feature/alt-editor-prototype)
+	- [ ] Create `AltEditor` component with minimal Monaco embed
+	- [ ] Hook to DocumentService for open/save
+	- [ ] Add tasks/notes in `specs/003-v1-2-enhancements/alternate-editor-prototype.md`
 - [ ] Assess packaging/footprint and offline compatibility in Electron
 - [ ] Draft migration plan (feature parity checklist, risks, rollout guard)
 
