@@ -11,16 +11,26 @@
 @if (IsVisible)
 {
     <div class="dialog-overlay" @onclick="OnClose" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
-    <div id="options-dialog" class="dialog-content" role="dialog" aria-modal="true" aria-labelledby="options-dialog-title" aria-describedby="options-dialog-desc" tabindex="-1" @ref="_dialogRef" @onclick:stopPropagation="true" @onkeydown="HandleKeyDown" style="max-width: 520px; width: 100%; background: var(--bg); color: var(--fg); border-radius: 8px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15), 0 10px 10px -5px rgba(0,0,0,0.1); overflow: hidden;">
-            <div style="background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;">
+    <div id="options-dialog" class="dialog-content" role="dialog" aria-modal="true" aria-labelledby="options-dialog-title" aria-describedby="options-dialog-desc" tabindex="-1" @ref="_dialogRef" @onclick:stopPropagation="true" @onkeydown="HandleKeyDown" style="min-height:520px; max-height:520px; max-width: 520px; width: 100%; background: var(--bg); color: var(--fg); border-radius: 8px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15), 0 10px 10px -5px rgba(0,0,0,0.1); overflow: hidden; display:flex; flex-direction:column;">
+        <div style="background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;">
                 <h2 id="options-dialog-title" style="margin: 0; font-size: 14px; font-weight: 600; color: var(--fg);">Options</h2>
                 <button @onclick="OnClose"
                         style="border: none; background: transparent; font-size: 20px; color: var(--muted); cursor: pointer; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 4px;">
                     ×
                 </button>
             </div>
-            <div id="options-dialog-desc" style="padding: 24px; max-height: 60vh; overflow-y: auto;">
-                <section style="margin-bottom: 20px;">
+            <div id="options-dialog-desc" style="padding: 24px; overflow-y: auto; flex:1 1 auto; min-height:0;">
+                <div class="tab-strip" role="tablist" aria-label="Options Sections" style="gap:6px; margin-bottom:12px;">
+                    <button role="tab" aria-selected="@(SelectedTab == OptionsTab.Extensions ? "true" : "false")" aria-controls="panel-extensions" @onclick="() => SelectTab(OptionsTab.Extensions)" class="tab">Recognized File Extensions</button>
+                    <button role="tab" aria-selected="@(SelectedTab == OptionsTab.Theme ? "true" : "false")" aria-controls="panel-theme" @onclick="() => SelectTab(OptionsTab.Theme)" class="tab">Theme</button>
+                    <button role="tab" aria-selected="@(SelectedTab == OptionsTab.Logging ? "true" : "false")" aria-controls="panel-logging" @onclick="() => SelectTab(OptionsTab.Logging)" class="tab">Logging</button>
+                    <button role="tab" aria-selected="@(SelectedTab == OptionsTab.Updates ? "true" : "false")" aria-controls="panel-updates" @onclick="() => SelectTab(OptionsTab.Updates)" class="tab">Updates</button>
+                    <button role="tab" aria-selected="@(SelectedTab == OptionsTab.Editor ? "true" : "false")" aria-controls="panel-editor" @onclick="() => SelectTab(OptionsTab.Editor)" class="tab">Editor</button>
+                </div>
+
+                @if (SelectedTab == OptionsTab.Extensions)
+                {
+                <section id="panel-extensions" role="tabpanel" aria-labelledby="panel-extensions-label" style="margin-bottom: 20px;">
                     <h3 style="font-size: 13px; font-weight: 600; margin: 0 0 8px 0; color: var(--fg);">Recognized File Extensions</h3>
                     <p style="font-size:12px; color:var(--muted); margin:0 0 8px 0;">Files with these extensions are treated as text and can be opened. .txt and .md cannot be removed.</p>
                     <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
@@ -50,37 +60,48 @@
                         </ul>
                     </div>
                 </section>
-                <section style="margin-bottom: 20px;">
-                    <h3 style="font-size: 13px; font-weight: 600; margin: 0 0 8px 0; color: var(--fg);">Editor</h3>
-                    <div style="display:flex; flex-direction:column; gap:12px;">
-                        <label style="display:flex; gap:8px; align-items:center; cursor:pointer; color: var(--fg);">
-                            <input type="checkbox"
-                                   checked="@AppState.Preferences.UseAlternateEditor"
-                                   @onchange="ToggleAlternateEditor" />
-                            <span>Use alternate editor (experimental)</span>
-                        </label>
-                        <p style="font-size:12px; color:var(--muted); margin:0 0 8px 0;">Switch to an experimental editor component (prototype) that enables advanced editing features. May be unstable.</p>
-                    </div>
-                </section>
-                <section style="margin-bottom: 20px;">
-                    <h3 style="font-size: 13px; font-weight: 600; margin: 0 0 8px 0; color: var(--fg);">Theme</h3>
-                    <div style="display:flex; gap:16px; align-items:center;">
-                        <label style="display:flex; gap:6px; align-items:center; cursor:pointer; color: var(--fg);" @onclick="() => SetTheme(ThemeMode.Light)">
-                            <input type="radio" name="theme" value="Light" checked="@(AppState.Preferences.Theme == ThemeMode.Light)" />
-                            <span>Light</span>
-                        </label>
-                        <label style="display:flex; gap:6px; align-items:center; cursor:pointer; color: var(--fg);" @onclick="() => SetTheme(ThemeMode.Dark)">
-                            <input type="radio" name="theme" value="Dark" checked="@(AppState.Preferences.Theme == ThemeMode.Dark)" />
-                            <span>Dark</span>
-                        </label>
-                        <label style="display:flex; gap:6px; align-items:center; color: var(--muted); cursor:not-allowed;">
-                            <input type="radio" name="theme" value="System" disabled checked="@(AppState.Preferences.Theme == ThemeMode.System)" />
-                            <span>System (disabled)</span>
-                        </label>
-                    </div>
-                </section>
+                }
                 
-                <section style="margin-bottom: 20px;">
+                @if (SelectedTab == OptionsTab.Theme)
+                {
+                    <section id="panel-theme" role="tabpanel" aria-labelledby="panel-theme-label" style="margin-bottom: 20px;">
+                        <h3 style="font-size: 13px; font-weight: 600; margin: 0 0 8px 0; color: var(--fg);">Theme</h3>
+                        <div style="display:flex; gap:16px; align-items:center;">
+                            <label style="display:flex; gap:6px; align-items:center; cursor:pointer; color: var(--fg);" @onclick="() => SetTheme(ThemeMode.Light)">
+                                <input type="radio" name="theme" value="Light" checked="@(AppState.Preferences.Theme == ThemeMode.Light)" />
+                                <span>Light</span>
+                            </label>
+                            <label style="display:flex; gap:6px; align-items:center; cursor:pointer; color: var(--fg);" @onclick="() => SetTheme(ThemeMode.Dark)">
+                                <input type="radio" name="theme" value="Dark" checked="@(AppState.Preferences.Theme == ThemeMode.Dark)" />
+                                <span>Dark</span>
+                            </label>
+                            <label style="display:flex; gap:6px; align-items:center; color: var(--muted); cursor:not-allowed;">
+                                <input type="radio" name="theme" value="System" disabled checked="@(AppState.Preferences.Theme == ThemeMode.System)" />
+                                <span>System (disabled)</span>
+                            </label>
+                        </div>
+                    </section>
+                }
+                @if (SelectedTab == OptionsTab.Editor)
+                {
+                    <section id="panel-editor" role="tabpanel" aria-labelledby="panel-editor-label" style="margin-bottom: 20px;">
+                        <h3 style="font-size: 13px; font-weight: 600; margin: 0 0 8px 0; color: var(--fg);">Editor</h3>
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <label style="display:flex; gap:8px; align-items:center; cursor:pointer; color: var(--fg);">
+                                <input type="checkbox"
+                                       checked="@AppState.Preferences.UseAlternateEditor"
+                                       @onchange="ToggleAlternateEditor" />
+                                <span>Use alternate editor (experimental)</span>
+                            </label>
+                            <p style="font-size:12px; color:var(--muted); margin:0 0 8px 0;">Switch to an experimental editor component (prototype) that enables advanced editing features. May be unstable.</p>
+                        </div>
+                    </section>
+                }
+                
+                
+                @if (SelectedTab == OptionsTab.Logging)
+                {
+                    <section style="margin-bottom: 20px;">
                     <h3 style="font-size: 13px; font-weight: 600; margin: 0 0 8px 0; color: var(--fg);">Logging</h3>
                     <div style="display:flex; flex-direction:column; gap:12px;">
                         <label style="display:flex; gap:8px; align-items:center; cursor:pointer; color: var(--fg);">
@@ -103,9 +124,12 @@
                             </div>
                         }
                     </div>
-                </section>
+                    </section>
+                }
                 
-                <section style="margin-bottom: 20px;">
+                @if (SelectedTab == OptionsTab.Updates)
+                {
+                    <section style="margin-bottom: 20px;">
                     <h3 style="font-size: 13px; font-weight: 600; margin: 0 0 8px 0; color: var(--fg);">Automatic Updates</h3>
                     <div style="display:flex; flex-direction:column; gap:12px;">
                         <label style="display:flex; gap:8px; align-items:center; cursor:pointer; color: var(--fg);">
@@ -161,22 +185,35 @@
                             </div>
                         }
                     </div>
-                </section>
+                    </section>
+                }
                 
-                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
-                    <button @onclick="OnClose" style="padding:6px 12px; background: var(--surface); color: var(--fg); border:1px solid var(--border); border-radius:6px; cursor:pointer;">Close</button>
-                </div>
+            </div>
+
+            <!-- Footer with persistent actions -->
+            <div style="padding: 12px 24px; border-top: 1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; background: var(--dialog-surface);">
+                <button @onclick="OnClose" style="padding:6px 12px; background: var(--surface); color: var(--fg); border:1px solid var(--border); border-radius:6px; cursor:pointer;">Close</button>
             </div>
         </div>
     </div>
 }
 
-@inject TextEdit.Infrastructure.Updates.AutoUpdateService AutoUpdateService
+@* AutoUpdateService was already injected at top; duplicate injection removed. *@
 
 @code {
     private ElementReference _dialogRef;
     private DotNetObjectReference<OptionsDialog>? _dotNetRef;
     private bool _trapAttached;
+    private OptionsTab SelectedTab { get; set; } = OptionsTab.Extensions;
+
+    private enum OptionsTab
+    {
+        Extensions,
+        Theme,
+        Logging,
+        Updates,
+        Editor
+    }
     private string _currentVersion = GetVersion();
     private string _updateStatus = "Idle";
     private bool _isCheckingForUpdates = false;
@@ -191,6 +228,11 @@
     {
         AutoUpdateService.StatusChanged += OnUpdateStatusChanged;
         UpdateStatusDisplay();
+    }
+
+    private void SelectTab(OptionsTab t)
+    {
+        SelectedTab = t;
     }
     
     private static string GetVersion()
