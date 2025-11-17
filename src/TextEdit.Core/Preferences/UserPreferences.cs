@@ -38,6 +38,11 @@ public class UserPreferences
     /// </summary>
     public TextEdit.Core.Updates.UpdatePreferences Updates { get; set; } = new();
 
+    /// <summary>
+    /// Use a richer alternate editor (prototype). This is an experimental feature that can be toggled in Options.
+    /// </summary>
+    public bool UseAlternateEditor { get; set; } = false;
+
     public UserPreferences()
     {
     }

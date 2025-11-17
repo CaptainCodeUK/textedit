@@ -188,6 +188,17 @@ public partial class TextEditor : ComponentBase, IDisposable
         }
     }
 
+    [Microsoft.JSInterop.JSInvokable]
+    public static async Task ToggleAlternateEditorFromJS(bool enabled)
+    {
+        // JS-invokable entrypoint used by Playwright tests to toggle the alternate editor preference
+        if (_currentInstance == null) return;
+        var appState = _currentInstance.AppState;
+        appState.Preferences.UseAlternateEditor = enabled;
+        await appState.SavePreferencesAsync();
+        appState.NotifyChanged();
+    }
+
     private Task HandleOptionsRequested()
     {
         DialogService.ShowOptionsDialog();

@@ -242,6 +242,35 @@ public class PlaywrightDomTests : IAsyncLifetime
         var ariaLabelledBy = await editor!.GetAttributeAsync("aria-labelledby");
     Assert.False(string.IsNullOrEmpty(ariaLabelledBy)); // Editor should be labelled by active tab
     }
+
+    [Fact]
+    public async Task AltEditor_Toggle_ReflectsInDOM()
+    {
+        if (!string.IsNullOrEmpty(_skipReason)) return;
+
+        Assert.NotNull(_page);
+
+        // Ensure the main textarea is present
+        await _page!.WaitForSelectorAsync("textarea#main-editor-textarea", new()
+        {
+            State = WaitForSelectorState.Visible,
+            Timeout = 10000
+        });
+
+        // Toggle alternate editor on via JS
+        await _page.EvaluateAsync("() => DotNet.invokeMethodAsync('TextEdit.UI', 'ToggleAlternateEditorFromJS', true)");
+
+        // Wait for alt editor to be visible
+        await _page.WaitForSelectorAsync("#alt-editor", new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
+
+        // Ensure the original textarea is removed or hidden
+        var textarea = await _page.QuerySelectorAsync("textarea#main-editor-textarea");
+        Assert.Null(textarea);
+
+        // Toggle back to original editor
+        await _page.EvaluateAsync("() => DotNet.invokeMethodAsync('TextEdit.UI', 'ToggleAlternateEditorFromJS', false)");
+        await _page.WaitForSelectorAsync("textarea#main-editor-textarea", new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
+    }
     
     [Fact]
     public async Task AxeCore_StatusBar_LiveRegion()

@@ -51,6 +51,18 @@
                     </div>
                 </section>
                 <section style="margin-bottom: 20px;">
+                    <h3 style="font-size: 13px; font-weight: 600; margin: 0 0 8px 0; color: var(--fg);">Editor</h3>
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <label style="display:flex; gap:8px; align-items:center; cursor:pointer; color: var(--fg);">
+                            <input type="checkbox"
+                                   checked="@AppState.Preferences.UseAlternateEditor"
+                                   @onchange="ToggleAlternateEditor" />
+                            <span>Use alternate editor (experimental)</span>
+                        </label>
+                        <p style="font-size:12px; color:var(--muted); margin:0 0 8px 0;">Switch to an experimental editor component (prototype) that enables advanced editing features. May be unstable.</p>
+                    </div>
+                </section>
+                <section style="margin-bottom: 20px;">
                     <h3 style="font-size: 13px; font-weight: 600; margin: 0 0 8px 0; color: var(--fg);">Theme</h3>
                     <div style="display:flex; gap:16px; align-items:center;">
                         <label style="display:flex; gap:6px; align-items:center; cursor:pointer; color: var(--fg);" @onclick="() => SetTheme(ThemeMode.Light)">
@@ -381,6 +393,12 @@
             AppState.Preferences.Updates.CheckIntervalHours = hours;
             await AppState.SavePreferencesAsync();
         }
+    }
+
+    private async Task ToggleAlternateEditor(ChangeEventArgs e)
+    {
+        AppState.Preferences.UseAlternateEditor = (bool)(e.Value ?? false);
+        await AppState.SavePreferencesAsync();
     }
 
     private string FormatLastCheckTime()
