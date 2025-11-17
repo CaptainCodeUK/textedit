@@ -195,8 +195,7 @@ public partial class TextEditor : ComponentBase, IDisposable
         if (_currentInstance == null) return;
         var appState = _currentInstance.AppState;
         appState.Preferences.UseAlternateEditor = enabled;
-        await appState.SavePreferencesAsync();
-        appState.NotifyChanged();
+    await appState.SavePreferencesAsync();
     }
 
     private Task HandleOptionsRequested()

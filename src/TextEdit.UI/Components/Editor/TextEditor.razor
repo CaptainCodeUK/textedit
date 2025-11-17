@@ -25,7 +25,10 @@
               @onfocus="UpdateCaretPosition"
               @onmouseup="UpdateCaretPosition"
               @onkeyup="UpdateCaretPosition"
-              @onblur="OnBlur"></textarea>      <FindBar 
+              @onblur="OnBlur"></textarea>
+  }
+  
+  <FindBar 
         @ref="_findBar"
         IsVisible="@_showFind"
         Text="@Content"
