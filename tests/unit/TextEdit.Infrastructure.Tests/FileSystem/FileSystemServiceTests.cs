@@ -103,7 +103,7 @@ public class FileSystemServiceTests : IDisposable
         var result = await _sut.ReadLargeFileAsync(path, Encoding.UTF8, progress);
         // Allow any asynchronously posted progress callbacks to flush — wait up to 5s for completion
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        while (!progressValues.Contains(100) && sw.ElapsedMilliseconds < 5000)
+        while ((!progressValues.Contains(100) || !progressValues.Contains(0)) && sw.ElapsedMilliseconds < 5000)
         {
             await Task.Delay(50);
         }
