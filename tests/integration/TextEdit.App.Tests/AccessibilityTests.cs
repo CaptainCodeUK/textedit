@@ -320,12 +320,14 @@ public class AccessibilityTests
         var undo = new UndoRedoService();
         var docs = new DocumentService(fs, undo);
         var tabs = new TabService();
-        var ipc = new TestIpcBridge();
-        var persistence = new PersistenceService();
+    var persistence = new PersistenceService();
+    var tmp = Path.Combine(Path.GetTempPath(), "textedit-accessibility-prefs-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(tmp);
+    var ipc = new TestIpcBridge(tmp);
         var autosave = new AutosaveService(1000000);
         var perfLogger = new PerformanceLogger();
         var dialog = new DialogService();
-        var prefsRepo = new PreferencesRepository();
+    var prefsRepo = new PreferencesRepository(tmp);
         var themeDetection = new ThemeDetectionService();
         var themeManager = new ThemeManager();
         var app = new AppState(docs, tabs, ipc, persistence, autosave, perfLogger, prefsRepo, themeDetection, themeManager, null, dialog);
@@ -386,7 +388,7 @@ public class AccessibilityTests
     
     private class TestIpcBridge : IpcBridge
     {
-        public TestIpcBridge() : base(new TextEdit.Infrastructure.Persistence.PreferencesRepository()) { }
+    public TestIpcBridge(string prefsBaseDir) : base(new TextEdit.Infrastructure.Persistence.PreferencesRepository(prefsBaseDir)) { }
         
         public override Task<string?> ShowOpenFileDialogAsync() => Task.FromResult<string?>(null);
         public override Task<string?> ShowSaveFileDialogAsync() => Task.FromResult<string?>(null);

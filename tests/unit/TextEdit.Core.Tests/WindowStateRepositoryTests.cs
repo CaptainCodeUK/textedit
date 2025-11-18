@@ -109,8 +109,8 @@ public class WindowStateRepositoryTests : IDisposable
     [Fact]
     public async Task LoadAsync_WithCorruptedFile_ReturnsDefaults()
     {
-        // Arrange - write invalid JSON to state file
-        var statePath = Path.Combine(AppPaths.BaseDir, "window-state.json");
+    // Arrange - write invalid JSON to state file in isolated test directory
+    var statePath = Path.Combine(_testDir, "window-state.json");
         Directory.CreateDirectory(Path.GetDirectoryName(statePath)!);
         await File.WriteAllTextAsync(statePath, "{ invalid json }");
 

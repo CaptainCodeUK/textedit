@@ -16,7 +16,9 @@ public class IpcBridgeTests
 
     public IpcBridgeTests()
     {
-        var prefsRepo = new PreferencesRepository();
+    var tmp = Path.Combine(Path.GetTempPath(), "textedit-ipc-prefs-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(tmp);
+    var prefsRepo = new PreferencesRepository(tmp);
         _bridge = new IpcBridge(prefsRepo);
     }
 

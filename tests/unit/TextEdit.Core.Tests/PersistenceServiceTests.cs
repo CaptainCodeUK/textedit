@@ -265,6 +265,21 @@ public class PersistenceServiceTests : IDisposable
     Assert.Empty(sessionFiles);
     }
 
+    [Fact]
+    public async Task PersistAutoUpdateMetadata_WritesAndRestoresLastCheck()
+    {
+        // Arrange
+        var now = DateTimeOffset.UtcNow;
+
+        // Act
+        await _service.PersistAutoUpdateMetadataAsync(now);
+        var restored = _service.RestoreAutoUpdateLastCheck();
+
+        // Assert
+        Assert.NotNull(restored);
+        Assert.Equal(now.ToString("o"), restored?.ToString("o"));
+    }
+
     public void Dispose()
     {
         // Clean up test files

@@ -38,7 +38,7 @@ public class SaveAsTests : IDisposable
         var undo = new UndoRedoService();
         var docs = new DocumentService(fs, undo);
         var tabs = new TabService();
-        var ipc = new TestIpcBridge
+        var ipc = new TestIpcBridge(_tempDir)
         {
             OpenPath = _helloPath,
             SavePath = _helloAPath
@@ -47,7 +47,9 @@ public class SaveAsTests : IDisposable
         var autosave = new AutosaveService(1000000); // very long interval; avoid firing in test
         var perfLogger = new PerformanceLogger();
         var dialog = new DialogService();
-        var prefsRepo = new PreferencesRepository();
+    var tmp = Path.Combine(Path.GetTempPath(), "textedit-saveas-prefs-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(tmp);
+    var prefsRepo = new PreferencesRepository(tmp);
         var themeDetection = new ThemeDetectionService();
         var themeManager = new ThemeManager();
 
@@ -78,7 +80,7 @@ public class SaveAsTests : IDisposable
         public string? OpenPath { get; set; }
         public string? SavePath { get; set; }
 
-        public TestIpcBridge() : base(new TextEdit.Infrastructure.Persistence.PreferencesRepository()) { }
+    public TestIpcBridge(string prefsBaseDir) : base(new TextEdit.Infrastructure.Persistence.PreferencesRepository(prefsBaseDir)) { }
 
         public override Task<string?> ShowOpenFileDialogAsync() => Task.FromResult(OpenPath);
         public override Task<string?> ShowSaveFileDialogAsync() => Task.FromResult(SavePath);

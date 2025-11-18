@@ -289,13 +289,13 @@ public class PersistenceService
 
     /// <summary>
     /// Persist simple auto-updater metadata such as the last check time.
-    /// Stored in AppPaths.AutoUpdateMetadataPath.
+    /// Stored in the session directory to avoid touching the global preferences JSON.
     /// </summary>
     public async Task PersistAutoUpdateMetadataAsync(DateTimeOffset lastCheckTime)
     {
         try
         {
-            var path = AppPaths.AutoUpdateMetadataPath;
+            var path = Path.Combine(_sessionDir, "auto-update.json");
             var json = JsonSerializer.Serialize(new { lastCheckTime = lastCheckTime }, new JsonSerializerOptions { WriteIndented = true });
             await File.WriteAllTextAsync(path, json);
         }
@@ -312,7 +312,7 @@ public class PersistenceService
     {
         try
         {
-            var path = AppPaths.AutoUpdateMetadataPath;
+            var path = Path.Combine(_sessionDir, "auto-update.json");
             if (!File.Exists(path)) return null;
             var json = File.ReadAllText(path);
             using var doc = System.Text.Json.JsonDocument.Parse(json);

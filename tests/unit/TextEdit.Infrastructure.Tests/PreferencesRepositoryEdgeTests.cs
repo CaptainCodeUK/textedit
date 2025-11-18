@@ -15,8 +15,10 @@ public class PreferencesRepositoryEdgeTests : IDisposable
 
     public PreferencesRepositoryEdgeTests()
     {
-        _repository = new PreferencesRepository();
-        _prefsPath = AppPaths.PreferencesPath;
+    _prefsDir = Path.Combine(Path.GetTempPath(), "textedit-pref-edge-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(_prefsDir);
+    _repository = new PreferencesRepository(_prefsDir);
+    _prefsPath = Path.Combine(_prefsDir, "preferences.json");
         _prefsDir = Path.GetDirectoryName(_prefsPath)!;
         if (File.Exists(_prefsPath)) File.Delete(_prefsPath);
     }
@@ -24,7 +26,7 @@ public class PreferencesRepositoryEdgeTests : IDisposable
     [Fact(Skip = "Unreliable on Linux/CI: directory permissions not portable")]
     public async Task SaveAsync_WhenDirectoryReadOnly_ThrowsAccessOrInvalidOperationException()
     {
-        Directory.CreateDirectory(_prefsDir);
+    Directory.CreateDirectory(_prefsDir);
         var dirInfo = new DirectoryInfo(_prefsDir);
         var originalMode = dirInfo.Attributes;
         try
@@ -48,7 +50,7 @@ public class PreferencesRepositoryEdgeTests : IDisposable
     [Fact(Skip = "Unreliable on Linux/CI: directory permissions not portable")]
     public async Task LoadAsync_WithInvalidExtensions_DoesNotThrow_AndKeepsEntries()
     {
-        Directory.CreateDirectory(_prefsDir);
+    Directory.CreateDirectory(_prefsDir);
         var dirInfo = new DirectoryInfo(_prefsDir);
         dirInfo.Attributes = FileAttributes.Normal; // Ensure writable before test
         var json = "{\"fileExtensions\":[\".txt\",\".md!\"]}";

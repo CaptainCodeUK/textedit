@@ -28,10 +28,8 @@ public static class AppPaths
     public static string SessionDir { get; }
 
     /// <summary>
-    /// Path to auto-updater metadata (last check time, etc.). Kept separate from user preferences to
-    /// avoid unintentional overwrites during early startup checks.
-    /// </summary>
-    public static string AutoUpdateMetadataPath { get; }
+    /// (Removed) Previously stored a dedicated path for auto-updater metadata. Use PersistenceService
+    /// session storage now; this property was removed to avoid duplication.
 
     /// <summary>
     /// Optional logs directory for file-based logging (not all hosts may use this).
@@ -77,7 +75,7 @@ public static class AppPaths
 
                 // Move Logs directory contents
                 TryMoveDirectory(oldLogsDir, newLogsDir);
-                TryMoveFile(oldAutoUpdatePath, newAutoUpdatePath);
+                // Migration from old auto-update metadata path removed; no-op
 
                 // Attempt to delete empty legacy base directory
                 TryDeleteIfEmpty(oldBaseDir);
@@ -94,7 +92,7 @@ public static class AppPaths
         PreferencesPath = newPrefsPath;
         SessionDir = newSessionDir;
         LogsDir = newLogsDir;
-    AutoUpdateMetadataPath = newAutoUpdatePath;
+    // Auto-update metadata path removed; prefer session-bound persistence.
     }
 
     private static void TryMoveFile(string sourcePath, string destPath)

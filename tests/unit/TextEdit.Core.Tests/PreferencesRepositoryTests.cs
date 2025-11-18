@@ -10,11 +10,14 @@ public class PreferencesRepositoryTests : IDisposable
 {
     private readonly PreferencesRepository _repository;
     private readonly string _testPrefsPath;
+    private readonly string _tempPrefsDir;
 
     public PreferencesRepositoryTests()
     {
-        _repository = new PreferencesRepository();
-        _testPrefsPath = AppPaths.PreferencesPath;
+    _tempPrefsDir = Path.Combine(Path.GetTempPath(), "textedit-prefs-tests-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(_tempPrefsDir);
+    _repository = new PreferencesRepository(_tempPrefsDir);
+    _testPrefsPath = Path.Combine(_tempPrefsDir, "preferences.json");
         
         // Clean up any existing test preferences
         if (File.Exists(_testPrefsPath))
@@ -245,10 +248,7 @@ public class PreferencesRepositoryTests : IDisposable
         // Cleanup test files
         try
         {
-            if (File.Exists(_testPrefsPath))
-            {
-                File.Delete(_testPrefsPath);
-            }
+            if (File.Exists(_testPrefsPath)) { File.Delete(_testPrefsPath); }
             var tempPath = _testPrefsPath + ".tmp";
             if (File.Exists(tempPath))
             {

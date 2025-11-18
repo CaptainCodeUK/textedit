@@ -18,12 +18,22 @@ public class PreferencesRepository : IPreferencesRepository
     private readonly Microsoft.Extensions.Logging.ILogger<PreferencesRepository>? _msLogger;
 
     public PreferencesRepository(TextEdit.Core.Abstractions.IAppLogger? logger = null, Microsoft.Extensions.Logging.ILogger<PreferencesRepository>? msLogger = null)
+        : this(null, logger, msLogger)
+    {
+    }
+
+    /// <summary>
+    /// Constructor that allows specifying a custom base directory for preferences.
+    /// This is primarily used for tests to avoid writing into the user AppData directory.
+    /// </summary>
+    public PreferencesRepository(string? baseDir, TextEdit.Core.Abstractions.IAppLogger? logger = null, Microsoft.Extensions.Logging.ILogger<PreferencesRepository>? msLogger = null)
     {
         _logger = logger;
         _msLogger = msLogger;
-        // Centralized location for preferences
-        Directory.CreateDirectory(AppPaths.BaseDir);
-        _preferencesPath = AppPaths.PreferencesPath;
+        // Allow tests to override the prefs directory for isolation
+        var dir = string.IsNullOrWhiteSpace(baseDir) ? AppPaths.BaseDir : baseDir;
+        Directory.CreateDirectory(dir);
+        _preferencesPath = Path.Combine(dir, "preferences.json");
         
         _jsonOptions = new JsonSerializerOptions
         {
