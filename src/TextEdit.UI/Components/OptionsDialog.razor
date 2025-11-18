@@ -312,16 +312,28 @@
             return;
         }
         // Apply requested theme and persist preferences
-        AppState.Preferences.Theme = mode;
-        await AppState.SavePreferencesAsync();
-        await AppState.ApplyThemeAsync();
+        try
+        {
+            await AppState.SetThemeAsync(mode);
+        }
+        catch (System.Exception ex)
+        {
+            DialogService.ShowErrorDialog("Preferences Error", $"Failed to save preferences: {ex.Message}");
+        }
         
     }
 
     private async Task ToggleLogging(ChangeEventArgs e)
     {
-        AppState.Preferences.LoggingEnabled = (bool)(e.Value ?? false);
-        await AppState.SavePreferencesAsync();
+        var enable = (bool)(e.Value ?? false);
+        try
+        {
+            await AppState.SetLoggingEnabledAsync(enable);
+        }
+        catch (System.Exception ex)
+        {
+            DialogService.ShowErrorDialog("Preferences Error", $"Failed to save preferences: {ex.Message}");
+        }
     }
 
     private async Task AddExtension()
@@ -465,15 +477,12 @@
     private async Task ToggleAlternateEditor(ChangeEventArgs e)
     {
         var newValue = (bool)(e.Value ?? false);
-        AppState.Preferences.UseAlternateEditor = newValue;
         try
         {
-            await AppState.SavePreferencesAsync();
+            await AppState.SetUseAlternateEditorAsync(newValue);
         }
         catch (System.Exception ex)
         {
-            // Revert change and notify user
-            AppState.Preferences.UseAlternateEditor = !newValue;
             DialogService.ShowErrorDialog("Preferences Error", $"Failed to save preferences: {ex.Message}");
         }
     }

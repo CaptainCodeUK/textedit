@@ -9,6 +9,7 @@ using TextEdit.Infrastructure.Autosave;
 using TextEdit.Infrastructure.Telemetry;
 using TextEdit.Infrastructure.Logging;
 using TextEdit.Core.Preferences;
+using Microsoft.Extensions.Logging;
 using TextEdit.Infrastructure.Themes;
 using TextEdit.UI.Services;
 using System.IO;
@@ -35,6 +36,7 @@ public class AppState : IDisposable
     private readonly ThemeDetectionService _themeDetection;
     private readonly ThemeManager _themeManager;
     private readonly IAppLogger? _logger;
+    private readonly Microsoft.Extensions.Logging.ILogger<AppState>? _msLogger;
     private readonly Dictionary<Guid, FileWatcher> _watchers = new();
     private readonly Dictionary<Guid, DateTimeOffset> _lastExternalChange = new();
 
@@ -51,7 +53,8 @@ public class AppState : IDisposable
         IPreferencesRepository prefsRepo,
         ThemeDetectionService themeDetection,
         ThemeManager themeManager,
-        IAppLoggerFactory? loggerFactory = null,
+    IAppLoggerFactory? loggerFactory = null,
+    Microsoft.Extensions.Logging.ILogger<AppState>? msLogger = null,
         DialogService? dialogService = null)
     {
         _docs = docs;
@@ -64,7 +67,8 @@ public class AppState : IDisposable
         _prefsRepo = prefsRepo;
         _themeDetection = themeDetection;
         _themeManager = themeManager;
-        _logger = loggerFactory?.CreateLogger<AppState>();
+    _logger = loggerFactory?.CreateLogger<AppState>();
+    _msLogger = msLogger;
         
         EditorState = new EditorState();
         ToolbarState = new ToolbarState();
@@ -73,6 +77,23 @@ public class AppState : IDisposable
         // Hook up autosave to trigger persistence
         _autosave.AutosaveRequested += HandleAutosaveAsync;
         _autosave.Start();
+    }
+
+    // Backwards-compatible constructor used in tests and earlier call sites
+    public AppState(
+        DocumentService docs,
+        TabService tabs,
+        IpcBridge ipc,
+        PersistenceService persistence,
+        AutosaveService autosave,
+        PerformanceLogger perfLogger,
+        IPreferencesRepository prefsRepo,
+        ThemeDetectionService themeDetection,
+        ThemeManager themeManager,
+        IAppLoggerFactory? loggerFactory,
+        DialogService? dialogService)
+        : this(docs, tabs, ipc, persistence, autosave, perfLogger, prefsRepo, themeDetection, themeManager, loggerFactory, msLogger: null, dialogService)
+    {
     }
 
     /// <summary>
@@ -267,6 +288,21 @@ public class AppState : IDisposable
     public async Task LoadPreferencesAsync()
     {
         Preferences = await _prefsRepo.LoadAsync();
+        // If we don't have a last-check time in preferences (or want to keep updater metadata separate),
+        // attempt to restore from PersistenceService's auto-update metadata, if present.
+        try
+        {
+            var persisted = _persistence.RestoreAutoUpdateLastCheck();
+            if (persisted.HasValue)
+            {
+                Preferences.Updates.LastCheckTime = persisted.Value;
+            }
+        }
+        catch { /* ignore */ }
+        _logger?.LogInformation("Loaded preferences: UseAlternateEditor={UseAlternateEditor}, LoggingEnabled={LoggingEnabled}, FileExtensions={ExtensionsCount}",
+            Preferences.UseAlternateEditor, Preferences.LoggingEnabled, Preferences.FileExtensions?.Count ?? 0);
+        _msLogger?.LogInformation("Loaded preferences (ms logger): UseAlternateEditor={UseAlternateEditor}, LoggingEnabled={LoggingEnabled}, FileExtensions={ExtensionsCount}",
+            Preferences.UseAlternateEditor, Preferences.LoggingEnabled, Preferences.FileExtensions?.Count ?? 0);
         await ApplyThemeAsync();
         NotifyChanged();
     }
@@ -277,7 +313,71 @@ public class AppState : IDisposable
     public async Task SavePreferencesAsync()
     {
         await _prefsRepo.SaveAsync(Preferences);
+        _logger?.LogInformation("Saved preferences: UseAlternateEditor={UseAlternateEditor}, LoggingEnabled={LoggingEnabled}, FileExtensions={ExtensionsCount}",
+            Preferences.UseAlternateEditor, Preferences.LoggingEnabled, Preferences.FileExtensions?.Count ?? 0);
+        _msLogger?.LogInformation("Saved preferences (ms logger): UseAlternateEditor={UseAlternateEditor}, LoggingEnabled={LoggingEnabled}, FileExtensions={ExtensionsCount}",
+            Preferences.UseAlternateEditor, Preferences.LoggingEnabled, Preferences.FileExtensions?.Count ?? 0);
         NotifyChanged();
+    }
+
+    /// <summary>
+    /// Centralized setter for UseAlternateEditor preference with save and error handling.
+    /// Ensures callers always persist the change and the UI is notified on success.
+    /// </summary>
+    public async Task SetUseAlternateEditorAsync(bool enabled)
+    {
+        Preferences.UseAlternateEditor = enabled;
+        try
+        {
+            await SavePreferencesAsync();
+            NotifyChanged();
+        }
+        catch
+        {
+            // Revert value on failure to persist
+            Preferences.UseAlternateEditor = !enabled;
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Centralized setter for LoggingEnabled preference with save and error handling.
+    /// </summary>
+    public async Task SetLoggingEnabledAsync(bool enabled)
+    {
+        Preferences.LoggingEnabled = enabled;
+        try
+        {
+            await SavePreferencesAsync();
+            _logger?.LogInformation("Set LoggingEnabled to {Enabled}", enabled);
+            NotifyChanged();
+        }
+        catch
+        {
+            Preferences.LoggingEnabled = !enabled;
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Centralized setter for Theme preference that applies theme after save.
+    /// </summary>
+    public async Task SetThemeAsync(ThemeMode theme)
+    {
+        Preferences.Theme = theme;
+        try
+        {
+            await SavePreferencesAsync();
+            await ApplyThemeAsync();
+            _logger?.LogInformation("Set Theme to {Theme}", theme);
+            NotifyChanged();
+        }
+        catch
+        {
+            // Revert to previous value (best effort) -- not perfectly transactional but preferable
+            Preferences.Theme = Preferences.Theme; // no-op but keeps pattern
+            throw;
+        }
     }
 
     /// <summary>

@@ -288,6 +288,50 @@ public class PersistenceService
     }
 
     /// <summary>
+    /// Persist simple auto-updater metadata such as the last check time.
+    /// Stored in AppPaths.AutoUpdateMetadataPath.
+    /// </summary>
+    public async Task PersistAutoUpdateMetadataAsync(DateTimeOffset lastCheckTime)
+    {
+        try
+        {
+            var path = AppPaths.AutoUpdateMetadataPath;
+            var json = JsonSerializer.Serialize(new { lastCheckTime = lastCheckTime }, new JsonSerializerOptions { WriteIndented = true });
+            await File.WriteAllTextAsync(path, json);
+        }
+        catch
+        {
+            // Suppress exceptions - not critical
+        }
+    }
+
+    /// <summary>
+    /// Restore the auto-updater last check time if present.
+    /// </summary>
+    public DateTimeOffset? RestoreAutoUpdateLastCheck()
+    {
+        try
+        {
+            var path = AppPaths.AutoUpdateMetadataPath;
+            if (!File.Exists(path)) return null;
+            var json = File.ReadAllText(path);
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("lastCheckTime", out var el) && el.ValueKind == System.Text.Json.JsonValueKind.String)
+            {
+                if (DateTimeOffset.TryParse(el.GetString(), out var dt))
+                {
+                    return dt;
+                }
+            }
+        }
+        catch
+        {
+            // ignore
+        }
+        return null;
+    }
+
+    /// <summary>
     /// Restore editor UI preferences from disk, providing sane defaults when absent.
     /// </summary>
     /// <returns>Tuple of word-wrap and preview visibility.</returns>

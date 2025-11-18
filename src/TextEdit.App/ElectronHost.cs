@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using TextEdit.Infrastructure.Ipc;
 using TextEdit.Core.Preferences;
+using TextEdit.Infrastructure.Persistence;
 
 namespace TextEdit.App;
 
@@ -801,6 +802,9 @@ public static partial class ElectronHost
             // TODO: Update owner/repo when repository is created
             autoUpdateService.Initialize("https://github.com/CaptainCodeUK/textedit/releases");
             
+            // Load preferences before performing any operations that may write preferences
+            try { await _appState.LoadPreferencesAsync(); } catch { /* don't fail startup on load error */ }
+
             // Check for updates on startup if enabled
             if (_appState.Preferences.Updates.CheckOnStartup)
             {
@@ -809,7 +813,13 @@ public static partial class ElectronHost
                 
                 // Update last check time
                 _appState.Preferences.Updates.LastCheckTime = DateTimeOffset.UtcNow;
-                await _appState.SavePreferencesAsync();
+                    try
+                    {
+                        using var innerScope = _app.Services.CreateScope();
+                        var persistence = innerScope.ServiceProvider.GetRequiredService<PersistenceService>();
+                        await persistence.PersistAutoUpdateMetadataAsync(_appState.Preferences.Updates.LastCheckTime.Value);
+                    }
+                    catch { /* ignore */ }
             }
             
             // Start periodic check timer (every 15 minutes, check if interval elapsed)
@@ -834,7 +844,14 @@ public static partial class ElectronHost
                             await autoUpdateService.CheckForUpdatesAsync(_appState.Preferences.Updates.AutoDownload);
                             
                             _appState.Preferences.Updates.LastCheckTime = DateTimeOffset.UtcNow;
-                            await _appState.SavePreferencesAsync();
+                            try
+                            {
+                                // Persist updater metadata separately so we don't overwrite user preferences
+                                using var innerScope = _app.Services.CreateScope();
+                                var persistence = innerScope.ServiceProvider.GetRequiredService<PersistenceService>();
+                                await persistence.PersistAutoUpdateMetadataAsync(_appState.Preferences.Updates.LastCheckTime.Value);
+                            }
+                            catch { /* suppress non-fatal persistence errors */ }
                         }
                     }
                     catch (Exception ex)

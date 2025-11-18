@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using TextEdit.Core.Preferences;
+using Microsoft.Extensions.Logging;
 
 namespace TextEdit.Infrastructure.Persistence;
 
@@ -13,9 +14,13 @@ public class PreferencesRepository : IPreferencesRepository
 {
     private readonly string _preferencesPath;
     private readonly JsonSerializerOptions _jsonOptions;
+    private readonly TextEdit.Core.Abstractions.IAppLogger? _logger;
+    private readonly Microsoft.Extensions.Logging.ILogger<PreferencesRepository>? _msLogger;
 
-    public PreferencesRepository()
+    public PreferencesRepository(TextEdit.Core.Abstractions.IAppLogger? logger = null, Microsoft.Extensions.Logging.ILogger<PreferencesRepository>? msLogger = null)
     {
+        _logger = logger;
+        _msLogger = msLogger;
         // Centralized location for preferences
         Directory.CreateDirectory(AppPaths.BaseDir);
         _preferencesPath = AppPaths.PreferencesPath;
@@ -36,8 +41,12 @@ public class PreferencesRepository : IPreferencesRepository
     {
         try
         {
+            _logger?.LogInformation("Attempting to load preferences from {Path}", _preferencesPath);
+            _msLogger?.LogInformation("Attempting to load preferences from {Path}", _preferencesPath);
             if (!File.Exists(_preferencesPath))
             {
+                _logger?.LogInformation("Preferences file not found, using defaults");
+                _msLogger?.LogInformation("Preferences file not found, using defaults");
                 return new UserPreferences();
             }
 
@@ -46,6 +55,7 @@ public class PreferencesRepository : IPreferencesRepository
             
             if (prefs == null)
             {
+                _logger?.LogWarning("Preferences deserialized to null; using defaults");
                 return new UserPreferences();
             }
 
@@ -54,19 +64,24 @@ public class PreferencesRepository : IPreferencesRepository
             var (isValid, invalidEntry) = prefs.ValidateExtensions();
             if (!isValid)
             {
-                // Invalid extension found; proceed with defaults silently
+                _logger?.LogWarning("Preferences file contains invalid extension entry: {InvalidEntry}", invalidEntry ?? "<null>");
+                _msLogger?.LogWarning("Preferences file contains invalid extension entry: {InvalidEntry}", invalidEntry ?? "<null>");
             }
 
             return prefs;
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
             // Corrupt JSON - return defaults and let user reconfigure
+            _logger?.LogWarning(ex, "Preferences JSON invalid: {Path}", _preferencesPath);
+            _msLogger?.LogWarning(ex, "Preferences JSON invalid: {Path}", _preferencesPath);
             return new UserPreferences();
         }
         catch (IOException)
         {
             // File I/O error - return defaults
+            _logger?.LogWarning("Preferences I/O error reading file: {Path}", _preferencesPath);
+            _msLogger?.LogWarning("Preferences I/O error reading file: {Path}", _preferencesPath);
             return new UserPreferences();
         }
     }
@@ -101,9 +116,13 @@ public class PreferencesRepository : IPreferencesRepository
             }
             var json = JsonSerializer.Serialize(preferences, _jsonOptions);
             await File.WriteAllTextAsync(tempPath, json);
+            _logger?.LogInformation("Wrote preferences temp file to {TempPath}", tempPath);
+            _msLogger?.LogInformation("Wrote preferences temp file to {TempPath}", tempPath);
             
             // Atomic rename (overwrites existing)
             File.Move(tempPath, _preferencesPath, overwrite: true);
+            _logger?.LogInformation("Moved temp preferences to {Path}", _preferencesPath);
+            _msLogger?.LogInformation("Moved temp preferences to {Path}", _preferencesPath);
         }
         catch (IOException ex)
         {

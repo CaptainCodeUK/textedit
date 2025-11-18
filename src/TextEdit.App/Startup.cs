@@ -85,7 +85,13 @@ public class Startup
     // moved above to group with ReplaceService
         
         // Phase 2 (v1.1): Preferences and theming infrastructure
-        services.AddSingleton<IPreferencesRepository, PreferencesRepository>();
+        services.AddSingleton<IPreferencesRepository>(sp =>
+        {
+            var loggerFactory = sp.GetRequiredService<IAppLoggerFactory>();
+            var logger = loggerFactory.CreateLogger<TextEdit.Infrastructure.Persistence.PreferencesRepository>();
+            var msLogger = sp.GetRequiredService<ILogger<TextEdit.Infrastructure.Persistence.PreferencesRepository>>();
+            return new TextEdit.Infrastructure.Persistence.PreferencesRepository(logger, msLogger);
+        });
         services.AddSingleton<WindowStateRepository>();
         services.AddSingleton<ThemeDetectionService>();
         services.AddSingleton<ThemeManager>();

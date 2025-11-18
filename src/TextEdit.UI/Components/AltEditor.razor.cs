@@ -26,6 +26,7 @@ public partial class AltEditor : IAsyncDisposable
                 await JS.InvokeVoidAsync("textEditMonaco.loadMonaco");
                 await JS.InvokeVoidAsync("textEditMonaco.createEditor", "alt-monaco", _dotNetRef, new { value = Value ?? string.Empty, language = "markdown" });
                 _initialized = true;
+                _lastValue = Value;
             }
             catch
             {
@@ -38,6 +39,7 @@ public partial class AltEditor : IAsyncDisposable
     {
         if (_initialized && _lastValue != Value)
         {
+            // Update Monaco editor only when parent changes content (not editor-originated changes)
             await JS.InvokeVoidAsync("textEditMonaco.setValue", "alt-monaco", Value ?? string.Empty);
             _lastValue = Value;
         }
@@ -48,6 +50,8 @@ public partial class AltEditor : IAsyncDisposable
     public async Task OnEditorContentChanged(string content)
     {
         _cachedValue = content;
+        // Mark last value so we don't reapply to the monaco editor when parent re-renders
+        _lastValue = content;
         Value = content;
         await ValueChanged.InvokeAsync(content);
     }

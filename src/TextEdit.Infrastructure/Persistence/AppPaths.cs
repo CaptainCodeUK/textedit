@@ -28,6 +28,12 @@ public static class AppPaths
     public static string SessionDir { get; }
 
     /// <summary>
+    /// Path to auto-updater metadata (last check time, etc.). Kept separate from user preferences to
+    /// avoid unintentional overwrites during early startup checks.
+    /// </summary>
+    public static string AutoUpdateMetadataPath { get; }
+
+    /// <summary>
     /// Optional logs directory for file-based logging (not all hosts may use this).
     /// </summary>
     public static string LogsDir { get; }
@@ -41,17 +47,21 @@ public static class AppPaths
         var newPrefsPath = Path.Combine(newBaseDir, "preferences.json");
         var newSessionDir = Path.Combine(newBaseDir, "Session");
         var newLogsDir = Path.Combine(newBaseDir, "Logs");
+    var newAutoUpdatePath = Path.Combine(newBaseDir, "auto-update.json");
 
         // Legacy base directory we migrate from
         var oldBaseDir = Path.Combine(appData, "TextEdit");
         var oldPrefsPath = Path.Combine(oldBaseDir, "preferences.json");
         var oldSessionDir = Path.Combine(oldBaseDir, "Session");
         var oldLogsDir = Path.Combine(oldBaseDir, "Logs");
+    var oldAutoUpdatePath = Path.Combine(oldBaseDir, "auto-update.json");
 
         // Ensure new directories exist
         Directory.CreateDirectory(newBaseDir);
         Directory.CreateDirectory(newSessionDir);
         Directory.CreateDirectory(newLogsDir);
+    // Ensure parent for auto-update metadata exists
+    Directory.CreateDirectory(newBaseDir);
 
         // Best-effort migration from TextEdit -> Scrappy
         // Rule: If legacy folder exists, attempt migration; otherwise skip.
@@ -67,6 +77,7 @@ public static class AppPaths
 
                 // Move Logs directory contents
                 TryMoveDirectory(oldLogsDir, newLogsDir);
+                TryMoveFile(oldAutoUpdatePath, newAutoUpdatePath);
 
                 // Attempt to delete empty legacy base directory
                 TryDeleteIfEmpty(oldBaseDir);
@@ -83,6 +94,7 @@ public static class AppPaths
         PreferencesPath = newPrefsPath;
         SessionDir = newSessionDir;
         LogsDir = newLogsDir;
+    AutoUpdateMetadataPath = newAutoUpdatePath;
     }
 
     private static void TryMoveFile(string sourcePath, string destPath)

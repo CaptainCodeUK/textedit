@@ -63,6 +63,49 @@ public class PreferencesRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveAsync_WithUseAlternateEditor_Persists()
+    {
+        // Arrange
+        var prefs = new UserPreferences
+        {
+            UseAlternateEditor = true,
+            FontFamily = "DejaVu Sans Mono"
+        };
+
+        // Act
+        await _repository.SaveAsync(prefs);
+        var loaded = await _repository.LoadAsync();
+
+        // Assert
+        Assert.True(loaded.UseAlternateEditor, "UseAlternateEditor should be preserved after save/load");
+        Assert.Equal("DejaVu Sans Mono", loaded.FontFamily);
+    }
+
+    [Fact]
+    public async Task SaveAsync_GeneratesJson_WithUseAlternateEditorField()
+    {
+        // Arrange
+        var prefs = new UserPreferences { UseAlternateEditor = true };
+        Directory.CreateDirectory(Path.GetDirectoryName(_testPrefsPath)!);
+
+        // Act
+        await _repository.SaveAsync(prefs);
+        var json = await File.ReadAllTextAsync(_testPrefsPath);
+
+        // Assert - JSON should contain the serialized boolean property
+        Assert.Contains("useAlternateEditor", json);
+    }
+
+    [Fact]
+    public async Task SaveAsync_WithLoggingEnabled_Persists()
+    {
+        var prefs = new UserPreferences { LoggingEnabled = true };
+        await _repository.SaveAsync(prefs);
+        var loaded = await _repository.LoadAsync();
+        Assert.True(loaded.LoggingEnabled);
+    }
+
+    [Fact]
     public async Task SaveAsync_WithNullPreferences_ThrowsArgumentNullException()
     {
         // Act & Assert

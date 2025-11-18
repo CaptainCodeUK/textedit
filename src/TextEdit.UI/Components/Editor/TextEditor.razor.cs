@@ -8,6 +8,7 @@ using TextEdit.UI.App;
 using TextEdit.UI.Services;
 using TextEdit.UI.Components.Editor;
 using TextEdit.Core.Searching;
+using TextEdit.Infrastructure.Logging;
 
 namespace TextEdit.UI.Components.Editor;
 
@@ -21,6 +22,7 @@ public partial class TextEditor : ComponentBase, IDisposable
     [Inject] protected DialogService DialogService { get; set; } = default!; // For About dialog
     [Inject] protected MarkdownFormattingService FormattingService { get; set; } = default!;
     [Inject] protected FindService FindService { get; set; } = default!; // US1: text search
+    [Inject] protected TextEdit.Infrastructure.Logging.IAppLoggerFactory AppLoggerFactory { get; set; } = default!;
 
     private ElementReference textareaElement;
     protected Document? CurrentDoc => AppState.ActiveDocument;
@@ -194,8 +196,24 @@ public partial class TextEditor : ComponentBase, IDisposable
         // JS-invokable entrypoint used by Playwright tests to toggle the alternate editor preference
         if (_currentInstance == null) return;
         var appState = _currentInstance.AppState;
-        appState.Preferences.UseAlternateEditor = enabled;
-    await appState.SavePreferencesAsync();
+        try
+        {
+            await appState.SetUseAlternateEditorAsync(enabled);
+        }
+        catch (System.Exception ex)
+        {
+            // Revert and show error dialog rather than letting the exception bubble
+            appState.Preferences.UseAlternateEditor = !enabled;
+            _currentInstance.DialogService?.ShowErrorDialog("Preferences Error", $"Failed to save preference: {ex.Message}");
+        }
+    }
+
+    [Microsoft.JSInterop.JSInvokable]
+    public static Task OpenOptionsDialogFromJS()
+    {
+        if (_currentInstance == null) return Task.CompletedTask;
+        _currentInstance.DialogService?.ShowOptionsDialog();
+        return Task.CompletedTask;
     }
 
     private Task HandleOptionsRequested()
@@ -457,8 +475,10 @@ public partial class TextEditor : ComponentBase, IDisposable
 
     protected Task HandleToggleToolbar()
     {
-        AppState.Preferences.ToolbarVisible = !AppState.Preferences.ToolbarVisible;
-        _ = AppState.SavePreferencesAsync();
+    AppState.Preferences.ToolbarVisible = !AppState.Preferences.ToolbarVisible;
+    var logger = AppLoggerFactory.CreateLogger<TextEditor>();
+    logger?.LogInformation("Toolbar visibility set to {Visible}", AppState.Preferences.ToolbarVisible);
+    _ = AppState.SavePreferencesAsync();
         return InvokeAsync(StateHasChanged);
     }
 

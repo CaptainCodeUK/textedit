@@ -275,6 +275,197 @@ public class PlaywrightDomTests : IAsyncLifetime
         await _page.EvaluateAsync("() => DotNet.invokeMethodAsync('TextEdit.UI', 'ToggleAlternateEditorFromJS', false)");
         await _page.WaitForSelectorAsync("textarea#main-editor-textarea", new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
     }
+
+    [Fact]
+    public async Task AltEditor_Toggle_PersistsAcrossReload()
+    {
+        if (!string.IsNullOrEmpty(_skipReason)) return;
+
+        Assert.NotNull(_page);
+
+        // Ensure the main textarea is present
+        await _page!.WaitForSelectorAsync("textarea#main-editor-textarea", new()
+        {
+            State = WaitForSelectorState.Visible,
+            Timeout = 10000
+        });
+
+        // Toggle alternate editor on via JS and wait for it to be visible
+        await _page.EvaluateAsync("() => DotNet.invokeMethodAsync('TextEdit.UI', 'ToggleAlternateEditorFromJS', true)");
+        await _page.WaitForSelectorAsync("#alt-editor", new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
+
+        // Reload the page (simulate app restart); preferences should be loaded from disk
+        await _page.ReloadAsync(new PageReloadOptions { Timeout = 30000 });
+
+        // Wait for the editor to be present again post reload
+        await _page.WaitForSelectorAsync("#alt-editor", new() { State = WaitForSelectorState.Visible, Timeout = 15000 });
+
+        var monaco = await _page.QuerySelectorAsync("#alt-monaco");
+        Assert.NotNull(monaco);
+    }
+
+    [Fact]
+    public async Task AltEditor_Toggle_PersistsAcrossAppRestart()
+    {
+        if (!string.IsNullOrEmpty(_skipReason)) return;
+
+        Assert.NotNull(_page);
+
+        // Ensure the main textarea is present
+        await _page!.WaitForSelectorAsync("textarea#main-editor-textarea", new()
+        {
+            State = WaitForSelectorState.Visible,
+            Timeout = 10000
+        });
+
+        // Toggle alternate editor on via JS
+        await _page.EvaluateAsync("() => DotNet.invokeMethodAsync('TextEdit.UI', 'ToggleAlternateEditorFromJS', true)");
+        await _page.WaitForSelectorAsync("#alt-editor", new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
+
+        // Gracefully close the connected browser and app process and restart app
+        try
+        {
+            if (_browser != null)
+            {
+                await _browser.CloseAsync();
+                _browser = null;
+                _page = null;
+            }
+
+            if (_appProcess != null && !_appProcess.HasExited)
+            {
+                _appProcess.Kill(entireProcessTree: true);
+                _appProcess.Dispose();
+                _appProcess = null;
+            }
+        }
+        catch
+        {
+            // Ignore errors when restarting
+        }
+
+        // Launch app again with remote debugging enabled and reconnect
+        await LaunchAppWithRemoteDebuggingAsync();
+
+        // Wait and reconnect via CDP
+        await Task.Delay(3000);
+        _browser = await _playwright!.Chromium.ConnectOverCDPAsync(RemoteDebuggingUrl);
+
+        var stopwatch = Stopwatch.StartNew();
+        while ((_page = _browser.Contexts.FirstOrDefault()?.Pages.FirstOrDefault()) == null && stopwatch.ElapsedMilliseconds < AppStartupTimeoutMs)
+        {
+            await Task.Delay(500);
+        }
+
+        if (_page == null)
+        {
+            throw new Xunit.Sdk.XunitException("Could not reconnect to app after restart");
+        }
+
+        await _page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+        // Wait for the AltEditor to be present after full restart
+        await _page.WaitForSelectorAsync("#alt-editor", new() { State = WaitForSelectorState.Visible, Timeout = 20000 });
+        var monaco = await _page.QuerySelectorAsync("#alt-monaco");
+        Assert.NotNull(monaco);
+    }
+
+    [Fact]
+    public async Task PreferencesFile_IsLoadedOnStartup()
+    {
+        if (!string.IsNullOrEmpty(_skipReason)) return;
+
+        // Write a preferences.json with UseAlternateEditor and LoggingEnabled set to true before launching
+        var prefs = new { useAlternateEditor = true, loggingEnabled = true };
+        var json = System.Text.Json.JsonSerializer.Serialize(prefs, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase, WriteIndented = true });
+        var prefsPath = TextEdit.Infrastructure.Persistence.AppPaths.PreferencesPath;
+        var dir = Path.GetDirectoryName(prefsPath)!;
+        Directory.CreateDirectory(dir);
+        await File.WriteAllTextAsync(prefsPath, json);
+
+        // Now restart app to read preferences at startup
+        try
+        {
+            if (_browser != null)
+            {
+                await _browser.CloseAsync();
+                _browser = null;
+                _page = null;
+            }
+            if (_appProcess != null && !_appProcess.HasExited)
+            {
+                _appProcess.Kill(entireProcessTree: true);
+                _appProcess.Dispose();
+                _appProcess = null;
+            }
+        }
+        catch { /* ignore failures in cleanup */ }
+
+        await LaunchAppWithRemoteDebuggingAsync();
+
+        await Task.Delay(3000);
+        _browser = await _playwright!.Chromium.ConnectOverCDPAsync(RemoteDebuggingUrl);
+        var stopwatch = Stopwatch.StartNew();
+        while ((_page = _browser.Contexts.FirstOrDefault()?.Pages.FirstOrDefault()) == null && stopwatch.ElapsedMilliseconds < AppStartupTimeoutMs)
+        {
+            await Task.Delay(500);
+        }
+
+        Assert.NotNull(_page);
+        await _page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+        // Ensure alt editor is used immediately on startup
+        await _page.WaitForSelectorAsync("#alt-editor", new() { State = WaitForSelectorState.Visible, Timeout = 15000 });
+
+        // Open Options dialog via JS and assert loggingEnabled is checked
+        await _page.EvaluateAsync("() => DotNet.invokeMethodAsync('TextEdit.UI', 'OpenOptionsDialogFromJS')");
+        await _page.WaitForSelectorAsync("#options-dialog", new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        var loggingCheckbox = await _page.QuerySelectorAsync("input[type='checkbox'][checked][aria-label='Enable detailed logging']");
+        Assert.NotNull(loggingCheckbox);
+    }
+
+    [Fact]
+    public async Task AutoUpdater_DoesNotOverwritePreferencesFileOnStartup()
+    {
+        if (!string.IsNullOrEmpty(_skipReason)) return;
+
+        Assert.NotNull(_page);
+
+        var prefsPath = TextEdit.Infrastructure.Persistence.AppPaths.PreferencesPath;
+        Directory.CreateDirectory(Path.GetDirectoryName(prefsPath)!);
+        var initial = new { useAlternateEditor = true, loggingEnabled = true, fileExtensions = new[] { ".md", ".txt" } };
+        var json = System.Text.Json.JsonSerializer.Serialize(initial, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase, WriteIndented = true });
+        await File.WriteAllTextAsync(prefsPath, json);
+
+        var before = File.ReadAllText(prefsPath);
+        var beforeTime = File.GetLastWriteTimeUtc(prefsPath);
+
+        // Restart app to trigger startup logic
+        try { if (_browser != null) { await _browser.CloseAsync(); _browser = null; _page = null; } } catch { }
+        try { if (_appProcess != null && !_appProcess.HasExited) { _appProcess.Kill(entireProcessTree: true); _appProcess.Dispose(); _appProcess = null; } } catch { }
+
+        await LaunchAppWithRemoteDebuggingAsync();
+        await Task.Delay(3000);
+        _browser = await _playwright!.Chromium.ConnectOverCDPAsync(RemoteDebuggingUrl);
+        var stopwatch = Stopwatch.StartNew();
+        while ((_page = _browser.Contexts.FirstOrDefault()?.Pages.FirstOrDefault()) == null && stopwatch.ElapsedMilliseconds < AppStartupTimeoutMs)
+        {
+            await Task.Delay(500);
+        }
+
+        Assert.NotNull(_page);
+        await _page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+        // Wait a little for any background save attempts
+        await Task.Delay(2000);
+
+        var after = File.ReadAllText(prefsPath);
+        var afterTime = File.GetLastWriteTimeUtc(prefsPath);
+
+        // Ensure file unchanged during startup
+        Assert.Equal(before, after);
+        Assert.Equal(beforeTime, afterTime);
+    }
     
     [Fact]
     public async Task AxeCore_StatusBar_LiveRegion()
