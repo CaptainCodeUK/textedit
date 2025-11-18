@@ -263,6 +263,10 @@ public class PlaywrightDomTests : IAsyncLifetime
         // Wait for alt editor to be visible
         await _page.WaitForSelectorAsync("#alt-editor", new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
 
+    // Monaco container should be present in the AltEditor PoC
+    var monaco = await _page.QuerySelectorAsync("#alt-monaco");
+    Assert.NotNull(monaco);
+
         // Ensure the original textarea is removed or hidden
         var textarea = await _page.QuerySelectorAsync("textarea#main-editor-textarea");
         Assert.Null(textarea);

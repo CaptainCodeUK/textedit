@@ -1,7 +1,7 @@
 @* Minimal placeholder component for alternative editor prototype. *@
-<div id="alt-editor" class="alt-editor-placeholder text-monospace p-2 bg-light border" role="region">
+<div class="alt-editor-placeholder text-monospace p-2 bg-light border" role="region" @attributes="AdditionalAttributes">
   <div class="mb-2"><strong>AltEditor (prototype)</strong></div>
-  <textarea class="w-100" rows="10" @bind="Value"></textarea>
+  <div id="alt-monaco" style="height:260px; border:1px solid var(--border); border-radius:6px; overflow:hidden;"></div>
   <div class="mt-2">
     <button class="btn btn-primary me-2" @onclick="Save">Save</button>
     <button class="btn btn-secondary" @onclick="Open">Open</button>
@@ -17,8 +17,20 @@
 
     private void Save()
     {
-        // TODO: wire to DocumentService in prototype
+    // Save via DocumentService -> AppState
+    if (_appState.ActiveDocument is null) return;
+    var content = _cachedValue ?? Value;
+    _documentService.UpdateContent(_appState.ActiveDocument, content);
+    _ = _appState.SaveActiveAsync();
     }
+
+  [Inject]
+  private DocumentService _documentService { get; set; } = default!;
+
+  [Inject]
+  private AppState _appState { get; set; } = default!;
+
+  private string? _cachedValue;
 
     private void Open()
     {

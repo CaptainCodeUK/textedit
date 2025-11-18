@@ -6,6 +6,7 @@
 @inject IpcBridge IpcBridge
 @inject IJSRuntime JS
 @inject TextEdit.Infrastructure.Updates.AutoUpdateService AutoUpdateService
+@inject TextEdit.UI.App.DialogService DialogService
 @using System.Runtime.InteropServices
 
 @if (IsVisible)
@@ -419,13 +420,30 @@
     private async Task ToggleCheckOnStartup(ChangeEventArgs e)
     {
         AppState.Preferences.Updates.CheckOnStartup = (bool)(e.Value ?? false);
-        await AppState.SavePreferencesAsync();
+        try
+        {
+            await AppState.SavePreferencesAsync();
+        }
+        catch (System.Exception ex)
+        {
+            // Revert and notify user
+            AppState.Preferences.Updates.CheckOnStartup = !(bool)(e.Value ?? false);
+            DialogService.ShowErrorDialog("Preferences Error", $"Failed to save preferences: {ex.Message}");
+        }
     }
 
     private async Task ToggleAutoDownload(ChangeEventArgs e)
     {
         AppState.Preferences.Updates.AutoDownload = (bool)(e.Value ?? false);
-        await AppState.SavePreferencesAsync();
+        try
+        {
+            await AppState.SavePreferencesAsync();
+        }
+        catch (System.Exception ex)
+        {
+            AppState.Preferences.Updates.AutoDownload = !(bool)(e.Value ?? false);
+            DialogService.ShowErrorDialog("Preferences Error", $"Failed to save preferences: {ex.Message}");
+        }
     }
 
     private async Task UpdateCheckInterval(ChangeEventArgs e)
@@ -433,14 +451,31 @@
         if (int.TryParse(e.Value?.ToString(), out var hours) && hours >= 1 && hours <= 168)
         {
             AppState.Preferences.Updates.CheckIntervalHours = hours;
-            await AppState.SavePreferencesAsync();
+            try
+            {
+                await AppState.SavePreferencesAsync();
+            }
+            catch (System.Exception ex)
+            {
+                DialogService.ShowErrorDialog("Preferences Error", $"Failed to save preferences: {ex.Message}");
+            }
         }
     }
 
     private async Task ToggleAlternateEditor(ChangeEventArgs e)
     {
-        AppState.Preferences.UseAlternateEditor = (bool)(e.Value ?? false);
-        await AppState.SavePreferencesAsync();
+        var newValue = (bool)(e.Value ?? false);
+        AppState.Preferences.UseAlternateEditor = newValue;
+        try
+        {
+            await AppState.SavePreferencesAsync();
+        }
+        catch (System.Exception ex)
+        {
+            // Revert change and notify user
+            AppState.Preferences.UseAlternateEditor = !newValue;
+            DialogService.ShowErrorDialog("Preferences Error", $"Failed to save preferences: {ex.Message}");
+        }
     }
 
     private string FormatLastCheckTime()
