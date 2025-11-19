@@ -180,18 +180,23 @@ window.editorFocus = {
 };
 
 // Handle Ctrl+Tab and Ctrl+Shift+Tab for tab navigation (needs to be at document level)
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Tab' && e.ctrlKey) {
-        e.preventDefault();
-        e.stopPropagation();
-        // Notify Blazor via custom event that can be picked up by interop
-        if (e.shiftKey) {
-            document.dispatchEvent(new CustomEvent('blazor-prev-tab'));
-        } else {
-            document.dispatchEvent(new CustomEvent('blazor-next-tab'));
+// Guard to ensure this listener is only registered once, even if module is loaded multiple times
+if (!window._texteditCtrlTabHandlerInstalled) {
+    window._texteditCtrlTabHandlerInstalled = true;
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Tab' && e.ctrlKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            // Notify Blazor via custom event that can be picked up by interop
+            // Ctrl+Tab = move tab RIGHT (next), Ctrl+Shift+Tab = move tab LEFT (previous)
+            if (e.shiftKey) {
+                document.dispatchEvent(new CustomEvent('blazor-prev-tab'));
+            } else {
+                document.dispatchEvent(new CustomEvent('blazor-next-tab'));
+            }
         }
-    }
-}, true); // capture phase to catch before anything else
+    }, true); // capture phase to catch before anything else
+}
 
 // Auto-initialize when DOM is ready
 if (document.readyState === 'loading') {

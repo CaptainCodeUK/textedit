@@ -38,9 +38,10 @@ public class Startup
     /// </summary>
     public void ConfigureServices(IServiceCollection services)
     {
-        // Add Blazor Server
+        // Add Blazor Server with detailed error reporting
         services.AddRazorPages();
-        services.AddServerSideBlazor();
+        services.AddServerSideBlazor()
+            .AddCircuitOptions(options => options.DetailedErrors = true);
 
         // Phase 2: Register core/infrastructure services
         services.AddSingleton<IUndoRedoService, UndoRedoService>();

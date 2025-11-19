@@ -109,5 +109,5 @@ public enum AlternateEditorKind
 {
     Monaco = 0,
     CodeMirror = 1,
-    // Reserve space for others (Ace, MonacoEnhanced, etc.)
+    Ace = 2
 }

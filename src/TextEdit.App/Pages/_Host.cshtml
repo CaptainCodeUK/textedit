@@ -47,5 +47,12 @@
         })();
     </script>
     <script src="_content/TextEdit.UI/js/codemirrorInterop.js?v=1"></script>
+    <script src="_content/TextEdit.UI/js/aceInterop.js?v=1"></script>
+    <script>
+        // Capture uncaught/async errors in a test-friendly global for Playwright to assert
+        window.__lastUnhandledError = null;
+        window.addEventListener('error', function (e) { try { window.__lastUnhandledError = e.error || e.message || "error"; } catch {} });
+        window.addEventListener('unhandledrejection', function (e) { try { window.__lastUnhandledError = e.reason || e; } catch {} });
+    </script>
 </body>
 </html>

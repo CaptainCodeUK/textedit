@@ -149,10 +149,20 @@ public partial class TextEditor : ComponentBase, IDisposable
             try
             {
                 await JSRuntime.InvokeVoidAsync("editorFocus.initialize", "main-editor-textarea");
-                // Set up listeners for Ctrl+Tab navigation
+                // Set up listeners for Ctrl+Tab navigation (guard against duplicate registration)
                 await JSRuntime.InvokeVoidAsync("eval", @"
-                    document.addEventListener('blazor-next-tab', () => DotNet.invokeMethodAsync('TextEdit.UI', 'HandleNextTabFromJS'));
-                    document.addEventListener('blazor-prev-tab', () => DotNet.invokeMethodAsync('TextEdit.UI', 'HandlePrevTabFromJS'));
+                    if (!window._texteditTabNavListenersInstalled) {
+                        window._texteditTabNavListenersInstalled = true;
+                        console.log('[TextEditor.razor] Setting up blazor-next-tab and blazor-prev-tab listeners');
+                        document.addEventListener('blazor-next-tab', () => {
+                            console.log('[TextEditor.razor] blazor-next-tab fired - calling HandleNextTabFromJS');
+                            DotNet.invokeMethodAsync('TextEdit.UI', 'HandleNextTabFromJS');
+                        });
+                        document.addEventListener('blazor-prev-tab', () => {
+                            console.log('[TextEditor.razor] blazor-prev-tab fired - calling HandlePrevTabFromJS');
+                            DotNet.invokeMethodAsync('TextEdit.UI', 'HandlePrevTabFromJS');
+                        });
+                    }
                 ");
             }
             catch { /* ignore */ }

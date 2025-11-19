@@ -384,6 +384,82 @@ public class PlaywrightDomTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task AltEditor_AceEditor_LoadsAndRenders()
+    {
+        if (!string.IsNullOrEmpty(_skipReason)) return;
+
+        Assert.NotNull(_page);
+
+        // Ensure the main textarea is present
+        await _page!.WaitForSelectorAsync("textarea#main-editor-textarea", new()
+        {
+            State = WaitForSelectorState.Visible,
+            Timeout = 10000
+        });
+
+        // Toggle alternate editor on
+        await _page.EvaluateAsync("() => DotNet.invokeMethodAsync('TextEdit.UI', 'ToggleAlternateEditorFromJS', true)");
+        await _page.WaitForSelectorAsync("#monaco-editor", new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
+
+        // Open Options and select ACE
+        await _page.EvaluateAsync("() => DotNet.invokeMethodAsync('TextEdit.UI', 'OpenOptionsDialogFromJS')");
+        await _page.WaitForSelectorAsync("#alternate-editor-select", new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
+        await _page.SelectOptionAsync("#alternate-editor-select", "Ace");
+
+        // Wait for ACE editor to appear
+        await _page.WaitForSelectorAsync("#ace-editor", new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        
+        // Verify ACE editor container is present
+        var aceContainer = await _page.QuerySelectorAsync("#ace-editor");
+        Assert.NotNull(aceContainer);
+        
+        // Verify ACE editor has initialized (should have .ace_editor class)
+        var aceEditor = await _page.QuerySelectorAsync("#ace-editor .ace_editor");
+        Assert.NotNull(aceEditor);
+        
+        // Verify ACE editor has visible dimensions
+        var box = await aceEditor.BoundingBoxAsync();
+        Assert.True(box?.Height > 0 && box?.Width > 0, "ACE editor should have visible dimensions");
+
+        // Verify Monaco and CodeMirror are not present
+        var monaco = await _page.QuerySelectorAsync("#monaco-editor");
+        var codemirror = await _page.QuerySelectorAsync("#codemirror-editor");
+        Assert.Null(monaco);
+        Assert.Null(codemirror);
+    }
+
+    [Fact]
+    public async Task AltEditor_AceEditor_CloseDialog_NoUnhandledErrors()
+    {
+        if (!string.IsNullOrEmpty(_skipReason)) return;
+
+        Assert.NotNull(_page);
+
+        // Ensure the main textarea is present
+        await _page!.WaitForSelectorAsync("textarea#main-editor-textarea", new()
+        {
+            State = WaitForSelectorState.Visible,
+            Timeout = 10000
+        });
+
+        // Toggle alternate editor on and select ACE
+        await _page.EvaluateAsync("() => DotNet.invokeMethodAsync('TextEdit.UI', 'ToggleAlternateEditorFromJS', true)");
+        await _page.EvaluateAsync("() => DotNet.invokeMethodAsync('TextEdit.UI', 'OpenOptionsDialogFromJS')");
+        await _page.WaitForSelectorAsync("#alternate-editor-select", new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
+        await _page.SelectOptionAsync("#alternate-editor-select", "Ace");
+
+        // Close the dialog using Escape key
+        await _page.Keyboard.PressAsync("Escape");
+
+        // Allow UI to update
+        await Task.Delay(200);
+
+        // Assert no global unhandled error was captured by the browser.
+        var lastError = await _page.EvaluateAsync<string?>("() => window.__lastUnhandledError || null");
+        Assert.Null(lastError);
+    }
+
+    [Fact]
     public async Task AltEditor_Toggle_PersistsAcrossAppRestart()
     {
         if (!string.IsNullOrEmpty(_skipReason)) return;

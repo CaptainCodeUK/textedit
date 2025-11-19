@@ -12,10 +12,13 @@
     @switch(AppState.Preferences.AlternateEditor)
     {
       case TextEdit.Core.Preferences.AlternateEditorKind.CodeMirror:
-        <CodeMirrorEditor id="codemirror-editor" @bind-Value="Content" />
+        <CodeMirrorEditor @key="CurrentDoc?.Id" id="codemirror-editor" @bind-Value="Content" />
+        break;
+      case TextEdit.Core.Preferences.AlternateEditorKind.Ace:
+        <AceEditor @key="CurrentDoc?.Id" id="ace-editor" @bind-Value="Content" />
         break;
       default:
-        <MonacoEditor id="monaco-editor" @bind-Value="Content" />
+        <MonacoEditor @key="CurrentDoc?.Id" id="monaco-editor" @bind-Value="Content" />
         break;
     }
   }
@@ -41,7 +44,7 @@
         IsVisible="@_showFind"
         Text="@Content"
       OnClose="@OnFindClosed"
-        EditorElementId="@(AppState.Preferences?.UseAlternateEditor ?? false ? (AppState.Preferences.AlternateEditor == TextEdit.Core.Preferences.AlternateEditorKind.CodeMirror ? "codemirror-editor" : "monaco-editor") : "main-editor-textarea")" />
+        EditorElementId="@(AppState.Preferences?.UseAlternateEditor ?? false ? (AppState.Preferences.AlternateEditor == TextEdit.Core.Preferences.AlternateEditorKind.CodeMirror ? "codemirror-editor" : AppState.Preferences.AlternateEditor == TextEdit.Core.Preferences.AlternateEditorKind.Ace ? "ace-editor" : "monaco-editor") : "main-editor-textarea")" />
 
       <ReplaceBar
         @ref="_replaceBar"
