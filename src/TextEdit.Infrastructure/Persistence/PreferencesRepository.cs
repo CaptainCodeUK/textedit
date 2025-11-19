@@ -42,6 +42,8 @@ public class PreferencesRepository : IPreferencesRepository
             AllowTrailingCommas = true,
             ReadCommentHandling = JsonCommentHandling.Skip
         };
+        // Make enum values human-readable in preferences.json
+        _jsonOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     }
 
     /// <summary>

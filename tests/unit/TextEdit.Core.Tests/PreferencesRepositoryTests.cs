@@ -85,6 +85,25 @@ public class PreferencesRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveAsync_WithAlternateEditor_Persists()
+    {
+        // Arrange
+        var prefs = new UserPreferences
+        {
+            UseAlternateEditor = true,
+            AlternateEditor = TextEdit.Core.Preferences.AlternateEditorKind.CodeMirror
+        };
+
+        // Act
+        await _repository.SaveAsync(prefs);
+        var loaded = await _repository.LoadAsync();
+
+        // Assert
+        Assert.True(loaded.UseAlternateEditor);
+        Assert.Equal(TextEdit.Core.Preferences.AlternateEditorKind.CodeMirror, loaded.AlternateEditor);
+    }
+
+    [Fact]
     public async Task SaveAsync_GeneratesJson_WithUseAlternateEditorField()
     {
         // Arrange

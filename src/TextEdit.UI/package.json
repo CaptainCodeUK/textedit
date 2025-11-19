@@ -1,0 +1,18 @@
+{
+  "name": "textedit-ui-webassets",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Build helper for local bundling of CodeMirror 6 to avoid multiple-instance problems",
+  "devDependencies": {
+    "esbuild": "0.18.0"
+  },
+  "dependencies": {
+    "@codemirror/state": "0.19.3",
+    "@codemirror/view": "0.19.45",
+    "@codemirror/basic-setup": "0.19.1",
+    "@codemirror/lang-markdown": "0.19.4"
+  },
+  "scripts": {
+  "build:codemirror": "esbuild tools/codemirror-entry.js --bundle --platform=browser --format=esm --outfile=wwwroot/lib/codemirror/codemirror-bundle.js --minify --sourcemap"
+  }
+}

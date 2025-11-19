@@ -94,6 +94,20 @@
                                        @onchange="ToggleAlternateEditor" />
                                 <span>Use alternate editor (experimental)</span>
                             </label>
+                            @if (AppState.Preferences.UseAlternateEditor)
+                            {
+                                <div style="padding-left:24px; margin-top:6px;">
+                                    <label style="display:flex; gap:8px; align-items:center; color: var(--fg);">
+                                        <span style="min-width:140px;">Alternate editor</span>
+                                        <select id="alternate-editor-select" @onchange="SetAlternateEditor">
+                                            @foreach (var item in Enum.GetValues(typeof(TextEdit.Core.Preferences.AlternateEditorKind)).Cast<TextEdit.Core.Preferences.AlternateEditorKind>())
+                                            {
+                                                <option value="@item.ToString()" selected="@(item == AppState.Preferences.AlternateEditor)">@item.ToString()</option>
+                                            }
+                                        </select>
+                                    </label>
+                                </div>
+                            }
                             <p style="font-size:12px; color:var(--muted); margin:0 0 8px 0;">Switch to an experimental editor component (prototype) that enables advanced editing features. May be unstable.</p>
                         </div>
                     </section>
@@ -271,7 +285,7 @@
     public async Task CloseDialog()
     {
         await OnClose.InvokeAsync();
-        await RestoreFocusToEditor();
+        await JS.InvokeVoidAsync("editorFocus.focusActiveEditor");
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
@@ -484,6 +498,22 @@
         catch (System.Exception ex)
         {
             DialogService.ShowErrorDialog("Preferences Error", $"Failed to save preferences: {ex.Message}");
+        }
+    }
+
+    private async Task SetAlternateEditor(ChangeEventArgs e)
+    {
+        var v = e.Value?.ToString() ?? string.Empty;
+        if (System.Enum.TryParse<TextEdit.Core.Preferences.AlternateEditorKind>(v, out var parsed))
+        {
+            try
+            {
+                await AppState.SetAlternateEditorAsync(parsed);
+            }
+            catch (System.Exception ex)
+            {
+                DialogService.ShowErrorDialog("Preferences Error", $"Failed to save preferences: {ex.Message}");
+            }
         }
     }
 

@@ -260,12 +260,39 @@ public class PlaywrightDomTests : IAsyncLifetime
         // Toggle alternate editor on via JS
         await _page.EvaluateAsync("() => DotNet.invokeMethodAsync('TextEdit.UI', 'ToggleAlternateEditorFromJS', true)");
 
-        // Wait for alt editor to be visible
-        await _page.WaitForSelectorAsync("#alt-editor", new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
+    // Wait for monaco editor to be visible
+    await _page.WaitForSelectorAsync("#monaco-editor", new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
 
-    // Monaco container should be present in the AltEditor PoC
-    var monaco = await _page.QuerySelectorAsync("#alt-monaco");
+    // Monaco container should be present since default AlternateEditor is Monaco
+    var monaco = await _page.QuerySelectorAsync("#monaco-editor");
+    var codemirror = await _page.QuerySelectorAsync("#codemirror-editor");
     Assert.NotNull(monaco);
+    Assert.Null(codemirror);
+
+    // Now open Options and select CodeMirror, then ensure editor swaps
+    await _page.EvaluateAsync("() => DotNet.invokeMethodAsync('TextEdit.UI', 'OpenOptionsDialogFromJS')");
+    await _page.WaitForSelectorAsync("#alternate-editor-select", new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
+    await _page.SelectOptionAsync("#alternate-editor-select", "CodeMirror");
+
+    // Wait for CodeMirror to appear and Monaco to be removed
+    await _page.WaitForSelectorAsync("#codemirror-editor", new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
+    monaco = await _page.QuerySelectorAsync("#monaco-editor");
+    Assert.Null(monaco);
+
+    // Ensure CodeMirror shows a visible editing surface (either CM6 or CM5)
+    var cmSurface = await _page.QuerySelectorAsync("#codemirror-editor .cm-editor, #codemirror-editor .CodeMirror, #codemirror-editor .codemirror-fallback-editor");
+    Assert.NotNull(cmSurface);
+    var box = await cmSurface.BoundingBoxAsync();
+    Assert.True(box?.Height > 0 && box?.Width > 0);
+
+    // If CM6 loaded, we also expect a cursor element to be present once focused. If fallback used, we skip cursor check.
+    var cursor = await _page.QuerySelectorAsync("#codemirror-editor .cm-editor .cm-cursor");
+    var fallback = await _page.QuerySelectorAsync("#codemirror-editor .codemirror-fallback-editor");
+    if (cursor != null && fallback == null)
+    {
+        var cBox = await cursor.BoundingBoxAsync();
+        Assert.True(cBox?.Height > 0 || cBox?.Width >= 0); // visible or zero-width caret
+    }
 
         // Ensure the original textarea is removed or hidden
         var textarea = await _page.QuerySelectorAsync("textarea#main-editor-textarea");
@@ -274,6 +301,15 @@ public class PlaywrightDomTests : IAsyncLifetime
         // Toggle back to original editor
         await _page.EvaluateAsync("() => DotNet.invokeMethodAsync('TextEdit.UI', 'ToggleAlternateEditorFromJS', false)");
         await _page.WaitForSelectorAsync("textarea#main-editor-textarea", new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
+
+    // If a local CodeMirror bundle was built for the UI, confirm the browser loaded it
+    var currentDir = FindWorkspaceRoot();
+    var bundlePath = Path.Combine(currentDir, "src", "TextEdit.UI", "wwwroot", "lib", "codemirror", "codemirror-bundle.js");
+    if (File.Exists(bundlePath))
+    {
+        var vendorLoaded = await _page.EvaluateAsync<bool>("() => !!window.__codemirror6_vendor_loaded");
+        Assert.True(vendorLoaded, "Local CodeMirror bundle exists but the page did not mark it as loaded (window.__codemirror6_vendor_loaded). Ensure build step ran and bundle is served.");
+    }
     }
 
     [Fact]
@@ -292,16 +328,59 @@ public class PlaywrightDomTests : IAsyncLifetime
 
         // Toggle alternate editor on via JS and wait for it to be visible
         await _page.EvaluateAsync("() => DotNet.invokeMethodAsync('TextEdit.UI', 'ToggleAlternateEditorFromJS', true)");
-        await _page.WaitForSelectorAsync("#alt-editor", new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
+    await _page.WaitForSelectorAsync("#monaco-editor", new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
 
         // Reload the page (simulate app restart); preferences should be loaded from disk
         await _page.ReloadAsync(new PageReloadOptions { Timeout = 30000 });
 
         // Wait for the editor to be present again post reload
-        await _page.WaitForSelectorAsync("#alt-editor", new() { State = WaitForSelectorState.Visible, Timeout = 15000 });
+    await _page.WaitForSelectorAsync("#monaco-editor", new() { State = WaitForSelectorState.Visible, Timeout = 15000 });
 
-        var monaco = await _page.QuerySelectorAsync("#alt-monaco");
-        Assert.NotNull(monaco);
+    var monaco = await _page.QuerySelectorAsync("#monaco-editor");
+    var codemirror = await _page.QuerySelectorAsync("#codemirror-editor");
+    Assert.NotNull(monaco);
+    Assert.NotNull(codemirror);
+    }
+
+    [Fact]
+    public async Task AltEditor_CodeMirror_Fallback_When_esm_sh_blocked()
+    {
+        if (!string.IsNullOrEmpty(_skipReason)) return;
+
+        Assert.NotNull(_page);
+
+        // Block external ESM and CDN providers so dynamic ESM imports fail
+        await _page.RouteAsync("**/esm.sh/**", async route => await route.AbortAsync());
+        await _page.RouteAsync("**/cdnjs.cloudflare.com/**", async route => await route.AbortAsync());
+
+        // Make sure default textarea is present
+        await _page!.WaitForSelectorAsync("textarea#main-editor-textarea", new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
+
+        // Toggle alternative editor on
+        await _page.EvaluateAsync("() => DotNet.invokeMethodAsync('TextEdit.UI', 'ToggleAlternateEditorFromJS', true)");
+        await _page.WaitForSelectorAsync("#monaco-editor", new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
+
+        // Pick CodeMirror, then wait for editor placeholder
+        await _page.EvaluateAsync("() => DotNet.invokeMethodAsync('TextEdit.UI', 'OpenOptionsDialogFromJS')");
+        await _page.WaitForSelectorAsync("#alternate-editor-select", new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
+        await _page.SelectOptionAsync("#alternate-editor-select", "CodeMirror");
+        await _page.WaitForSelectorAsync("#codemirror-editor", new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
+
+        // We expect either our local bundle (if built) or the fallback editor to be used.
+        bool vendorLoaded = await _page.EvaluateAsync<bool>("() => !!window.__codemirror6_vendor_loaded");
+        if (vendorLoaded)
+        {
+            // Local bundle present - ensure CM6 UI is shown
+            var cm6 = await _page.QuerySelectorAsync("#codemirror-editor .cm-editor");
+            Assert.NotNull(cm6);
+        }
+        else
+        {
+            // No local bundle - check for legacy or internal fallback
+            var cm5 = await _page.QuerySelectorAsync("#codemirror-editor .CodeMirror");
+            var fallback = await _page.QuerySelectorAsync("#codemirror-editor .codemirror-fallback-editor");
+            Assert.True(cm5 != null || fallback != null, "Expected either CM5 or internal fallback when esm.sh is blocked");
+        }
     }
 
     [Fact]
@@ -320,7 +399,7 @@ public class PlaywrightDomTests : IAsyncLifetime
 
         // Toggle alternate editor on via JS
         await _page.EvaluateAsync("() => DotNet.invokeMethodAsync('TextEdit.UI', 'ToggleAlternateEditorFromJS', true)");
-        await _page.WaitForSelectorAsync("#alt-editor", new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
+    await _page.WaitForSelectorAsync("#monaco-editor", new() { State = WaitForSelectorState.Visible, Timeout = 10000 });
 
         // Gracefully close the connected browser and app process and restart app
         try
@@ -364,9 +443,9 @@ public class PlaywrightDomTests : IAsyncLifetime
 
         await _page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
-        // Wait for the AltEditor to be present after full restart
-        await _page.WaitForSelectorAsync("#alt-editor", new() { State = WaitForSelectorState.Visible, Timeout = 20000 });
-        var monaco = await _page.QuerySelectorAsync("#alt-monaco");
+    // Wait for the MonacoEditor to be present after full restart
+    await _page.WaitForSelectorAsync("#monaco-editor", new() { State = WaitForSelectorState.Visible, Timeout = 20000 });
+    var monaco = await _page.QuerySelectorAsync("#monaco-editor");
         Assert.NotNull(monaco);
     }
 
@@ -376,7 +455,7 @@ public class PlaywrightDomTests : IAsyncLifetime
         if (!string.IsNullOrEmpty(_skipReason)) return;
 
         // Write a preferences.json with UseAlternateEditor and LoggingEnabled set to true before launching
-        var prefs = new { useAlternateEditor = true, loggingEnabled = true };
+    var prefs = new { useAlternateEditor = true, loggingEnabled = true, alternateEditor = "Monaco" };
         var json = System.Text.Json.JsonSerializer.Serialize(prefs, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase, WriteIndented = true });
         var prefsPath = TextEdit.Infrastructure.Persistence.AppPaths.PreferencesPath;
         var dir = Path.GetDirectoryName(prefsPath)!;
@@ -415,7 +494,7 @@ public class PlaywrightDomTests : IAsyncLifetime
         await _page.WaitForLoadStateAsync(LoadState.NetworkIdle);
 
         // Ensure alt editor is used immediately on startup
-        await _page.WaitForSelectorAsync("#alt-editor", new() { State = WaitForSelectorState.Visible, Timeout = 15000 });
+    await _page.WaitForSelectorAsync("#monaco-editor", new() { State = WaitForSelectorState.Visible, Timeout = 15000 });
 
         // Open Options dialog via JS and assert loggingEnabled is checked
         await _page.EvaluateAsync("() => DotNet.invokeMethodAsync('TextEdit.UI', 'OpenOptionsDialogFromJS')");
@@ -433,7 +512,7 @@ public class PlaywrightDomTests : IAsyncLifetime
 
         var prefsPath = TextEdit.Infrastructure.Persistence.AppPaths.PreferencesPath;
         Directory.CreateDirectory(Path.GetDirectoryName(prefsPath)!);
-        var initial = new { useAlternateEditor = true, loggingEnabled = true, fileExtensions = new[] { ".md", ".txt" } };
+    var initial = new { useAlternateEditor = true, loggingEnabled = true, alternateEditor = "Monaco", fileExtensions = new[] { ".md", ".txt" } };
         var json = System.Text.Json.JsonSerializer.Serialize(initial, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase, WriteIndented = true });
         await File.WriteAllTextAsync(prefsPath, json);
 

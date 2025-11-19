@@ -400,6 +400,34 @@ Integration tests in `tests/integration/TextEdit.App.Tests/`:
 
 **Decision:** Acceptable trade-off for menu integration. Delegates are assigned once on TextEditor mount.
 
+## Local CodeMirror bundling
+
+To avoid issues where multiple instances of @codemirror/* are loaded (which can cause
+"Unrecognized extension" runtime errors), this project includes a small esbuild script
+that creates a single local bundle of CodeMirror 6. The bundle lives under:
+
+```
+src/TextEdit.UI/wwwroot/lib/codemirror/codemirror-bundle.js
+```
+
+To build locally (Fish shell):
+
+```fish
+./scripts/build-codemirror.fish
+```
+
+Or from the UI folder using npm:
+
+```bash
+cd src/TextEdit.UI
+npm ci
+npm run build:codemirror
+```
+
+`codemirrorInterop.js` prefers the local bundle when available and only falls back
+to remote esm.sh if the local bundle is absent. This reduces module duplication and
+makes CM6 behave deterministically.
+
 ## Known Limitations
 
 - No virtual scrolling (not needed for text documents <10MB)

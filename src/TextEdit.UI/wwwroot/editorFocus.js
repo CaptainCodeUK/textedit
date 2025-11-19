@@ -1,5 +1,6 @@
 // Focus management for the text editor
 window.editorFocus = {
+    _currentEditorId: 'main-editor-textarea',
     focus: function (elementId) {
         const element = document.getElementById(elementId);
         if (element) {
@@ -8,6 +9,7 @@ window.editorFocus = {
         }
         return false;
     },
+    
 
     // Focus with a slight delay to ensure DOM updates are complete
     focusDelayed: function (elementId, delayMs = 10) {
@@ -57,9 +59,12 @@ window.editorFocus = {
     // Initialize global focus management
     initialize: function(editorId) {
         // Prevent focus loss when clicking on non-interactive areas
-        document.addEventListener('mousedown', function(e) {
+        if (editorId) this._currentEditorId = editorId;
+        if (this._initialized) return;
+        this._initialized = true;
+        document.addEventListener('mousedown', (e) => {
             const target = e.target;
-            const editor = document.getElementById(editorId);
+            const editor = document.getElementById(this._currentEditorId);
             // If the click is inside the Find/Replace bars, never interfere
             const inFindReplaceBar = !!(target.closest && (target.closest('.findbar') || target.closest('.findbar-container')));
             if (inFindReplaceBar) {
@@ -86,10 +91,49 @@ window.editorFocus = {
                 
                 // Restore focus to editor
                 setTimeout(() => {
-                    editor.focus();
+                    try { editor.focus(); } catch (err) { /* ignore */ }
                 }, 0);
             }
         });
+    }
+
+    // Change which editor element is considered the active editor.
+    setActiveEditor: function (editorId) {
+        if (!editorId) return false;
+        this._currentEditorId = editorId;
+        try {
+            // Clear existing active classes
+            document.querySelectorAll('.codemirror-editor-placeholder.active-editor, .alt-editor-placeholder.active-editor').forEach(e => e.classList.remove('active-editor'));
+            // Add active class to the wrapper element containing the editor
+            const elm = document.getElementById(editorId);
+            if (elm) {
+                const wrap = elm.closest('.codemirror-editor-placeholder') || elm.closest('.alt-editor-placeholder');
+                if (wrap) wrap.classList.add('active-editor');
+            }
+        } catch (e) { }
+        return true;
+    },
+
+    // Focus the current active editor. Try Monaco/CodeMirror focus methods
+    focusActiveEditor: function () {
+        try {
+            // Monaco: textEditMonaco.editors['monaco-editor'].editor.focus()
+            if (window.textEditMonaco && window.textEditMonaco.editors && window.textEditMonaco.editors['monaco-editor'] && window.textEditMonaco.editors['monaco-editor'].editor) {
+                try { window.textEditMonaco.editors['monaco-editor'].editor.focus(); return true; } catch (e) { }
+            }
+
+            // CM6: textEditCodeMirror.editors['codemirror-editor'].view.focus()
+            if (window.textEditCodeMirror && window.textEditCodeMirror.editors && window.textEditCodeMirror.editors['codemirror-editor']) {
+                const entry = window.textEditCodeMirror.editors['codemirror-editor'];
+                try { if (entry.view && entry.view.focus) { entry.view.focus(); return true; } } catch (e) { }
+                try { if (entry.editor && entry.editor.focus) { entry.editor.focus(); return true; } } catch (e) { }
+            }
+
+            // Otherwise, fallback to focusing an HTML element with the id
+            const el = document.getElementById(this._currentEditorId || 'main-editor-textarea');
+            if (el) { el.focus(); return true; }
+        } catch (e) { }
+        return false;
     }
 };
 

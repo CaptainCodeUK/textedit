@@ -299,8 +299,8 @@ public class AppState : IDisposable
             }
         }
         catch { /* ignore */ }
-        _logger?.LogInformation("Loaded preferences: UseAlternateEditor={UseAlternateEditor}, LoggingEnabled={LoggingEnabled}, FileExtensions={ExtensionsCount}",
-            Preferences.UseAlternateEditor, Preferences.LoggingEnabled, Preferences.FileExtensions?.Count ?? 0);
+        _logger?.LogInformation("Loaded preferences: UseAlternateEditor={UseAlternateEditor}, AlternateEditor={AlternateEditor}, LoggingEnabled={LoggingEnabled}, FileExtensions={ExtensionsCount}",
+            Preferences.UseAlternateEditor, Preferences.AlternateEditor, Preferences.LoggingEnabled, Preferences.FileExtensions?.Count ?? 0);
         _msLogger?.LogInformation("Loaded preferences (ms logger): UseAlternateEditor={UseAlternateEditor}, LoggingEnabled={LoggingEnabled}, FileExtensions={ExtensionsCount}",
             Preferences.UseAlternateEditor, Preferences.LoggingEnabled, Preferences.FileExtensions?.Count ?? 0);
         await ApplyThemeAsync();
@@ -313,8 +313,8 @@ public class AppState : IDisposable
     public async Task SavePreferencesAsync()
     {
         await _prefsRepo.SaveAsync(Preferences);
-        _logger?.LogInformation("Saved preferences: UseAlternateEditor={UseAlternateEditor}, LoggingEnabled={LoggingEnabled}, FileExtensions={ExtensionsCount}",
-            Preferences.UseAlternateEditor, Preferences.LoggingEnabled, Preferences.FileExtensions?.Count ?? 0);
+        _logger?.LogInformation("Saved preferences: UseAlternateEditor={UseAlternateEditor}, AlternateEditor={AlternateEditor}, LoggingEnabled={LoggingEnabled}, FileExtensions={ExtensionsCount}",
+            Preferences.UseAlternateEditor, Preferences.AlternateEditor, Preferences.LoggingEnabled, Preferences.FileExtensions?.Count ?? 0);
         _msLogger?.LogInformation("Saved preferences (ms logger): UseAlternateEditor={UseAlternateEditor}, LoggingEnabled={LoggingEnabled}, FileExtensions={ExtensionsCount}",
             Preferences.UseAlternateEditor, Preferences.LoggingEnabled, Preferences.FileExtensions?.Count ?? 0);
         NotifyChanged();
@@ -336,6 +336,25 @@ public class AppState : IDisposable
         {
             // Revert value on failure to persist
             Preferences.UseAlternateEditor = !enabled;
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Set which alternate editor to use (Monaco, CodeMirror, ...). Saves preferences and reverts on failure.
+    /// </summary>
+    public async Task SetAlternateEditorAsync(Core.Preferences.AlternateEditorKind editor)
+    {
+        var prev = Preferences.AlternateEditor;
+        Preferences.AlternateEditor = editor;
+        try
+        {
+            await SavePreferencesAsync();
+            NotifyChanged();
+        }
+        catch
+        {
+            Preferences.AlternateEditor = prev;
             throw;
         }
     }

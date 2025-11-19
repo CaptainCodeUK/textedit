@@ -9,7 +9,15 @@
         style="height:100%;min-height:0;display:flex;flex-direction:column;flex:1 1 auto; position:relative;">
   @if (AppState.Preferences?.UseAlternateEditor ?? false)
   {
-    <AltEditor id="alt-editor" @bind-Value="Content" />
+    @switch(AppState.Preferences.AlternateEditor)
+    {
+      case TextEdit.Core.Preferences.AlternateEditorKind.CodeMirror:
+        <CodeMirrorEditor id="codemirror-editor" @bind-Value="Content" />
+        break;
+      default:
+        <MonacoEditor id="monaco-editor" @bind-Value="Content" />
+        break;
+    }
   }
   else
   {
@@ -33,7 +41,7 @@
         IsVisible="@_showFind"
         Text="@Content"
       OnClose="@OnFindClosed"
-        EditorElementId="main-editor-textarea" />
+        EditorElementId="@(AppState.Preferences?.UseAlternateEditor ?? false ? (AppState.Preferences.AlternateEditor == TextEdit.Core.Preferences.AlternateEditorKind.CodeMirror ? "codemirror-editor" : "monaco-editor") : "main-editor-textarea")" />
 
       <ReplaceBar
         @ref="_replaceBar"

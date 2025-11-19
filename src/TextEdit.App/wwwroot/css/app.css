@@ -1,3 +1,15 @@
+/* Bring active (focused) editor above overlays when necessary */
+.codemirror-editor-placeholder.active-editor,
+.alt-editor-placeholder.active-editor {
+    z-index: 1101;
+    position: relative;
+}
+.codemirror-editor-placeholder.active-editor .cm-editor,
+.alt-editor-placeholder.active-editor .monaco-editor,
+.alt-editor-placeholder.active-editor #monaco-editor {
+    z-index: 1102;
+    position: relative;
+}
 /* Minimal runtime CSS to ensure layout stretches and editor fills space.
    Tailwind build can replace/augment this later. */
 

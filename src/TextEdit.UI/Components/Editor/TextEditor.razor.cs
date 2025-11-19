@@ -222,11 +222,11 @@ public partial class TextEditor : ComponentBase, IDisposable
         return Task.CompletedTask;
     }
 
-    private void OnAppStateChanged()
+    private async void OnAppStateChanged()
     {
         // flush any pending snapshot for the previous document before switching
         FlushPendingUndoPush();
-        InvokeAsync(() =>
+    _ = InvokeAsync(async () =>
         {
             var newActiveId = CurrentDoc?.Id;
             if (newActiveId != _lastActiveDocId)
@@ -238,6 +238,13 @@ public partial class TextEditor : ComponentBase, IDisposable
                 StateHasChanged();
             }
             StateHasChanged();
+            try
+            {
+                // Update focus manager to use active editor element ID
+                var editorId = AppState.Preferences?.UseAlternateEditor ?? false ? (AppState.Preferences.AlternateEditor == TextEdit.Core.Preferences.AlternateEditorKind.CodeMirror ? "codemirror-editor" : "monaco-editor") : "main-editor-textarea";
+                await JSRuntime.InvokeVoidAsync("editorFocus.setActiveEditor", editorId);
+            }
+            catch { }
         });
     }
 
@@ -251,7 +258,15 @@ public partial class TextEditor : ComponentBase, IDisposable
         
         try
         {
-            await JSRuntime.InvokeVoidAsync("editorFocus.focusDelayed", "main-editor-textarea", 10);
+            // If alternate editor is enabled, focus whichever engine is active (Monaco/CodeMirror)
+            if (AppState.Preferences?.UseAlternateEditor ?? false)
+            {
+                await JSRuntime.InvokeVoidAsync("editorFocus.focusActiveEditor");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("editorFocus.focusDelayed", "main-editor-textarea", 10);
+            }
         }
         catch
         {

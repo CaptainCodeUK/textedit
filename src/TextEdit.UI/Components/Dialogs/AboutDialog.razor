@@ -124,7 +124,7 @@
         try
         {
             await Task.Delay(100); // Allow dialog to close
-            await JS.InvokeVoidAsync("editorFocus.focus", "main-editor-textarea");
+            await JS.InvokeVoidAsync("editorFocus.focusActiveEditor");
         }
         catch { /* ignore */ }
     }
