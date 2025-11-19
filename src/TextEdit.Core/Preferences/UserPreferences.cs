@@ -38,17 +38,6 @@ public class UserPreferences
     /// </summary>
     public TextEdit.Core.Updates.UpdatePreferences Updates { get; set; } = new();
 
-    /// <summary>
-    /// Use a richer alternate editor (prototype). This is an experimental feature that can be toggled in Options.
-    /// </summary>
-    public bool UseAlternateEditor { get; set; } = false;
-
-    /// <summary>
-    /// Which alternate editor to use when UseAlternateEditor is true.
-    /// Allows experimentation with multiple editors (Monaco, CodeMirror, etc).
-    /// </summary>
-    public AlternateEditorKind AlternateEditor { get; set; } = AlternateEditorKind.Monaco;
-
     public UserPreferences()
     {
     }
@@ -99,15 +88,4 @@ public enum ThemeMode
     Light = 0,
     Dark = 1,
     System = 2
-}
-
-/// <summary>
-/// Experimental alternate editor choices.
-/// Add new types here as needed when prototyping other editors.
-/// </summary>
-public enum AlternateEditorKind
-{
-    Monaco = 0,
-    CodeMirror = 1,
-    Ace = 2
 }

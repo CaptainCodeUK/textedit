@@ -21,10 +21,8 @@ public partial class TextEditor : ComponentBase, IDisposable
     [Inject] protected IJSRuntime JSRuntime { get; set; } = default!;
     [Inject] protected DialogService DialogService { get; set; } = default!; // For About dialog
     [Inject] protected MarkdownFormattingService FormattingService { get; set; } = default!;
-    [Inject] protected FindService FindService { get; set; } = default!; // US1: text search
     [Inject] protected TextEdit.Infrastructure.Logging.IAppLoggerFactory AppLoggerFactory { get; set; } = default!;
 
-    private ElementReference textareaElement;
     protected Document? CurrentDoc => AppState.ActiveDocument;
     protected EditorState State => AppState.EditorState;
     private bool _suppressUndoPush;
@@ -34,14 +32,6 @@ public partial class TextEditor : ComponentBase, IDisposable
     private static readonly TimeSpan _undoDebounce = TimeSpan.FromMilliseconds(400);
     private bool _pendingCaretSync;
     private Guid? _lastActiveDocId;
-    // Find UI state (US1)
-    private bool _showFind;
-    private FindBar? _findBar;
-    // Replace UI state (US2)
-    private bool _showReplace;
-    private ReplaceBar? _replaceBar;
-    private bool _replaceMatchCase;
-    private bool _replaceWholeWord;
 
     protected string Content
     {
@@ -82,8 +72,7 @@ public partial class TextEditor : ComponentBase, IDisposable
         EditorCommandHub.OpenRequested = HandleOpen;
         EditorCommandHub.SaveRequested = HandleSave;
         EditorCommandHub.SaveAsRequested = HandleSaveAs;
-        EditorCommandHub.UndoRequested = HandleUndo;
-        EditorCommandHub.RedoRequested = HandleRedo;
+        // Undo/Redo handled natively by Monaco
         EditorCommandHub.NextTabRequested = HandleNextTab;
         EditorCommandHub.PrevTabRequested = HandlePrevTab;
         EditorCommandHub.CloseTabRequested = HandleCloseTab;
@@ -94,14 +83,8 @@ public partial class TextEditor : ComponentBase, IDisposable
         EditorCommandHub.ToggleToolbarRequested = HandleToggleToolbar;
         EditorCommandHub.AboutRequested = HandleAboutRequested; // T055
         EditorCommandHub.OptionsRequested = HandleOptionsRequested; // US3
-    // Find
-    EditorCommandHub.FindRequested = HandleFindRequested;
-    EditorCommandHub.FindNextRequested = HandleFindNextRequested;
-    EditorCommandHub.FindPreviousRequested = HandleFindPreviousRequested;
-        // Replace
-        EditorCommandHub.ReplaceRequested = HandleReplaceRequested;
         
-        // Format menu commands
+        // Format menu commands (Monaco handles find/replace/undo natively)
         EditorCommandHub.FormatHeading1Requested = () => HandleFormatCommand(MarkdownFormattingService.MarkdownFormat.H1);
         EditorCommandHub.FormatHeading2Requested = () => HandleFormatCommand(MarkdownFormattingService.MarkdownFormat.H2);
         EditorCommandHub.FormatBoldRequested = () => HandleFormatCommand(MarkdownFormattingService.MarkdownFormat.Bold);
@@ -111,41 +94,11 @@ public partial class TextEditor : ComponentBase, IDisposable
         EditorCommandHub.FormatNumberedListRequested = () => HandleFormatCommand(MarkdownFormattingService.MarkdownFormat.NumberedList);
     }
 
-    private async Task HandleFindRequested()
-    {
-        // Make bars mutually exclusive
-        _showReplace = false;
-        _showFind = true;
-        await InvokeAsync(StateHasChanged);
-        try { await _findBar?.ShowAsync()!; } catch { /* ignore */ }
-    }
-
-    private async Task HandleFindNextRequested()
-    {
-        // Navigate without reopening the Find bar
-        try { await _findBar?.NextAsync()!; } catch { /* ignore */ }
-    }
-
-    private async Task HandleFindPreviousRequested()
-    {
-        // Navigate without reopening the Find bar
-        try { await _findBar?.PrevAsync()!; } catch { /* ignore */ }
-    }
-
-    private async Task HandleReplaceRequested()
-    {
-        // Make bars mutually exclusive
-        _showFind = false;
-        _showReplace = true;
-        await InvokeAsync(StateHasChanged);
-        try { await _replaceBar?.ShowAsync()!; } catch { /* ignore */ }
-    }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            // Initialize the Tab key handler for the editor
+            // Initialize the Tab key handler for the editor (Monaco handles find/replace/undo natively)
             try
             {
                 await JSRuntime.InvokeVoidAsync("editorFocus.initialize", "main-editor-textarea");
@@ -177,11 +130,8 @@ public partial class TextEditor : ComponentBase, IDisposable
         {
             _pendingCaretSync = false;
             // After a tab switch/render, restore caret and update status.
-            // Only force-focus the editor if no bars are currently visible to avoid stealing focus from inputs.
-            if (!_showFind && !_showReplace)
-            {
-                await FocusEditorAsync();
-            }
+            // Always use Monaco editor focus
+            await FocusEditorAsync();
             if (CurrentDoc is not null)
             {
                 var docId = CurrentDoc.Id;
@@ -201,23 +151,6 @@ public partial class TextEditor : ComponentBase, IDisposable
     }
 
     [Microsoft.JSInterop.JSInvokable]
-    public static async Task ToggleAlternateEditorFromJS(bool enabled)
-    {
-        // JS-invokable entrypoint used by Playwright tests to toggle the alternate editor preference
-        if (_currentInstance == null) return;
-        var appState = _currentInstance.AppState;
-        try
-        {
-            await appState.SetUseAlternateEditorAsync(enabled);
-        }
-        catch (System.Exception ex)
-        {
-            // Revert and show error dialog rather than letting the exception bubble
-            appState.Preferences.UseAlternateEditor = !enabled;
-            _currentInstance.DialogService?.ShowErrorDialog("Preferences Error", $"Failed to save preference: {ex.Message}");
-        }
-    }
-
     [Microsoft.JSInterop.JSInvokable]
     public static Task OpenOptionsDialogFromJS()
     {
@@ -232,11 +165,11 @@ public partial class TextEditor : ComponentBase, IDisposable
         return Task.CompletedTask;
     }
 
-    private async void OnAppStateChanged()
+    private void OnAppStateChanged()
     {
         // flush any pending snapshot for the previous document before switching
         FlushPendingUndoPush();
-    _ = InvokeAsync(async () =>
+        _ = InvokeAsync(async () =>
         {
             var newActiveId = CurrentDoc?.Id;
             if (newActiveId != _lastActiveDocId)
@@ -250,9 +183,8 @@ public partial class TextEditor : ComponentBase, IDisposable
             StateHasChanged();
             try
             {
-                // Update focus manager to use active editor element ID
-                var editorId = AppState.Preferences?.UseAlternateEditor ?? false ? (AppState.Preferences.AlternateEditor == TextEdit.Core.Preferences.AlternateEditorKind.CodeMirror ? "codemirror-editor" : "monaco-editor") : "main-editor-textarea";
-                await JSRuntime.InvokeVoidAsync("editorFocus.setActiveEditor", editorId);
+                // Update focus manager to use Monaco editor
+                await JSRuntime.InvokeVoidAsync("editorFocus.setActiveEditor", "monaco-editor");
             }
             catch { }
         });
@@ -260,23 +192,10 @@ public partial class TextEditor : ComponentBase, IDisposable
 
     private async Task FocusEditorAsync()
     {
-        // Don't steal focus from Find/Replace bars when they're visible
-        if (_showFind || _showReplace)
-        {
-            return;
-        }
-        
         try
         {
-            // If alternate editor is enabled, focus whichever engine is active (Monaco/CodeMirror)
-            if (AppState.Preferences?.UseAlternateEditor ?? false)
-            {
-                await JSRuntime.InvokeVoidAsync("editorFocus.focusActiveEditor");
-            }
-            else
-            {
-                await JSRuntime.InvokeVoidAsync("editorFocus.focusDelayed", "main-editor-textarea", 10);
-            }
+            // Always use Monaco editor focus
+            await JSRuntime.InvokeVoidAsync("editorFocus.focusActiveEditor");
         }
         catch
         {
@@ -399,45 +318,6 @@ public partial class TextEditor : ComponentBase, IDisposable
         await FocusEditorAsync();
     }
 
-    protected async Task HandleUndo()
-    {
-        if (CurrentDoc is null) return;
-        // Flush any pending changes first
-    FlushPendingUndoPush();
-        
-        var text = UndoRedo.Undo(CurrentDoc.Id);
-        if (text is not null)
-        {
-            _suppressUndoPush = true;
-            Content = text;
-            _suppressUndoPush = false;
-            // Reset edit tracking so next edit starts fresh
-            _lastEditedDocId = CurrentDoc.Id;
-            _beforeEditContent = text;
-            
-        }
-        await InvokeAsync(StateHasChanged);
-        await FocusEditorAsync();
-    }
-
-    protected async Task HandleRedo()
-    {
-        if (CurrentDoc is null) return;
-        var text = UndoRedo.Redo(CurrentDoc.Id);
-        if (text is not null)
-        {
-            _suppressUndoPush = true;
-            Content = text;
-            _suppressUndoPush = false;
-            // Reset edit tracking so next edit starts fresh
-            _lastEditedDocId = CurrentDoc.Id;
-            _beforeEditContent = text;
-            
-        }
-        await InvokeAsync(StateHasChanged);
-        await FocusEditorAsync();
-    }
-
     protected async Task HandleNextTab()
     {
         FlushPendingUndoPush();
@@ -539,18 +419,7 @@ public partial class TextEditor : ComponentBase, IDisposable
         FlushPendingUndoPush();
     }
 
-    private Task OnFindClosed()
-    {
-        _showFind = false;
-        return Task.CompletedTask;
-    }
 
-    private async Task OnReplaceClosed()
-    {
-        _showReplace = false;
-        await FocusEditorAsync();
-        await InvokeAsync(StateHasChanged);
-    }
 
     private async Task OnReplaceNextRequested(TextEdit.Core.Searching.ReplaceOperation op)
     {
