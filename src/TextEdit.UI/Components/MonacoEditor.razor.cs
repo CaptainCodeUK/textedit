@@ -1,12 +1,14 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using TextEdit.Core.Documents;
+using TextEdit.UI.App;
 
 namespace TextEdit.UI.Components;
 
 public partial class MonacoEditor : IAsyncDisposable
 {
     [Inject] private IJSRuntime JS { get; set; } = default!;
+    [Inject] private AppState AppState { get; set; } = default!;
 
     private DotNetObjectReference<MonacoEditor>? _dotNetRef;
     private bool _initialized;
@@ -23,6 +25,10 @@ public partial class MonacoEditor : IAsyncDisposable
                 await JS.InvokeVoidAsync("textEditMonaco.createEditor", "monaco-editor", _dotNetRef, new { value = Value ?? string.Empty, language = "markdown" });
                 _initialized = true;
                 _lastValue = Value;
+                
+                // Apply persisted settings
+                await ApplyPersistedSettings();
+                
                 try {
                     await JS.InvokeVoidAsync("editorFocus.setActiveEditor", "monaco-editor");
                     await JS.InvokeVoidAsync("editorFocus.focusActiveEditor");
@@ -95,6 +101,30 @@ public partial class MonacoEditor : IAsyncDisposable
     {
         if (_initialized)
             await JS.InvokeVoidAsync("textEditMonaco.setLanguage", "monaco-editor", language);
+    }
+
+    private async Task ApplyPersistedSettings()
+    {
+        if (!_initialized) return;
+        
+        try
+        {
+            // Apply line numbers setting
+            await JS.InvokeVoidAsync("textEditMonaco.setLineNumbers", "monaco-editor", AppState.Preferences.ShowLineNumbers);
+            
+            // Apply minimap setting
+            await JS.InvokeVoidAsync("textEditMonaco.setMinimap", "monaco-editor", AppState.Preferences.ShowMinimap);
+            
+            // Apply theme setting
+            var monacoTheme = AppState.Preferences.Theme switch
+            {
+                TextEdit.Core.Preferences.ThemeMode.Dark => "vs-dark",
+                TextEdit.Core.Preferences.ThemeMode.Light => "vs",
+                _ => "vs-dark" // System -> Dark (interim default)
+            };
+            await JS.InvokeVoidAsync("textEditMonaco.setTheme", "monaco-editor", monacoTheme);
+        }
+        catch { /* ignore */ }
     }
 
     public async ValueTask DisposeAsync()

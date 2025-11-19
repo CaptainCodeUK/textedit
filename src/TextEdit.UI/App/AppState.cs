@@ -150,6 +150,12 @@ public class AppState : IDisposable
     /// Raised when state changes and components should re-render.
     /// </summary>
     public event Action? Changed;
+    
+    /// <summary>
+    /// Raised when the theme changes, allowing editors to update their theme dynamically.
+    /// </summary>
+    public event Action<ThemeMode>? ThemeChanged;
+    
     private void NotifyChanged()
     {
         _stateVersion++;
@@ -350,6 +356,7 @@ public class AppState : IDisposable
             await ApplyThemeAsync();
             _logger?.LogInformation("Set Theme to {Theme}", theme);
             NotifyChanged();
+            ThemeChanged?.Invoke(theme);
         }
         catch
         {

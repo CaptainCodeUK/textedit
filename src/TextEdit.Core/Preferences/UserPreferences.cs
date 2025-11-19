@@ -34,6 +34,16 @@ public class UserPreferences
     public bool ToolbarVisible { get; set; } = true;
 
     /// <summary>
+    /// Editor line numbers visibility setting.
+    /// </summary>
+    public bool ShowLineNumbers { get; set; } = true;
+
+    /// <summary>
+    /// Editor minimap visibility setting.
+    /// </summary>
+    public bool ShowMinimap { get; set; } = false;
+
+    /// <summary>
     /// Auto-update preferences (check frequency, auto-download, etc).
     /// </summary>
     public TextEdit.Core.Updates.UpdatePreferences Updates { get; set; } = new();

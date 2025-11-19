@@ -8,6 +8,7 @@
 @inject TextEdit.Infrastructure.Updates.AutoUpdateService AutoUpdateService
 @inject TextEdit.UI.App.DialogService DialogService
 @using System.Runtime.InteropServices
+@using TextEdit.UI.Components.Editor
 
 @if (IsVisible)
 {
@@ -86,10 +87,27 @@
                 @if (SelectedTab == OptionsTab.Editor)
                 {
                     <section id="panel-editor" role="tabpanel" aria-labelledby="panel-editor-label" style="margin-bottom: 20px;">
-                        <h3 style="font-size: 13px; font-weight: 600; margin: 0 0 8px 0; color: var(--fg);">Editor</h3>
+                        <h3 style="font-size: 13px; font-weight: 600; margin: 0 0 8px 0; color: var(--fg);">Editor Options</h3>
                         <div style="display:flex; flex-direction:column; gap:12px;">
-                            <!-- Monaco editor is always active -->
-                            <p style="font-size:12px; color:var(--muted); margin:0 0 8px 0;">Switch to an experimental editor component (prototype) that enables advanced editing features. May be unstable.</p>
+                            <!-- Word Wrap -->
+                            <label style="display:flex; gap:8px; align-items:center; cursor:pointer; color: var(--fg);">
+                                <input type="checkbox" checked="@AppState.EditorState.WordWrap" @onchange="ToggleWordWrap" />
+                                <span>Enable word wrap (Alt+Z)</span>
+                            </label>
+
+                            <!-- Line Numbers -->
+                            <label style="display:flex; gap:8px; align-items:center; cursor:pointer; color: var(--fg);">
+                                <input type="checkbox" checked="@AppState.Preferences.ShowLineNumbers" @onchange="ToggleLineNumbers" />
+                                <span>Show line numbers</span>
+                            </label>
+
+                            <!-- Minimap -->
+                            <label style="display:flex; gap:8px; align-items:center; cursor:pointer; color: var(--fg);">
+                                <input type="checkbox" checked="@AppState.Preferences.ShowMinimap" @onchange="ToggleMinimap" />
+                                <span>Show minimap</span>
+                            </label>
+
+                            <p style="font-size:12px; color:var(--muted); margin:8px 0 0 0;">Font size and family can be changed using the toolbar dropdowns.</p>
                         </div>
                     </section>
                 }
@@ -514,5 +532,50 @@
         order = Math.Min(order, sizes.Length - 1);
         var adjusted = bytes / Math.Pow(1024, order);
         return $"{adjusted:0.##} {sizes[order]}";
+    }
+
+    // Editor settings - Now bound to AppState.Preferences for persistence
+    
+    private async Task ToggleWordWrap(ChangeEventArgs e)
+    {
+        // Word wrap is controlled via EditorCommandHub which syncs with AppState and View menu
+        try
+        {
+            await EditorCommandHub.InvokeSafe(EditorCommandHub.ToggleWordWrapRequested);
+        }
+        catch (System.Exception ex)
+        {
+            DialogService.ShowErrorDialog("Editor Error", $"Failed to toggle word wrap: {ex.Message}");
+        }
+    }
+
+    private async Task ToggleLineNumbers(ChangeEventArgs e)
+    {
+        bool enabled = (bool)(e.Value ?? true);
+        AppState.Preferences.ShowLineNumbers = enabled;
+        try
+        {
+            await AppState.SavePreferencesAsync();
+            await JS.InvokeVoidAsync("textEditMonaco.setLineNumbers", "monaco-editor", enabled);
+        }
+        catch (System.Exception ex)
+        {
+            DialogService.ShowErrorDialog("Editor Error", $"Failed to apply setting: {ex.Message}");
+        }
+    }
+
+    private async Task ToggleMinimap(ChangeEventArgs e)
+    {
+        bool enabled = (bool)(e.Value ?? false);
+        AppState.Preferences.ShowMinimap = enabled;
+        try
+        {
+            await AppState.SavePreferencesAsync();
+            await JS.InvokeVoidAsync("textEditMonaco.setMinimap", "monaco-editor", enabled);
+        }
+        catch (System.Exception ex)
+        {
+            DialogService.ShowErrorDialog("Editor Error", $"Failed to apply setting: {ex.Message}");
+        }
     }
 }

@@ -25,6 +25,7 @@ public partial class TextEditor : ComponentBase, IDisposable
 
     protected Document? CurrentDoc => AppState.ActiveDocument;
     protected EditorState State => AppState.EditorState;
+    private MonacoEditor? _monacoEditor;
     private bool _suppressUndoPush;
     private CancellationTokenSource? _undoCts;
     private Guid? _lastEditedDocId;
@@ -67,12 +68,19 @@ public partial class TextEditor : ComponentBase, IDisposable
         
         // Don't create a document here - App.razor's RestoreSessionAsync handles initialization
         AppState.Changed += OnAppStateChanged;
+        AppState.ThemeChanged += OnThemeChanged;
         // Register handlers for application menu integration
         EditorCommandHub.NewRequested = HandleNew;
         EditorCommandHub.OpenRequested = HandleOpen;
         EditorCommandHub.SaveRequested = HandleSave;
         EditorCommandHub.SaveAsRequested = HandleSaveAs;
-        // Undo/Redo handled natively by Monaco
+        // Edit menu commands (Undo/Redo/Find/Replace all invoke Monaco's native implementations)
+        EditorCommandHub.UndoRequested = () => JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "undo").AsTask();
+        EditorCommandHub.RedoRequested = () => JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "redo").AsTask();
+        EditorCommandHub.FindRequested = () => JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "actions.find").AsTask();
+        EditorCommandHub.FindNextRequested = () => JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "editor.action.nextMatchFindAction").AsTask();
+        EditorCommandHub.FindPreviousRequested = () => JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "editor.action.previousMatchFindAction").AsTask();
+        EditorCommandHub.ReplaceRequested = () => JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "editor.action.startFindReplaceAction").AsTask();
         EditorCommandHub.NextTabRequested = HandleNextTab;
         EditorCommandHub.PrevTabRequested = HandlePrevTab;
         EditorCommandHub.CloseTabRequested = HandleCloseTab;
@@ -102,11 +110,11 @@ public partial class TextEditor : ComponentBase, IDisposable
             try
             {
                 await JSRuntime.InvokeVoidAsync("editorFocus.initialize", "main-editor-textarea");
-                // Set up listeners for Ctrl+Tab navigation (guard against duplicate registration)
+                // Set up listeners for Ctrl+Tab navigation and Alt+P preview toggle
                 await JSRuntime.InvokeVoidAsync("eval", @"
                     if (!window._texteditTabNavListenersInstalled) {
                         window._texteditTabNavListenersInstalled = true;
-                        console.log('[TextEditor.razor] Setting up blazor-next-tab and blazor-prev-tab listeners');
+                        console.log('[TextEditor.razor] Setting up blazor-next-tab, blazor-prev-tab, and blazor-toggle-preview listeners');
                         document.addEventListener('blazor-next-tab', () => {
                             console.log('[TextEditor.razor] blazor-next-tab fired - calling HandleNextTabFromJS');
                             DotNet.invokeMethodAsync('TextEdit.UI', 'HandleNextTabFromJS');
@@ -114,6 +122,10 @@ public partial class TextEditor : ComponentBase, IDisposable
                         document.addEventListener('blazor-prev-tab', () => {
                             console.log('[TextEditor.razor] blazor-prev-tab fired - calling HandlePrevTabFromJS');
                             DotNet.invokeMethodAsync('TextEdit.UI', 'HandlePrevTabFromJS');
+                        });
+                        document.addEventListener('blazor-toggle-preview', () => {
+                            console.log('[TextEditor.razor] blazor-toggle-preview fired - calling HandleTogglePreviewFromJS');
+                            DotNet.invokeMethodAsync('TextEdit.UI', 'HandleTogglePreviewFromJS');
                         });
                     }
                 ");
@@ -188,6 +200,29 @@ public partial class TextEditor : ComponentBase, IDisposable
             }
             catch { }
         });
+    }
+
+    /// <summary>
+    /// Called by AppState when the theme changes to update Monaco with the new theme.
+    /// Maps Light/Dark theme modes to Monaco theme names.
+    /// </summary>
+    public async Task UpdateMonacoThemeAsync(TextEdit.Core.Preferences.ThemeMode themeMode)
+    {
+        if (_monacoEditor == null) return;
+
+        var monacoTheme = themeMode switch
+        {
+            TextEdit.Core.Preferences.ThemeMode.Dark => "vs-dark",
+            TextEdit.Core.Preferences.ThemeMode.Light => "vs",
+            _ => "vs-dark" // System -> Dark (interim default)
+        };
+
+        await _monacoEditor.SetThemeAsync(monacoTheme);
+    }
+
+    private void OnThemeChanged(TextEdit.Core.Preferences.ThemeMode themeMode)
+    {
+        _ = InvokeAsync(() => UpdateMonacoThemeAsync(themeMode));
     }
 
     private async Task FocusEditorAsync()
@@ -361,12 +396,20 @@ public partial class TextEditor : ComponentBase, IDisposable
         await FocusEditorAsync();
     }
 
-    protected Task HandleToggleWordWrap()
+    protected async Task HandleToggleWordWrap()
     {
         State.WordWrap = !State.WordWrap;
         State.NotifyChanged(); // Notify so menu checkmarks update
         AppState.PersistEditorPreferences();
-        return InvokeAsync(StateHasChanged);
+        
+        // Update Monaco editor with new word wrap setting
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("textEditMonaco.setWordWrap", "monaco-editor", State.WordWrap);
+        }
+        catch { /* ignore */ }
+        
+        await InvokeAsync(StateHasChanged);
     }
 
     protected Task HandleTogglePreview()
@@ -531,6 +574,12 @@ public partial class TextEditor : ComponentBase, IDisposable
         return EditorCommandHub.InvokeSafe(EditorCommandHub.PrevTabRequested);
     }
 
+    [Microsoft.JSInterop.JSInvokable]
+    public static Task HandleTogglePreviewFromJS()
+    {
+        return EditorCommandHub.InvokeSafe(EditorCommandHub.TogglePreviewRequested);
+    }
+
         private static TextEditor? _currentInstance;
     
     [Microsoft.JSInterop.JSInvokable]
@@ -584,6 +633,7 @@ public partial class TextEditor : ComponentBase, IDisposable
     {
         FlushPendingUndoPush();
         AppState.Changed -= OnAppStateChanged;
+        AppState.ThemeChanged -= OnThemeChanged;
         if (_currentInstance == this) _currentInstance = null;
     }
 

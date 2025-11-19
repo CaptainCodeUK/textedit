@@ -42,8 +42,53 @@ window.textEditMonaco = window.textEditMonaco || {
       } catch (e) { /* ignore */ }
     });
 
+    // Handle Ctrl+Tab and Ctrl+Shift+Tab using Monaco's command system
+    // Monaco KeyMod and KeyCode for proper keybinding - always execute
+    editor.addCommand(
+      monaco.KeyMod.CtrlCmd | monaco.KeyCode.Tab,
+      () => {
+        console.log('[monacoInterop] Ctrl+Tab triggered via Monaco command');
+        document.dispatchEvent(new CustomEvent('blazor-next-tab'));
+      }
+    );
+    
+    editor.addCommand(
+      monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Tab,
+      () => {
+        console.log('[monacoInterop] Ctrl+Shift+Tab triggered via Monaco command');
+        document.dispatchEvent(new CustomEvent('blazor-prev-tab'));
+      }
+    );
+    
+    // Override Alt+P to toggle markdown preview (instead of Monaco's default binding)
+    editor.addCommand(
+      monaco.KeyMod.Alt | monaco.KeyCode.KeyP,
+      () => {
+        console.log('[monacoInterop] Alt+P triggered - toggling markdown preview');
+        document.dispatchEvent(new CustomEvent('blazor-toggle-preview'));
+      }
+    );
+    
+    // ALSO handle via onKeyDown as fallback
+    const keyDownListener = editor.onKeyDown((e) => {
+      // Check for Ctrl/Cmd+Tab or Ctrl/Cmd+Shift+Tab
+      const isCtrlOrCmd = (e.ctrlKey || e.metaKey) && !e.altKey;
+      // Monaco uses different key codes - Tab is 2
+      const isTabKey = e.keyCode === 2;
+      
+      if (isCtrlOrCmd && isTabKey) {
+        console.log('[monacoInterop] Ctrl+Tab detected via onKeyDown, dispatching event. Shift:', e.shiftKey);
+        e.preventDefault();
+        if (e.shiftKey) {
+          document.dispatchEvent(new CustomEvent('blazor-prev-tab'));
+        } else {
+          document.dispatchEvent(new CustomEvent('blazor-next-tab'));
+        }
+      }
+    });
+
     // Save editor instance for later
-    window.textEditMonaco.editors[elementId] = { editor, changeListener };
+    window.textEditMonaco.editors[elementId] = { editor, changeListener, keyDownListener };
     return true;
   },
 
@@ -61,6 +106,7 @@ window.textEditMonaco = window.textEditMonaco || {
     const entry = window.textEditMonaco.editors[elementId];
     if (!entry) return;
     entry.changeListener.dispose();
+    if (entry.keyDownListener) entry.keyDownListener.dispose();
     entry.editor.dispose();
     delete window.textEditMonaco.editors[elementId];
   },
@@ -142,6 +188,23 @@ window.textEditMonaco = window.textEditMonaco || {
     } catch (e) {
       console.error('[monacoInterop] getOptions failed:', e);
       return null;
+    }
+  },
+
+  // Execute a Monaco editor command
+  executeCommand: function(elementId, commandId) {
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry || !entry.editor) {
+      console.warn("[monacoInterop] executeCommand: editor not found for", elementId);
+      return false;
+    }
+    try {
+      console.log("[monacoInterop] executing command:", commandId);
+      entry.editor.trigger("keyboard", commandId, undefined);
+      return true;
+    } catch (e) {
+      console.error("[monacoInterop] executeCommand failed:", commandId, e);
+      return false;
     }
   }
 };

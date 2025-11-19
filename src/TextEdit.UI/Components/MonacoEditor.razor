@@ -1,11 +1,6 @@
-@* Minimal placeholder component that hosts the Monaco editor prototype. *@
-<div class="alt-editor-placeholder text-monospace p-2 bg-light border" role="region" @attributes="AdditionalAttributes">
-  <div class="mb-2"><strong>Monaco Editor (prototype)</strong></div>
-  <div id="monaco-editor" style="height:260px; border:1px solid var(--border); border-radius:6px; overflow:hidden;"></div>
-  <div class="mt-2">
-    <button class="btn btn-primary me-2" @onclick="Save">Save</button>
-    <button class="btn btn-secondary" @onclick="Open">Open</button>
-  </div>
+@* Monaco editor component that provides rich text editing capabilities. *@
+<div class="monaco-container h-full min-h-0 flex flex-col" role="region" @attributes="AdditionalAttributes" style="height:100%;min-height:0;display:flex;flex-direction:column;flex:1 1 auto;">
+  <div id="monaco-editor" style="height:100%; width:100%; flex:1 1 auto;"></div>
 </div>
 
 @code {
@@ -25,14 +20,4 @@
     private AppState _appState { get; set; } = default!;
 
     private string? _cachedValue;
-
-    private void Save()
-    {
-        if (_appState.ActiveDocument is null) return;
-        var content = _cachedValue ?? Value;
-        _documentService.UpdateContent(_appState.ActiveDocument, content);
-        _ = _appState.SaveActiveAsync();
-    }
-
-    private void Open() {}
 }
