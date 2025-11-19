@@ -63,5 +63,85 @@ window.textEditMonaco = window.textEditMonaco || {
     entry.changeListener.dispose();
     entry.editor.dispose();
     delete window.textEditMonaco.editors[elementId];
+  },
+
+  // Update editor options at runtime
+  updateOptions: function(elementId, optionsObj) {
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry || !entry.editor) return false;
+    try {
+      entry.editor.updateOptions(optionsObj);
+      return true;
+    } catch (e) {
+      console.error('[monacoInterop] updateOptions failed:', e);
+      return false;
+    }
+  },
+
+  // Convenience methods for common toggles
+  setLineNumbers: function(elementId, show) {
+    return this.updateOptions(elementId, { lineNumbers: show ? 'on' : 'off' });
+  },
+
+  setMinimap: function(elementId, enabled) {
+    return this.updateOptions(elementId, { minimap: { enabled: enabled } });
+  },
+
+  setWordWrap: function(elementId, enabled) {
+    return this.updateOptions(elementId, { wordWrap: enabled ? 'on' : 'off' });
+  },
+
+  setFontSize: function(elementId, size) {
+    return this.updateOptions(elementId, { fontSize: size });
+  },
+
+  setFontFamily: function(elementId, fontFamily) {
+    return this.updateOptions(elementId, { fontFamily: fontFamily });
+  },
+
+  setTheme: function(elementId, theme) {
+    // theme can be 'vs', 'vs-dark', 'hc-black', or custom
+    try {
+      monaco.editor.setTheme(theme);
+      return true;
+    } catch (e) {
+      console.error('[monacoInterop] setTheme failed:', e);
+      return false;
+    }
+  },
+
+  setLanguage: function(elementId, language) {
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry || !entry.editor || !entry.editor.getModel) return false;
+    try {
+      const model = entry.editor.getModel();
+      if (model) {
+        monaco.editor.setModelLanguage(model, language);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error('[monacoInterop] setLanguage failed:', e);
+      return false;
+    }
+  },
+
+  // Get current options (useful for debugging)
+  getOptions: function(elementId) {
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry || !entry.editor) return null;
+    try {
+      // Return a subset of commonly used options
+      const opts = entry.editor.getOptions();
+      return {
+        fontSize: opts.get(37), // monaco.editor.EditorOption.fontSize = 37
+        fontFamily: opts.get(36), // monaco.editor.EditorOption.fontFamily = 36
+        lineNumbers: opts.get(51), // monaco.editor.EditorOption.lineNumbers = 51
+        wordWrap: opts.get(112), // monaco.editor.EditorOption.wordWrap = 112
+      };
+    } catch (e) {
+      console.error('[monacoInterop] getOptions failed:', e);
+      return null;
+    }
   }
 };

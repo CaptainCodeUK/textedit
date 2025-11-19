@@ -54,6 +54,49 @@ public partial class MonacoEditor : IAsyncDisposable
         await ValueChanged.InvokeAsync(content);
     }
 
+    // Runtime option updates
+    public async Task SetLineNumbersAsync(bool show)
+    {
+        if (_initialized)
+            await JS.InvokeVoidAsync("textEditMonaco.setLineNumbers", "monaco-editor", show);
+    }
+
+    public async Task SetMinimapAsync(bool enabled)
+    {
+        if (_initialized)
+            await JS.InvokeVoidAsync("textEditMonaco.setMinimap", "monaco-editor", enabled);
+    }
+
+    public async Task SetWordWrapAsync(bool enabled)
+    {
+        if (_initialized)
+            await JS.InvokeVoidAsync("textEditMonaco.setWordWrap", "monaco-editor", enabled);
+    }
+
+    public async Task SetFontSizeAsync(int size)
+    {
+        if (_initialized)
+            await JS.InvokeVoidAsync("textEditMonaco.setFontSize", "monaco-editor", size);
+    }
+
+    public async Task SetFontFamilyAsync(string fontFamily)
+    {
+        if (_initialized)
+            await JS.InvokeVoidAsync("textEditMonaco.setFontFamily", "monaco-editor", fontFamily);
+    }
+
+    public async Task SetThemeAsync(string theme)
+    {
+        if (_initialized)
+            await JS.InvokeVoidAsync("textEditMonaco.setTheme", "monaco-editor", theme);
+    }
+
+    public async Task SetLanguageAsync(string language)
+    {
+        if (_initialized)
+            await JS.InvokeVoidAsync("textEditMonaco.setLanguage", "monaco-editor", language);
+    }
+
     public async ValueTask DisposeAsync()
     {
         try
