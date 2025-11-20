@@ -42,25 +42,8 @@ window.textEditMonaco = window.textEditMonaco || {
       } catch (e) { /* ignore */ }
     });
 
-    // Handle Ctrl+Tab and Ctrl+Shift+Tab using Monaco's command system
-    // Monaco KeyMod and KeyCode for proper keybinding - always execute
-    editor.addCommand(
-      monaco.KeyMod.CtrlCmd | monaco.KeyCode.Tab,
-      () => {
-        console.log('[monacoInterop] Ctrl+Tab triggered via Monaco command');
-        document.dispatchEvent(new CustomEvent('blazor-next-tab'));
-      }
-    );
-    
-    editor.addCommand(
-      monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Tab,
-      () => {
-        console.log('[monacoInterop] Ctrl+Shift+Tab triggered via Monaco command');
-        document.dispatchEvent(new CustomEvent('blazor-prev-tab'));
-      }
-    );
-    
     // Override Alt+P to toggle markdown preview (instead of Monaco's default binding)
+    // Ctrl+Tab is handled at Electron menu level for better cross-platform support
     editor.addCommand(
       monaco.KeyMod.Alt | monaco.KeyCode.KeyP,
       () => {
@@ -69,23 +52,7 @@ window.textEditMonaco = window.textEditMonaco || {
       }
     );
     
-    // ALSO handle via onKeyDown as fallback
-    const keyDownListener = editor.onKeyDown((e) => {
-      // Check for Ctrl/Cmd+Tab or Ctrl/Cmd+Shift+Tab
-      const isCtrlOrCmd = (e.ctrlKey || e.metaKey) && !e.altKey;
-      // Monaco uses different key codes - Tab is 2
-      const isTabKey = e.keyCode === 2;
-      
-      if (isCtrlOrCmd && isTabKey) {
-        console.log('[monacoInterop] Ctrl+Tab detected via onKeyDown, dispatching event. Shift:', e.shiftKey);
-        e.preventDefault();
-        if (e.shiftKey) {
-          document.dispatchEvent(new CustomEvent('blazor-prev-tab'));
-        } else {
-          document.dispatchEvent(new CustomEvent('blazor-next-tab'));
-        }
-      }
-    });
+    const keyDownListener = null;
 
     // Save editor instance for later
     window.textEditMonaco.editors[elementId] = { editor, changeListener, keyDownListener };

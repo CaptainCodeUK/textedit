@@ -179,24 +179,15 @@ window.editorFocus = {
     }
 };
 
-// Handle Ctrl+Tab and Ctrl+Shift+Tab for tab navigation (needs to be at document level)
-// Guard to ensure this listener is only registered once, even if module is loaded multiple times
+// Handle Ctrl+Tab and Ctrl+Shift+Tab for tab navigation (now handled at Electron menu level)
+// The Electron.NET menu system handles these accelerators globally, so we don't need DOM-level handling
+// which would interfere with Electron's event processing
 if (!window._texteditCtrlTabHandlerInstalled) {
     window._texteditCtrlTabHandlerInstalled = true;
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Tab' && e.ctrlKey) {
-            e.preventDefault();
-            e.stopPropagation();
-            // Notify Blazor via custom event that can be picked up by interop
-            // Ctrl+Tab = move tab RIGHT (next), Ctrl+Shift+Tab = move tab LEFT (previous)
-            if (e.shiftKey) {
-                document.dispatchEvent(new CustomEvent('blazor-prev-tab'));
-            } else {
-                document.dispatchEvent(new CustomEvent('blazor-next-tab'));
-            }
-        }
-    }, true); // capture phase to catch before anything else
+    // Ctrl+Tab is handled by ElectronHost.cs Window menu accelerators
+    // This prevents conflicts between document-level and menu-level event handling
 }
+
 
 // Auto-initialize when DOM is ready
 if (document.readyState === 'loading') {

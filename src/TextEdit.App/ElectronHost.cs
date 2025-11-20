@@ -422,7 +422,7 @@ public static partial class ElectronHost
             {
                 new MenuItem { Label = "Next Tab", Accelerator = "Ctrl+Tab", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.NextTabRequested); } },
                 new MenuItem { Label = "Previous Tab", Accelerator = "Ctrl+Shift+Tab", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.PrevTabRequested); } },
-                // Keep accelerators but hide these entries from the menu (if Visible is supported)
+                // Hidden menu items to register accelerators - Electron needs menu registration for Tab key to work
                 new MenuItem { Label = "Next Tab (PageDown)", Accelerator = "Ctrl+PageDown", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.NextTabRequested); }, Visible = false },
                 new MenuItem { Label = "Previous Tab (PageUp)", Accelerator = "Ctrl+PageUp", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.PrevTabRequested); }, Visible = false },
                 new MenuItem { Type = MenuType.separator },
@@ -457,6 +457,38 @@ public static partial class ElectronHost
         };
 
         Electron.Menu.SetApplicationMenu(new[] { fileMenu, editMenu, formatMenu, viewMenu, windowMenu, helpMenu });
+        
+        // Register global shortcuts for Ctrl+Tab (Tab is special in Electron and needs GlobalShortcut registration)
+        RegisterGlobalShortcuts();
+    }
+
+    /// <summary>
+    /// Register global shortcuts for keys that need system-level handling (e.g., Ctrl+Tab)
+    /// </summary>
+    private static void RegisterGlobalShortcuts()
+    {
+        try
+        {
+            // Ctrl+Tab: Next Tab
+            Electron.GlobalShortcut.Register("ctrl+tab", () =>
+            {
+                _logger?.LogDebug("GlobalShortcut: Ctrl+Tab pressed");
+                _ = EditorCommandHub.InvokeSafe(EditorCommandHub.NextTabRequested);
+            });
+
+            // Ctrl+Shift+Tab: Previous Tab
+            Electron.GlobalShortcut.Register("ctrl+shift+tab", () =>
+            {
+                _logger?.LogDebug("GlobalShortcut: Ctrl+Shift+Tab pressed");
+                _ = EditorCommandHub.InvokeSafe(EditorCommandHub.PrevTabRequested);
+            });
+
+            _logger?.LogInformation("Global shortcuts registered: Ctrl+Tab, Ctrl+Shift+Tab");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to register global shortcuts");
+        }
     }
 
     /// <summary>
@@ -524,6 +556,16 @@ public static partial class ElectronHost
         try
         {
             _logger?.LogInformation("Quitting application via menu/keyboard command");
+            // Unregister global shortcuts before quitting
+            try
+            {
+                Electron.GlobalShortcut.UnregisterAll();
+                _logger?.LogDebug("Global shortcuts unregistered");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to unregister global shortcuts");
+            }
             Electron.App.Quit();
         }
         catch (Exception ex)
