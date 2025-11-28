@@ -383,9 +383,10 @@ public static partial class ElectronHost
                 new MenuItem { Label = "Undo", Accelerator = "CmdOrCtrl+Z", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.UndoRequested); } },
                 new MenuItem { Label = "Redo", Accelerator = "CmdOrCtrl+Y", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.RedoRequested); } },
                 new MenuItem { Type = MenuType.separator },
-                new MenuItem { Role = MenuRole.cut },
-                new MenuItem { Role = MenuRole.copy },
-                new MenuItem { Role = MenuRole.paste },
+                // Use custom Cut/Copy/Paste menu items so we can enable/disable based on toolbar state
+                new MenuItem { Label = "Cut", Accelerator = "CmdOrCtrl+X", Enabled = _appState?.ToolbarState.CanCut ?? false, Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.CutRequested); } },
+                new MenuItem { Label = "Copy", Accelerator = "CmdOrCtrl+C", Enabled = _appState?.ToolbarState.CanCopy ?? false, Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.CopyRequested); } },
+                new MenuItem { Label = "Paste", Accelerator = "CmdOrCtrl+V", Enabled = _appState?.ToolbarState.CanPaste ?? true, Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.PasteRequested); } },
                 new MenuItem { Type = MenuType.separator },
                 // Find commands (US1)
                 new MenuItem { Label = "Find…", Accelerator = "CmdOrCtrl+F", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.FindRequested); } },

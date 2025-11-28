@@ -25,6 +25,8 @@ public class MarkdownFormattingService
 
     /// <summary>
     /// Apply markdown format to current selection or insert markers at cursor.
+    /// For line-start formats (headings, lists), inserts at the beginning of the current line.
+    /// For inline formats (bold, italic, code), wraps selection or inserts at cursor.
     /// </summary>
     /// <param name="currentContent">Current document content</param>
     /// <param name="selectionStart">Start index of selection (or cursor position)</param>
@@ -42,18 +44,36 @@ public class MarkdownFormattingService
             ? currentContent.Substring(selectionStart, selectionEnd - selectionStart) 
             : string.Empty;
 
-        var (prefix, suffix) = format switch
+        var (prefix, suffix, isLineFormat) = format switch
         {
-            MarkdownFormat.H1 => ("# ", ""),
-            MarkdownFormat.H2 => ("## ", ""),
-            MarkdownFormat.Bold => ("**", "**"),
-            MarkdownFormat.Italic => ("*", "*"),
-            MarkdownFormat.Code => ("`", "`"),
-            MarkdownFormat.BulletedList => ("- ", ""),
-            MarkdownFormat.NumberedList => ("1. ", ""),
-            _ => ("", "")
+            MarkdownFormat.H1 => ("# ", "", true),
+            MarkdownFormat.H2 => ("## ", "", true),
+            MarkdownFormat.Bold => ("**", "**", false),
+            MarkdownFormat.Italic => ("*", "*", false),
+            MarkdownFormat.Code => ("`", "`", false),
+            MarkdownFormat.BulletedList => ("- ", "", true),
+            MarkdownFormat.NumberedList => ("1. ", "", true),
+            _ => ("", "", false)
         };
 
+        // For line-format operations (headings, bullets), insert at line start
+        if (isLineFormat)
+        {
+            // Find the start of the current line
+            int lineStart = selectionStart;
+            while (lineStart > 0 && currentContent[lineStart - 1] != '\n')
+            {
+                lineStart--;
+            }
+
+            var before = currentContent.Substring(0, lineStart);
+            var after = currentContent.Substring(lineStart);
+            var newContent = before + prefix + after;
+            var newCursorPos = lineStart + prefix.Length;
+            return new FormattingResult(newContent, newCursorPos, newCursorPos);
+        }
+        
+        // For inline formats (bold, italic, code)
         if (hasSelection)
         {
             // Wrap selection

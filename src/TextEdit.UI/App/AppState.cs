@@ -167,6 +167,11 @@ public class AppState : IDisposable
     public void NotifyDocumentUpdated() => NotifyChanged();
 
     /// <summary>
+    /// Notify UI that toolbar state changed (e.g., Cut/Copy button enabling based on selection)
+    /// </summary>
+    public void NotifyToolbarStateChanged() => NotifyChanged();
+
+    /// <summary>
     /// Update the Electron window title based on current document (T056-T060)
     /// </summary>
     private void UpdateWindowTitle()

@@ -77,6 +77,9 @@ public partial class TextEditor : ComponentBase, IDisposable
         // Edit menu commands (Undo/Redo/Find/Replace all invoke Monaco's native implementations)
         EditorCommandHub.UndoRequested = () => JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "undo").AsTask();
         EditorCommandHub.RedoRequested = () => JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "redo").AsTask();
+        EditorCommandHub.CutRequested = () => JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "editor.action.clipboardCutAction").AsTask();
+        EditorCommandHub.CopyRequested = () => JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "editor.action.clipboardCopyAction").AsTask();
+        EditorCommandHub.PasteRequested = () => JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "editor.action.clipboardPasteAction").AsTask();
         EditorCommandHub.FindRequested = () => JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "actions.find").AsTask();
         EditorCommandHub.FindNextRequested = () => JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "editor.action.nextMatchFindAction").AsTask();
         EditorCommandHub.FindPreviousRequested = () => JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "editor.action.previousMatchFindAction").AsTask();
@@ -100,6 +103,18 @@ public partial class TextEditor : ComponentBase, IDisposable
         EditorCommandHub.FormatCodeRequested = () => HandleFormatCommand(MarkdownFormattingService.MarkdownFormat.Code);
         EditorCommandHub.FormatBulletListRequested = () => HandleFormatCommand(MarkdownFormattingService.MarkdownFormat.BulletedList);
         EditorCommandHub.FormatNumberedListRequested = () => HandleFormatCommand(MarkdownFormattingService.MarkdownFormat.NumberedList);
+        
+        // Font change handlers (from Toolbar)
+        EditorCommandHub.FontSizeChanged = async (size) => 
+        {
+            if (_monacoEditor is not null)
+                await _monacoEditor.SetFontSizeAsync(size);
+        };
+        EditorCommandHub.FontFamilyChanged = async (fontFamily) => 
+        {
+            if (_monacoEditor is not null)
+                await _monacoEditor.SetFontFamilyAsync(fontFamily);
+        };
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -109,12 +124,13 @@ public partial class TextEditor : ComponentBase, IDisposable
             // Initialize the Tab key handler for the editor (Monaco handles find/replace/undo natively)
             try
             {
+                Console.WriteLine("[OnAfterRenderAsync] Setting up event listeners");
                 await JSRuntime.InvokeVoidAsync("editorFocus.initialize", "main-editor-textarea");
-                // Set up listeners for Ctrl+Tab navigation and Alt+P preview toggle
+                // Set up listeners for Ctrl+Tab navigation, Alt+P preview toggle, and Monaco selection changes
                 await JSRuntime.InvokeVoidAsync("eval", @"
                     if (!window._texteditTabNavListenersInstalled) {
                         window._texteditTabNavListenersInstalled = true;
-                        console.log('[TextEditor.razor] Setting up blazor-next-tab, blazor-prev-tab, and blazor-toggle-preview listeners');
+                        console.log('[TextEditor.razor] Setting up blazor-next-tab, blazor-prev-tab, blazor-toggle-preview, and monaco-selection-changed listeners');
                         document.addEventListener('blazor-next-tab', () => {
                             console.log('[TextEditor.razor] blazor-next-tab fired - calling HandleNextTabFromJS');
                             DotNet.invokeMethodAsync('TextEdit.UI', 'HandleNextTabFromJS');
@@ -127,10 +143,19 @@ public partial class TextEditor : ComponentBase, IDisposable
                             console.log('[TextEditor.razor] blazor-toggle-preview fired - calling HandleTogglePreviewFromJS');
                             DotNet.invokeMethodAsync('TextEdit.UI', 'HandleTogglePreviewFromJS');
                         });
+                        document.addEventListener('monaco-selection-changed', () => {
+                            console.log('[TextEditor.razor] monaco-selection-changed fired - calling HandleMonacoSelectionChanged');
+                            DotNet.invokeMethodAsync('TextEdit.UI', 'HandleMonacoSelectionChanged');
+                        });
+                    } else {
+                        console.log('[TextEditor.razor] Event listeners already installed, skipping');
                     }
                 ");
             }
-            catch { /* ignore */ }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[OnAfterRenderAsync] Error setting up listeners: {ex}");
+            }
             
             await FocusEditorAsync();
             // Initialize counts and caret on first render
@@ -162,7 +187,6 @@ public partial class TextEditor : ComponentBase, IDisposable
         }
     }
 
-    [Microsoft.JSInterop.JSInvokable]
     [Microsoft.JSInterop.JSInvokable]
     public static Task OpenOptionsDialogFromJS()
     {
@@ -436,24 +460,30 @@ public partial class TextEditor : ComponentBase, IDisposable
         
         try
         {
-            var start = await JSRuntime.InvokeAsync<int>("eval", "document.getElementById('main-editor-textarea')?.selectionStart ?? 0");
-            var end = await JSRuntime.InvokeAsync<int>("eval", "document.getElementById('main-editor-textarea')?.selectionEnd ?? 0");
+            // Get selection from Monaco editor
+            var selectionObj = await JSRuntime.InvokeAsync<Dictionary<string, int>>("textEditMonaco.getSelectionRange", "monaco-editor");
+            int start = selectionObj?.ContainsKey("start") == true ? selectionObj["start"] : 0;
+            int end = selectionObj?.ContainsKey("end") == true ? selectionObj["end"] : 0;
             
-            // Push current state to undo before applying format
-            UndoRedo.Push(CurrentDoc, CurrentDoc.Content);
+            Console.WriteLine($"[HandleFormatCommand] Selection: start={start}, end={end}");
             
+            // Apply formatting (will insert at line start for headings/bullets, at caret for inline)
             var result = FormattingService.ApplyFormat(CurrentDoc.Content, start, end, format);
+            Console.WriteLine($"[HandleFormatCommand] After format: NewContent length={result.NewContent.Length}, NewSelectionStart={result.NewSelectionStart}, NewSelectionEnd={result.NewSelectionEnd}");
             
-            CurrentDoc.SetContent(result.NewContent);
-            AppState.NotifyDocumentUpdated();
-            
-            // Update textarea and restore selection
-            await JSRuntime.InvokeVoidAsync("eval", 
-                $"{{ const el = document.getElementById('main-editor-textarea'); if (el) {{ el.value = {System.Text.Json.JsonSerializer.Serialize(result.NewContent)}; el.setSelectionRange({result.NewSelectionStart}, {result.NewSelectionEnd}); }} }}");
+            // IMPORTANT: Use applyEdit for Monaco undo/redo integration ONLY
+            // Do NOT call CurrentDoc.SetContent() or AppState.NotifyDocumentUpdated() here - let Monaco's change event do it
+            // This creates the undo point properly in Monaco's undo stack
+            await JSRuntime.InvokeVoidAsync("textEditMonaco.applyEdit", "monaco-editor", new
+            {
+                content = result.NewContent,
+                selectionStart = result.NewSelectionStart,
+                selectionEnd = result.NewSelectionEnd
+            });
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore formatting errors
+            Console.WriteLine($"[HandleFormatCommand] Error: {ex}");
         }
     }
 
@@ -534,19 +564,28 @@ public partial class TextEditor : ComponentBase, IDisposable
             {
                 State.CaretIndexByDocument[CurrentDoc.Id] = position.Index;
                 
-                // Update toolbar state based on selection and dirty state
-                // Check if there's a selection by comparing start/end
+                // Update toolbar state based on Monaco selection and dirty state
                 bool hasSelection = false;
                 try
                 {
-                    var selEnd = await JSRuntime.InvokeAsync<int>("eval", "document.getElementById('main-editor-textarea')?.selectionEnd ?? 0");
-                    hasSelection = position.Index != selEnd;
+                    var selectionRange = await JSRuntime.InvokeAsync<Dictionary<string, int>>("textEditMonaco.getSelectionRange", "monaco-editor");
+                    int start = selectionRange?.ContainsKey("start") == true ? selectionRange["start"] : 0;
+                    int end = selectionRange?.ContainsKey("end") == true ? selectionRange["end"] : 0;
+                    hasSelection = start != end;
+                    Console.WriteLine($"[UpdateCaretPosition] Selection: start={start}, end={end}, hasSelection={hasSelection}");
                 }
-                catch { /* ignore */ }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[UpdateCaretPosition] Error getting selection: {ex}");
+                }
                 
                 AppState.ToolbarState.Update(CurrentDoc.IsDirty, hasSelection);
+                Console.WriteLine($"[UpdateCaretPosition] Updated toolbar: CanCut={AppState.ToolbarState.CanCut}, CanCopy={AppState.ToolbarState.CanCopy}");
+                
+                // Notify toolbar component to re-render with updated button states
+                AppState.NotifyToolbarStateChanged();
             }
-            // Notify StatusBar only; avoid causing full AppState change that re-renders editor
+            // Notify StatusBar of caret changes
             State.NotifyChanged();
         }
         catch
@@ -578,6 +617,22 @@ public partial class TextEditor : ComponentBase, IDisposable
     public static Task HandleTogglePreviewFromJS()
     {
         return EditorCommandHub.InvokeSafe(EditorCommandHub.TogglePreviewRequested);
+    }
+
+    [Microsoft.JSInterop.JSInvokable]
+    public static Task HandleMonacoSelectionChanged()
+    {
+        // Update toolbar state when Monaco selection changes (for Cut/Copy buttons)
+        if (_currentInstance is not null)
+        {
+            Console.WriteLine("[HandleMonacoSelectionChanged] Called, updating toolbar state");
+            _ = _currentInstance.UpdateCaretPosition();
+        }
+        else
+        {
+            Console.WriteLine("[HandleMonacoSelectionChanged] _currentInstance is null!");
+        }
+        return Task.CompletedTask;
     }
 
         private static TextEditor? _currentInstance;

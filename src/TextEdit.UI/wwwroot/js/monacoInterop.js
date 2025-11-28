@@ -38,8 +38,23 @@ window.textEditMonaco = window.textEditMonaco || {
 
     const changeListener = editor.onDidChangeModelContent(() => {
       try {
+        // Dispatch selection-changed event after content changes to update toolbar
+        document.dispatchEvent(new CustomEvent('monaco-selection-changed'));
         dotNetRef.invokeMethodAsync('OnEditorContentChanged', editor.getValue());
       } catch (e) { /* ignore */ }
+    });
+
+    // Listen for selection changes to update toolbar state (Cut/Copy buttons)
+    const selectionListener = editor.onDidChangeCursorSelection(() => {
+      try {
+        console.log('[monacoInterop] Selection changed - dispatching monaco-selection-changed DOM event');
+        const selection = editor.getSelection();
+        console.log('[monacoInterop] Selection object:', selection);
+        const event = new CustomEvent('monaco-selection-changed', { detail: { source: 'monacoInterop' } });
+        document.dispatchEvent(event);
+      } catch (e) {
+        console.error('[monacoInterop] Error in selection listener:', e);
+      }
     });
 
     // Override Alt+P to toggle markdown preview (instead of Monaco's default binding)
@@ -55,7 +70,7 @@ window.textEditMonaco = window.textEditMonaco || {
     const keyDownListener = null;
 
     // Save editor instance for later
-    window.textEditMonaco.editors[elementId] = { editor, changeListener, keyDownListener };
+    window.textEditMonaco.editors[elementId] = { editor, changeListener, selectionListener, keyDownListener };
     return true;
   },
 
@@ -73,6 +88,7 @@ window.textEditMonaco = window.textEditMonaco || {
     const entry = window.textEditMonaco.editors[elementId];
     if (!entry) return;
     entry.changeListener.dispose();
+    if (entry.selectionListener) entry.selectionListener.dispose();
     if (entry.keyDownListener) entry.keyDownListener.dispose();
     entry.editor.dispose();
     delete window.textEditMonaco.editors[elementId];
@@ -171,6 +187,106 @@ window.textEditMonaco = window.textEditMonaco || {
       return true;
     } catch (e) {
       console.error("[monacoInterop] executeCommand failed:", commandId, e);
+      return false;
+    }
+  },
+
+  // Get current caret position as offset in the document
+  getCaretOffset: function(elementId) {
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry || !entry.editor) return 0;
+    try {
+      const position = entry.editor.getPosition();
+      if (!position) return 0;
+      const model = entry.editor.getModel();
+      if (!model) return 0;
+      // Convert line/column to offset
+      return model.getOffsetAt(position);
+    } catch (e) {
+      console.error('[monacoInterop] getCaretOffset failed:', e);
+      return 0;
+    }
+  },
+
+  // Get selected text range as {start, end} offsets
+  getSelectionRange: function(elementId) {
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry || !entry.editor) {
+      console.warn('[monacoInterop] getSelectionRange: editor not found for', elementId);
+      return { start: 0, end: 0 };
+    }
+    try {
+      const selection = entry.editor.getSelection();
+      if (!selection) {
+        console.log('[monacoInterop] getSelectionRange: no selection');
+        return { start: 0, end: 0 };
+      }
+      const model = entry.editor.getModel();
+      if (!model) {
+        console.warn('[monacoInterop] getSelectionRange: no model');
+        return { start: 0, end: 0 };
+      }
+      // Convert positions to offsets
+      const start = model.getOffsetAt(selection.getStartPosition());
+      const end = model.getOffsetAt(selection.getEndPosition());
+      console.log('[monacoInterop] getSelectionRange:', { start, end });
+      return { start, end };
+    } catch (e) {
+      console.error('[monacoInterop] getSelectionRange failed:', e);
+      return { start: 0, end: 0 };
+    }
+  },
+
+  // Apply an edit operation to the editor with undo/redo integration
+  // Uses Monaco's executeEdits() API so Ctrl+Z works naturally
+  applyEdit: function(elementId, editData) {
+    console.log('[monacoInterop.applyEdit] Called with elementId:', elementId, 'editData:', editData);
+    
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry || !entry.editor) {
+      console.warn('[monacoInterop] applyEdit: editor not found for', elementId);
+      console.warn('[monacoInterop] Available editors:', Object.keys(window.textEditMonaco.editors));
+      return false;
+    }
+    try {
+      const editor = entry.editor;
+      const model = editor.getModel();
+      if (!model) {
+        console.warn('[monacoInterop] applyEdit: no model');
+        return false;
+      }
+
+      console.log('[monacoInterop] applyEdit: applying edit with content length', editData.content.length);
+
+      // Replace entire content at once - this creates a single undo point
+      const fullRange = model.getFullModelRange();
+      console.log('[monacoInterop] applyEdit: fullRange:', fullRange);
+      
+      editor.executeEdits('formatting', [
+        {
+          range: fullRange,
+          text: editData.content
+        }
+      ]);
+      
+      console.log('[monacoInterop] applyEdit: executeEdits completed');
+
+      // Set selection after applying edit
+      if (editData.selectionStart !== undefined && editData.selectionEnd !== undefined) {
+        const startPos = model.getPositionAt(editData.selectionStart);
+        const endPos = model.getPositionAt(editData.selectionEnd);
+        console.log('[monacoInterop] applyEdit: setting selection from', startPos, 'to', endPos);
+        editor.setSelection(new monaco.Range(
+          startPos.lineNumber, startPos.column,
+          endPos.lineNumber, endPos.column
+        ));
+        editor.revealPositionInCenter(endPos);
+      }
+
+      return true;
+    } catch (e) {
+      console.error('[monacoInterop] applyEdit failed:', e);
+      console.error('[monacoInterop] applyEdit stack:', e.stack);
       return false;
     }
   }

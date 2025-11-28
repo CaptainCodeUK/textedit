@@ -115,6 +115,13 @@ public partial class MonacoEditor : IAsyncDisposable
             // Apply minimap setting
             await JS.InvokeVoidAsync("textEditMonaco.setMinimap", "monaco-editor", AppState.Preferences.ShowMinimap);
             
+            // Apply font size setting
+            await JS.InvokeVoidAsync("textEditMonaco.setFontSize", "monaco-editor", AppState.Preferences.FontSize);
+            
+            // Apply font family setting
+            if (!string.IsNullOrEmpty(AppState.Preferences.FontFamily))
+                await JS.InvokeVoidAsync("textEditMonaco.setFontFamily", "monaco-editor", AppState.Preferences.FontFamily);
+            
             // Apply theme setting
             var monacoTheme = AppState.Preferences.Theme switch
             {

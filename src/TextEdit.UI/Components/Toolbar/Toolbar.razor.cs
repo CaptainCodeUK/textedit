@@ -3,6 +3,7 @@ using Microsoft.JSInterop;
 using TextEdit.Core.Editing;
 using TextEdit.UI.App;
 using TextEdit.UI.Services;
+using TextEdit.UI.Components.Editor;
 using static TextEdit.UI.Services.MarkdownFormattingService;
 
 namespace TextEdit.UI.Components.Toolbar;
@@ -89,40 +90,35 @@ public partial class Toolbar : ComponentBase, IDisposable
         
         try
         {
-            // Get selection from textarea
-            var selection = await JSRuntime.InvokeAsync<string>(
-                "eval",
-                @"document.getElementById('main-editor-textarea')?.value.substring(
-                    document.getElementById('main-editor-textarea')?.selectionStart ?? 0,
-                    document.getElementById('main-editor-textarea')?.selectionEnd ?? 0
-                ) ?? ''"
-            );
+            // Get selection from Monaco editor
+            var selectionObj = await JSRuntime.InvokeAsync<Dictionary<string, int>>("textEditMonaco.getSelectionRange", "monaco-editor");
+            int start = selectionObj?.ContainsKey("start") == true ? selectionObj["start"] : 0;
+            int end = selectionObj?.ContainsKey("end") == true ? selectionObj["end"] : 0;
             
-            if (!string.IsNullOrEmpty(selection))
+            if (start == end) return; // No selection
+            
+            var doc = AppState.ActiveDocument;
+            var selection = doc.Content.Substring(start, end - start);
+            
+            // Copy to clipboard
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", selection);
+            
+            // Remove selection from document
+            var newContent = doc.Content.Substring(0, start) + doc.Content.Substring(end);
+            
+            // IMPORTANT: Use applyEdit for Monaco undo/redo integration ONLY
+            // Do NOT update doc.SetContent() or AppState here - let Monaco's change event do it
+            // This creates the undo point properly in Monaco's undo stack
+            await JSRuntime.InvokeVoidAsync("textEditMonaco.applyEdit", "monaco-editor", new
             {
-                // Copy to clipboard
-                await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", selection);
-                
-                // Remove selection from document
-                var doc = AppState.ActiveDocument;
-                var start = await JSRuntime.InvokeAsync<int>("eval", "document.getElementById('main-editor-textarea')?.selectionStart ?? 0");
-                var end = await JSRuntime.InvokeAsync<int>("eval", "document.getElementById('main-editor-textarea')?.selectionEnd ?? 0");
-                
-                // Push current state to undo before cutting
-                UndoRedo.Push(doc, doc.Content);
-                
-                var newContent = doc.Content.Substring(0, start) + doc.Content.Substring(end);
-                doc.SetContent(newContent);
-                AppState.NotifyDocumentUpdated();
-                
-                // Update textarea and restore caret
-                await JSRuntime.InvokeVoidAsync("eval", 
-                    $"{{ const el = document.getElementById('main-editor-textarea'); if (el) {{ el.value = {System.Text.Json.JsonSerializer.Serialize(newContent)}; el.setSelectionRange({start}, {start}); }} }}");
-            }
+                content = newContent,
+                selectionStart = start,
+                selectionEnd = start
+            });
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore clipboard errors
+            Console.WriteLine($"[HandleCut] Error: {ex}");
         }
     }
 
@@ -130,22 +126,22 @@ public partial class Toolbar : ComponentBase, IDisposable
     {
         try
         {
-            var selection = await JSRuntime.InvokeAsync<string>(
-                "eval",
-                @"document.getElementById('main-editor-textarea')?.value.substring(
-                    document.getElementById('main-editor-textarea')?.selectionStart ?? 0,
-                    document.getElementById('main-editor-textarea')?.selectionEnd ?? 0
-                ) ?? ''"
-            );
+            // Get selection from Monaco editor
+            var selectionObj = await JSRuntime.InvokeAsync<Dictionary<string, int>>("textEditMonaco.getSelectionRange", "monaco-editor");
+            int start = selectionObj?.ContainsKey("start") == true ? selectionObj["start"] : 0;
+            int end = selectionObj?.ContainsKey("end") == true ? selectionObj["end"] : 0;
             
-            if (!string.IsNullOrEmpty(selection))
+            if (start == end) return; // No selection
+            
+            if (AppState.ActiveDocument is not null)
             {
+                var selection = AppState.ActiveDocument.Content.Substring(start, end - start);
                 await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", selection);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore clipboard errors
+            Console.WriteLine($"[HandleCopy] Error: {ex}");
         }
     }
 
@@ -160,25 +156,29 @@ public partial class Toolbar : ComponentBase, IDisposable
             if (!string.IsNullOrEmpty(text))
             {
                 var doc = AppState.ActiveDocument;
-                var start = await JSRuntime.InvokeAsync<int>("eval", "document.getElementById('main-editor-textarea')?.selectionStart ?? 0");
-                var end = await JSRuntime.InvokeAsync<int>("eval", "document.getElementById('main-editor-textarea')?.selectionEnd ?? 0");
                 
-                // Push current state to undo before pasting
-                UndoRedo.Push(doc, doc.Content);
+                // Get selection from Monaco editor
+                var selectionObj = await JSRuntime.InvokeAsync<Dictionary<string, int>>("textEditMonaco.getSelectionRange", "monaco-editor");
+                int start = selectionObj?.ContainsKey("start") == true ? selectionObj["start"] : 0;
+                int end = selectionObj?.ContainsKey("end") == true ? selectionObj["end"] : 0;
                 
                 var newContent = doc.Content.Substring(0, start) + text + doc.Content.Substring(end);
-                doc.SetContent(newContent);
-                AppState.NotifyDocumentUpdated();
                 
-                // Update textarea and set caret after pasted text
+                // IMPORTANT: Use applyEdit for Monaco undo/redo integration ONLY
+                // Do NOT update doc.SetContent() or AppState here - let Monaco's change event do it
+                // This creates the undo point properly in Monaco's undo stack
                 var newCaretPos = start + text.Length;
-                await JSRuntime.InvokeVoidAsync("eval", 
-                    $"{{ const el = document.getElementById('main-editor-textarea'); if (el) {{ el.value = {System.Text.Json.JsonSerializer.Serialize(newContent)}; el.setSelectionRange({newCaretPos}, {newCaretPos}); }} }}");
+                await JSRuntime.InvokeVoidAsync("textEditMonaco.applyEdit", "monaco-editor", new
+                {
+                    content = newContent,
+                    selectionStart = newCaretPos,
+                    selectionEnd = newCaretPos
+                });
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore clipboard errors
+            Console.WriteLine($"[HandlePaste] Error: {ex}");
         }
     }
 
@@ -188,10 +188,11 @@ public partial class Toolbar : ComponentBase, IDisposable
         AppState.Preferences.FontFamily = fontFamily;
         await AppState.SavePreferencesAsync();
         
-        // Apply font to editor immediately
-        await JSRuntime.InvokeVoidAsync("eval", 
-            $@"{{ const el = document.getElementById('main-editor-textarea'); 
-                 if (el) {{ el.style.fontFamily = {System.Text.Json.JsonSerializer.Serialize(fontFamily)}; }} }}");
+        // Apply font to Monaco editor via EditorCommandHub
+        if (EditorCommandHub.FontFamilyChanged is not null)
+        {
+            await EditorCommandHub.FontFamilyChanged(fontFamily);
+        }
         
         StateHasChanged();
     }
@@ -203,10 +204,11 @@ public partial class Toolbar : ComponentBase, IDisposable
             AppState.Preferences.FontSize = size;
             await AppState.SavePreferencesAsync();
             
-            // Apply font size to editor immediately
-            await JSRuntime.InvokeVoidAsync("eval", 
-                $@"{{ const el = document.getElementById('main-editor-textarea'); 
-                     if (el) {{ el.style.fontSize = '{size}px'; }} }}");
+            // Apply font size to Monaco editor via EditorCommandHub
+            if (EditorCommandHub.FontSizeChanged is not null)
+            {
+                await EditorCommandHub.FontSizeChanged(size);
+            }
             
             StateHasChanged();
         }
@@ -219,24 +221,30 @@ public partial class Toolbar : ComponentBase, IDisposable
         try
         {
             var doc = AppState.ActiveDocument;
-            var start = await JSRuntime.InvokeAsync<int>("eval", "document.getElementById('main-editor-textarea')?.selectionStart ?? 0");
-            var end = await JSRuntime.InvokeAsync<int>("eval", "document.getElementById('main-editor-textarea')?.selectionEnd ?? 0");
             
-            // Push current state to undo before applying format
-            UndoRedo.Push(doc, doc.Content);
+            // Get selection from Monaco editor
+            var selectionObj = await JSRuntime.InvokeAsync<Dictionary<string, int>>("textEditMonaco.getSelectionRange", "monaco-editor");
+            int start = selectionObj?.ContainsKey("start") == true ? selectionObj["start"] : 0;
+            int end = selectionObj?.ContainsKey("end") == true ? selectionObj["end"] : 0;
+            
+            Console.WriteLine($"[Toolbar.HandleFormat] Selection: start={start}, end={end}");
             
             var result = FormattingService.ApplyFormat(doc.Content, start, end, format);
+            Console.WriteLine($"[Toolbar.HandleFormat] After format: NewContent length={result.NewContent.Length}");
             
-            doc.SetContent(result.NewContent);
-            AppState.NotifyDocumentUpdated();
-            
-            // Update textarea and restore selection
-            await JSRuntime.InvokeVoidAsync("eval", 
-                $"{{ const el = document.getElementById('main-editor-textarea'); if (el) {{ el.value = {System.Text.Json.JsonSerializer.Serialize(result.NewContent)}; el.setSelectionRange({result.NewSelectionStart}, {result.NewSelectionEnd}); }} }}");
+            // IMPORTANT: Use applyEdit for Monaco undo/redo integration ONLY
+            // Do NOT call doc.SetContent() or AppState.NotifyDocumentUpdated() here - let Monaco's change event do it
+            // This creates the undo point properly in Monaco's undo stack
+            await JSRuntime.InvokeVoidAsync("textEditMonaco.applyEdit", "monaco-editor", new
+            {
+                content = result.NewContent,
+                selectionStart = result.NewSelectionStart,
+                selectionEnd = result.NewSelectionEnd
+            });
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore formatting errors
+            Console.WriteLine($"[Toolbar.HandleFormat] Error: {ex}");
         }
     }
 }

@@ -12,6 +12,9 @@ public static class EditorCommandHub
     public static Func<Task>? SaveAsRequested { get; set; }
     public static Func<Task>? UndoRequested { get; set; }
     public static Func<Task>? RedoRequested { get; set; }
+    public static Func<Task>? CutRequested { get; set; }
+    public static Func<Task>? CopyRequested { get; set; }
+    public static Func<Task>? PasteRequested { get; set; }
     public static Func<Task>? NextTabRequested { get; set; }
     public static Func<Task>? PrevTabRequested { get; set; }
     public static Func<Task>? CloseTabRequested { get; set; }
@@ -37,6 +40,10 @@ public static class EditorCommandHub
     public static Func<Task>? FormatCodeRequested { get; set; }
     public static Func<Task>? FormatBulletListRequested { get; set; }
     public static Func<Task>? FormatNumberedListRequested { get; set; }
+    
+    // Font change commands (from Toolbar)
+    public static Func<int, Task>? FontSizeChanged { get; set; }
+    public static Func<string, Task>? FontFamilyChanged { get; set; }
 
     /// <summary>
     /// Safely invokes an asynchronous delegate when non-null; otherwise returns a completed task.
