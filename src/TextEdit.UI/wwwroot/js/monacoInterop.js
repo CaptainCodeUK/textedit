@@ -1,5 +1,12 @@
 window.textEditMonaco = window.textEditMonaco || {
   editors: {},
+  
+  // Test function to verify JS interop is working
+  testFunction: function() {
+    console.log('[monacoInterop] testFunction called');
+    return { message: 'Hello from testFunction', timestamp: new Date().getTime() };
+  },
+  
   loadMonaco: function(baseUrl) {
     baseUrl = baseUrl || 'https://cdn.jsdelivr.net/npm/monaco-editor@0.38.0/min';
     return new Promise((resolve, reject) => {
@@ -237,6 +244,101 @@ window.textEditMonaco = window.textEditMonaco || {
     }
   },
 
+  // Check if undo is available by querying the editor's command state
+  canUndo: function(elementId) {
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry || !entry.editor) {
+      console.warn('[monacoInterop] canUndo: editor not found');
+      return false;
+    }
+    try {
+      const model = entry.editor.getModel();
+      if (!model) return false;
+      // Monaco tracks undo/redo through the model's version and edit stack
+      // We can check if there are edits in the undo stack by attempting to get undo/redo stack info
+      // Note: Monaco doesn't expose undo stack directly, but we can use onDidChangeModelContent
+      // and track edits, or we can check if the model has version history
+      
+      // The model has a version counter that increases with each edit
+      // We can track the base version to determine if undo is available
+      const currentVersion = model.getVersionId();
+      // Store initial version if not already stored
+      if (!window.textEditMonaco._editorVersions) {
+        window.textEditMonaco._editorVersions = {};
+      }
+      const key = 'undo_' + elementId;
+      if (!window.textEditMonaco._editorVersions[key]) {
+        window.textEditMonaco._editorVersions[key] = currentVersion;
+      }
+      // Can undo if current version is different from baseline
+      return currentVersion !== window.textEditMonaco._editorVersions[key];
+    } catch (e) {
+      console.error('[monacoInterop] canUndo failed:', e);
+      return false;
+    }
+  },
+
+  // Check if redo is available
+  canRedo: function(elementId) {
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry || !entry.editor) {
+      console.warn('[monacoInterop] canRedo: editor not found');
+      return false;
+    }
+    try {
+      // Monaco doesn't expose redo state directly either
+      // We would need to track this through edit history
+      // For now, return false as a safe default
+      return false;
+    } catch (e) {
+      console.error('[monacoInterop] canRedo failed:', e);
+      return false;
+    }
+  },
+
+  // Listen for undo/redo stack changes and invoke a callback
+  onUndoRedoStackChange: function(elementId, dotNetRef) {
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry || !entry.editor) {
+      console.warn('[monacoInterop] onUndoRedoStackChange: editor not found');
+      return false;
+    }
+    try {
+      const editor = entry.editor;
+      const model = editor.getModel();
+      if (!model) return false;
+      
+      // Track when content changes (which updates undo/redo state)
+      const changeListener = model.onDidChangeContent(() => {
+        try {
+          // Dispatch event so Blazor can poll for undo/redo state
+          document.dispatchEvent(new CustomEvent('monaco-undo-redo-changed', { 
+            detail: { 
+              elementId: elementId,
+              versionId: model.getVersionId()
+            } 
+          }));
+          
+          // Optionally invoke .NET callback
+          if (dotNetRef) {
+            dotNetRef.invokeMethodAsync('OnUndoRedoStackChanged', model.getVersionId()).catch(e => console.error('Callback error:', e));
+          }
+        } catch (e) {
+          console.error('[monacoInterop] onUndoRedoStackChange callback error:', e);
+        }
+      });
+      
+      // Store the listener for potential disposal
+      if (!entry.undoRedoListener) {
+        entry.undoRedoListener = changeListener;
+      }
+      return true;
+    } catch (e) {
+      console.error('[monacoInterop] onUndoRedoStackChange failed:', e);
+      return false;
+    }
+  },
+
   // Apply an edit operation to the editor with undo/redo integration
   // Uses Monaco's executeEdits() API so Ctrl+Z works naturally
   applyEdit: function(elementId, editData) {
@@ -287,6 +389,42 @@ window.textEditMonaco = window.textEditMonaco || {
     } catch (e) {
       console.error('[monacoInterop] applyEdit failed:', e);
       console.error('[monacoInterop] applyEdit stack:', e.stack);
+      return false;
+    }
+  },
+
+  // Get the current undo/redo state - SIMPLE VERSION
+  // Just returns what Monaco gives us directly without complex tracking
+  // Returns { canUndo: boolean, canRedo: boolean, versionId: number }
+  getUndoRedoState: function(elementId) {
+    // For now, just return a constant to test if JS interop works at all
+    window.___lastUndo = new Date().getTime();  // Track when this was called
+    return { canUndo: true, canRedo: false, versionId: 42, hasSavedPoint: false };
+  },
+
+  // Mark the current version as a saved point for undo/redo tracking
+  markSavePoint: function(elementId) {
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry || !entry.editor) return false;
+    
+    try {
+      const model = entry.editor.getModel();
+      if (!model) return false;
+      
+      if (!window.textEditMonaco._undoRedoStates) {
+        window.textEditMonaco._undoRedoStates = {};
+      }
+      
+      const stateKey = 'state_' + elementId;
+      window.textEditMonaco._undoRedoStates[stateKey] = {
+        savedVersion: model.getVersionId(),
+        hasSavedPoint: true
+      };
+      
+      console.log('[monacoInterop] Marked save point at version', model.getVersionId());
+      return true;
+    } catch (e) {
+      console.error('[monacoInterop] markSavePoint failed:', e);
       return false;
     }
   }

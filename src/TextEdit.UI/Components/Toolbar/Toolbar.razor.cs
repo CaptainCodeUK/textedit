@@ -84,6 +84,18 @@ public partial class Toolbar : ComponentBase, IDisposable
         await AppState.SaveActiveAsync();
     }
 
+    private async Task HandleUndo()
+    {
+        // Invoke Monaco's native undo command
+        await JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "undo");
+    }
+
+    private async Task HandleRedo()
+    {
+        // Invoke Monaco's native redo command
+        await JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "redo");
+    }
+
     private async Task HandleCut()
     {
         if (AppState.ActiveDocument is null) return;

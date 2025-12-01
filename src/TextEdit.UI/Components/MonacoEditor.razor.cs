@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using TextEdit.Core.Documents;
 using TextEdit.UI.App;
+using TextEdit.UI.Services;
 
 namespace TextEdit.UI.Components;
 
@@ -9,6 +10,7 @@ public partial class MonacoEditor : IAsyncDisposable
 {
     [Inject] private IJSRuntime JS { get; set; } = default!;
     [Inject] private AppState AppState { get; set; } = default!;
+    [Inject] private UndoRedoStateService UndoRedoService { get; set; } = default!;
 
     private DotNetObjectReference<MonacoEditor>? _dotNetRef;
     private bool _initialized;

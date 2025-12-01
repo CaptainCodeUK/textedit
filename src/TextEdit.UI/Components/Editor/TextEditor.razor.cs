@@ -22,6 +22,7 @@ public partial class TextEditor : ComponentBase, IDisposable
     [Inject] protected DialogService DialogService { get; set; } = default!; // For About dialog
     [Inject] protected MarkdownFormattingService FormattingService { get; set; } = default!;
     [Inject] protected TextEdit.Infrastructure.Logging.IAppLoggerFactory AppLoggerFactory { get; set; } = default!;
+    [Inject] protected UndoRedoStateService UndoRedoStateService { get; set; } = default!;
 
     protected Document? CurrentDoc => AppState.ActiveDocument;
     protected EditorState State => AppState.EditorState;
@@ -75,8 +76,8 @@ public partial class TextEditor : ComponentBase, IDisposable
         EditorCommandHub.SaveRequested = HandleSave;
         EditorCommandHub.SaveAsRequested = HandleSaveAs;
         // Edit menu commands (Undo/Redo/Find/Replace all invoke Monaco's native implementations)
-        EditorCommandHub.UndoRequested = () => JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "undo").AsTask();
-        EditorCommandHub.RedoRequested = () => JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "redo").AsTask();
+        EditorCommandHub.UndoRequested = HandleUndoCommand;
+        EditorCommandHub.RedoRequested = HandleRedoCommand;
         EditorCommandHub.CutRequested = () => JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "editor.action.clipboardCutAction").AsTask();
         EditorCommandHub.CopyRequested = () => JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "editor.action.clipboardCopyAction").AsTask();
         EditorCommandHub.PasteRequested = () => JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "editor.action.clipboardPasteAction").AsTask();
@@ -162,6 +163,9 @@ public partial class TextEditor : ComponentBase, IDisposable
             State.CharacterCount = CurrentDoc?.Content.Length ?? 0;
             _lastActiveDocId = CurrentDoc?.Id;
             await UpdateCaretPosition();
+            
+            // Update undo/redo state on first render (safe in OnAfterRenderAsync)
+            await UndoRedoStateService.UpdateStateAsync("monaco-editor");
         }
         if (_pendingCaretSync)
         {
@@ -341,6 +345,16 @@ public partial class TextEditor : ComponentBase, IDisposable
             }
             catch (TaskCanceledException) { }
         });
+    }
+
+    private async Task HandleUndoCommand()
+    {
+        await JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "undo");
+    }
+
+    private async Task HandleRedoCommand()
+    {
+        await JSRuntime.InvokeVoidAsync("textEditMonaco.executeCommand", "monaco-editor", "redo");
     }
 
     protected async Task HandleNew()

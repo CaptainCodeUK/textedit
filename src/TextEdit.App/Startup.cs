@@ -83,9 +83,9 @@ public class Startup
         services.AddSingleton<PerformanceLogger>();
         // Markdown rendering
         services.AddSingleton<MarkdownRenderer>();
+        services.AddSingleton<MarkdownFormattingService>();
+        services.AddSingleton<UndoRedoStateService>();
     // moved above to group with ReplaceService
-        
-        // Phase 2 (v1.1): Preferences and theming infrastructure
         services.AddSingleton<IPreferencesRepository>(sp =>
         {
             var loggerFactory = sp.GetRequiredService<IAppLoggerFactory>();
@@ -96,7 +96,6 @@ public class Startup
         services.AddSingleton<WindowStateRepository>();
         services.AddSingleton<ThemeDetectionService>();
         services.AddSingleton<ThemeManager>();
-        services.AddSingleton<MarkdownFormattingService>();
         services.AddSingleton<ElectronIpcListener>();
         
         // Phase 3 (v1.2): Auto-updates

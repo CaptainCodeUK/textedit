@@ -63,5 +63,20 @@ window.textEditMonaco = window.textEditMonaco || {
     entry.changeListener.dispose();
     entry.editor.dispose();
     delete window.textEditMonaco.editors[elementId];
+  },
+
+  executeCommand: function(elementId, commandId) {
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry) {
+      console.warn('[executeCommand] No editor found for:', elementId);
+      return;
+    }
+    
+    try {
+      entry.editor.trigger('keyboard', commandId, {});
+      console.log('[executeCommand] Executed:', commandId);
+    } catch (e) {
+      console.error('[executeCommand] Error executing command:', commandId, e);
+    }
   }
 };

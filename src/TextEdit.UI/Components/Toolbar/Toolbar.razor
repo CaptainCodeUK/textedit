@@ -35,6 +35,29 @@
                 </button>
         
                 <div class="toolbar-divider"></div>
+
+                <!-- Undo/Redo Operations -->
+                <button type="button" 
+                                class="toolbar-button" 
+                                title="Undo (Ctrl+Z)"
+                                aria-label="Undo"
+                                disabled="@(!AppState.CanUndo)"
+                                tabindex="-1"
+                                @onclick="HandleUndo">
+                        <span class="icon">↶</span>
+                </button>
+        
+                <button type="button" 
+                                class="toolbar-button" 
+                                title="Redo (Ctrl+Y)"
+                                aria-label="Redo"
+                                disabled="@(!AppState.CanRedo)"
+                                tabindex="-1"
+                                @onclick="HandleRedo">
+                        <span class="icon">↷</span>
+                </button>
+        
+                <div class="toolbar-divider"></div>
         
                 <!-- Clipboard Operations -->
                 <button type="button" 
