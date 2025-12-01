@@ -22,7 +22,6 @@ public partial class TextEditor : ComponentBase, IDisposable
     [Inject] protected DialogService DialogService { get; set; } = default!; // For About dialog
     [Inject] protected MarkdownFormattingService FormattingService { get; set; } = default!;
     [Inject] protected TextEdit.Infrastructure.Logging.IAppLoggerFactory AppLoggerFactory { get; set; } = default!;
-    [Inject] protected UndoRedoStateService UndoRedoStateService { get; set; } = default!;
 
     protected Document? CurrentDoc => AppState.ActiveDocument;
     protected EditorState State => AppState.EditorState;
@@ -163,9 +162,6 @@ public partial class TextEditor : ComponentBase, IDisposable
             State.CharacterCount = CurrentDoc?.Content.Length ?? 0;
             _lastActiveDocId = CurrentDoc?.Id;
             await UpdateCaretPosition();
-            
-            // Update undo/redo state on first render (safe in OnAfterRenderAsync)
-            await UndoRedoStateService.UpdateStateAsync("monaco-editor");
         }
         if (_pendingCaretSync)
         {

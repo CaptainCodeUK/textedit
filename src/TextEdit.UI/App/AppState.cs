@@ -35,7 +35,6 @@ public class AppState : IDisposable
     private readonly IPreferencesRepository _prefsRepo;
     private readonly ThemeDetectionService _themeDetection;
     private readonly ThemeManager _themeManager;
-    private readonly UndoRedoStateService _undoRedoStateService;
     private readonly IAppLogger? _logger;
     private readonly Microsoft.Extensions.Logging.ILogger<AppState>? _msLogger;
     private readonly Dictionary<Guid, FileWatcher> _watchers = new();
@@ -54,7 +53,6 @@ public class AppState : IDisposable
         IPreferencesRepository prefsRepo,
         ThemeDetectionService themeDetection,
         ThemeManager themeManager,
-        UndoRedoStateService undoRedoStateService,
     IAppLoggerFactory? loggerFactory = null,
     Microsoft.Extensions.Logging.ILogger<AppState>? msLogger = null,
         DialogService? dialogService = null)
@@ -69,7 +67,6 @@ public class AppState : IDisposable
         _prefsRepo = prefsRepo;
         _themeDetection = themeDetection;
         _themeManager = themeManager;
-        _undoRedoStateService = undoRedoStateService;
     _logger = loggerFactory?.CreateLogger<AppState>();
     _msLogger = msLogger;
         
@@ -80,9 +77,6 @@ public class AppState : IDisposable
         // Hook up autosave to trigger persistence
         _autosave.AutosaveRequested += HandleAutosaveAsync;
         _autosave.Start();
-        
-        // Hook up undo/redo state changes to notify UI
-        _undoRedoStateService.Changed += OnUndoRedoStateChanged;
     }
 
     // Backwards-compatible constructor used in tests and earlier call sites
@@ -98,7 +92,7 @@ public class AppState : IDisposable
         ThemeManager themeManager,
         IAppLoggerFactory? loggerFactory,
         DialogService? dialogService)
-        : this(docs, tabs, ipc, persistence, autosave, perfLogger, prefsRepo, themeDetection, themeManager, new UndoRedoStateService(null!), loggerFactory, null, dialogService)
+        : this(docs, tabs, ipc, persistence, autosave, perfLogger, prefsRepo, themeDetection, themeManager, loggerFactory, null, dialogService)
     {
     }
 
@@ -133,14 +127,14 @@ public class AppState : IDisposable
     public ToolbarState ToolbarState { get; }
 
     /// <summary>
-    /// Undo/Redo state tracked from Monaco editor.
+    /// Undo is always available - Monaco handles validation internally.
     /// </summary>
-    public bool CanUndo => _undoRedoStateService.CanUndo;
+    public bool CanUndo => true;
     
     /// <summary>
-    /// True if redo is available.
+    /// Redo is always available - Monaco handles validation internally.
     /// </summary>
-    public bool CanRedo => _undoRedoStateService.CanRedo;
+    public bool CanRedo => true;
 
     /// <summary>
     /// User preferences loaded from disk.
@@ -191,12 +185,6 @@ public class AppState : IDisposable
     /// Called when Monaco editor's undo/redo state changes.
     /// Updates menu and toolbar button visibility.
     /// </summary>
-    private void OnUndoRedoStateChanged()
-    {
-        Console.WriteLine($"[AppState.OnUndoRedoStateChanged] CanUndo={CanUndo}, CanRedo={CanRedo}");
-        NotifyChanged();
-    }
-
     /// <summary>
     /// Update the Electron window title based on current document (T056-T060)
     /// </summary>
@@ -317,9 +305,6 @@ public class AppState : IDisposable
         {
             NotifyChanged();
         }
-        
-        // Start polling for undo/redo state changes
-        _undoRedoStateService.StartPolling("monaco-editor");
     }
 
     /// <summary>
@@ -766,7 +751,6 @@ public class AppState : IDisposable
     public void Dispose()
     {
         _autosave.Stop();
-        _undoRedoStateService.StopPolling();
         
         foreach (var watcher in _watchers.Values)
         {

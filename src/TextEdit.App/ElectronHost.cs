@@ -2,7 +2,6 @@ using ElectronNET.API;
 using ElectronNET.API.Entities;
 using TextEdit.UI.App;
 using TextEdit.UI.Components.Editor;
-using TextEdit.UI.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
@@ -21,7 +20,6 @@ public static partial class ElectronHost
 {
     private static WebApplication? _app;
     private static AppState? _appState;
-    private static UndoRedoStateService? _undoRedoStateService;
     private static ILogger? _logger;
     private static string[] _initialArgs = Array.Empty<string>();
     private static BrowserWindow? _mainWindow;
@@ -35,7 +33,6 @@ public static partial class ElectronHost
     {
         _app = app;
         _appState = app.Services.GetRequiredService<AppState>();
-        _undoRedoStateService = app.Services.GetRequiredService<UndoRedoStateService>();
         _logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("ElectronHost");
         _initialArgs = args ?? Array.Empty<string>();
         

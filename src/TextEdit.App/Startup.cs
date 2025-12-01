@@ -84,8 +84,6 @@ public class Startup
         // Markdown rendering
         services.AddSingleton<MarkdownRenderer>();
         services.AddSingleton<MarkdownFormattingService>();
-        services.AddSingleton<UndoRedoStateService>();
-    // moved above to group with ReplaceService
         services.AddSingleton<IPreferencesRepository>(sp =>
         {
             var loggerFactory = sp.GetRequiredService<IAppLoggerFactory>();

@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
-using TextEdit.Core.Editing;
 using TextEdit.UI.App;
 using TextEdit.UI.Services;
 using TextEdit.UI.Components.Editor;
@@ -17,7 +16,6 @@ public partial class Toolbar : ComponentBase, IDisposable
     [Inject] protected AppState AppState { get; set; } = default!;
     [Inject] protected MarkdownFormattingService FormattingService { get; set; } = default!;
     [Inject] protected IJSRuntime JSRuntime { get; set; } = default!;
-    [Inject] protected IUndoRedoService UndoRedo { get; set; } = default!;
 
     protected override void OnInitialized()
     {
