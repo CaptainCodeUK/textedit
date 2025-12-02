@@ -7,31 +7,71 @@ window.textEditMonaco = window.textEditMonaco || {
     return { message: 'Hello from testFunction', timestamp: new Date().getTime() };
   },
   
-  loadMonaco: function(baseUrl) {
-    baseUrl = baseUrl || 'https://cdn.jsdelivr.net/npm/monaco-editor@0.38.0/min';
-    return new Promise((resolve, reject) => {
-      if (window.monaco) {
-        resolve();
-        return;
+  loadMonaco: (function() {
+    let loadingPromise = null;
+
+    return function(baseUrl) {
+      console.log('[monacoInterop] loadMonaco called with baseUrl:', baseUrl);
+      baseUrl = baseUrl || 'https://cdn.jsdelivr.net/npm/monaco-editor@0.38.0/min';
+
+      // Prevent duplicate loading of the Monaco loader script
+      if (document.getElementById('monaco-loader-script')) {
+        console.log('[monacoInterop] Monaco loader script already loaded, resolving immediately');
+        return Promise.resolve();
       }
 
-      const script = document.createElement('script');
-      script.src = baseUrl + '/vs/loader.js';
-      script.onload = () => {
-        require.config({ paths: { vs: baseUrl + '/vs' } });
-        require(['vs/editor/editor.main'], () => {
+      if (loadingPromise) {
+        console.log('[monacoInterop] Monaco loader script is already loading, returning existing promise');
+        return loadingPromise;
+      }
+
+      loadingPromise = new Promise((resolve, reject) => {
+        if (window.monaco) {
+          console.log('[monacoInterop] Monaco already loaded, resolving immediately');
           resolve();
-        }, reject);
-      };
-      script.onerror = reject;
-      document.head.appendChild(script);
-    });
-  },
+          return;
+        }
+
+        console.log('[monacoInterop] Loading Monaco from', baseUrl + '/vs/loader.js');
+        const script = document.createElement('script');
+        script.id = 'monaco-loader-script';
+        script.src = baseUrl + '/vs/loader.js';
+        script.onload = () => {
+          console.log('[monacoInterop] Loader script loaded, configuring require');
+          require.config({ paths: { vs: baseUrl + '/vs' } });
+          require(['vs/editor/editor.main'], () => {
+            console.log('[monacoInterop] Monaco editor main loaded, resolving');
+            resolve();
+          }, reject);
+        };
+        script.onerror = (err) => {
+          console.error('[monacoInterop] Failed to load loader.js:', err);
+          reject(err);
+        };
+        document.head.appendChild(script);
+      });
+
+      return loadingPromise;
+    };
+  })(),
 
   createEditor: function(elementId, dotNetRef, options) {
+    console.log('[monacoInterop] createEditor called for', elementId);
     options = options || {};
+
+    // Prevent duplicate initialization
+    if (window.textEditMonaco.editors[elementId]) {
+      console.warn('[monacoInterop] Editor already exists for', elementId);
+      return false;
+    }
+
     const el = document.getElementById(elementId);
-    if (!el) throw new Error('Element not found: ' + elementId);
+    if (!el) {
+      console.error('[monacoInterop] Element not found:', elementId);
+      throw new Error('Element not found: ' + elementId);
+    }
+
+    console.log('[monacoInterop] Creating editor with options:', options);
 
     const editor = monaco.editor.create(el, {
       value: options.value || '',
@@ -425,6 +465,149 @@ window.textEditMonaco = window.textEditMonaco || {
       return true;
     } catch (e) {
       console.error('[monacoInterop] markSavePoint failed:', e);
+      return false;
+    }
+  },
+
+  /**
+   * Sets spell check decorations on the editor.
+   * Creates red wavy underlines for misspelled words.
+   * @param {string} elementId - Editor container ID
+   * @param {Array} decorationData - Array of decoration objects with range and options
+   */
+  setSpellCheckDecorations: function(elementId, decorationData) {
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry) {
+      console.warn('[setSpellCheckDecorations] No editor found for:', elementId);
+      return;
+    }
+
+    try {
+      // Transform decoration data into Monaco decoration objects
+      const decorations = decorationData.map(d => ({
+        range: new monaco.Range(
+          d.range.startLineNumber,
+          d.range.startColumn,
+          d.range.endLineNumber,
+          d.range.endColumn
+        ),
+        options: {
+          isWholeLine: d.options.isWholeLine || false,
+          className: d.options.className || 'spell-check-error',
+          glyphMarginClassName: d.options.glyphMarginClassName,
+          glyphMarginHoverMessage: d.options.glyphMarginHoverMessage,
+          inlineClassName: d.options.inlineClassName,
+          inlineClassNameAffectsLetterSpacing: d.options.inlineClassNameAffectsLetterSpacing || false,
+          beforeContentClassName: d.options.beforeContentClassName,
+          afterContentClassName: d.options.afterContentClassName,
+          suggestions: d.options.suggestions || [],
+          message: d.options.message || ''
+        }
+      }));
+
+      // Apply decorations to editor
+      if (!entry.spellCheckDecorationsId) {
+        entry.spellCheckDecorationsId = [];
+      }
+
+      // Clear previous decorations and apply new ones
+      entry.spellCheckDecorationsId = entry.editor.deltaDecorations(
+        entry.spellCheckDecorationsId,
+        decorations
+      );
+
+      console.log('[setSpellCheckDecorations] Applied', decorations.length, 'decorations');
+    } catch (e) {
+      console.error('[setSpellCheckDecorations] Error setting decorations:', e);
+    }
+  },
+
+  /**
+   * Clears all spell check decorations from the editor.
+   * @param {string} elementId - Editor container ID
+   */
+  clearSpellCheckDecorations: function(elementId) {
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry) {
+      console.warn('[clearSpellCheckDecorations] No editor found for:', elementId);
+      return;
+    }
+
+    try {
+      if (entry.spellCheckDecorationsId && entry.spellCheckDecorationsId.length > 0) {
+        entry.spellCheckDecorationsId = entry.editor.deltaDecorations(
+          entry.spellCheckDecorationsId,
+          []
+        );
+        console.log('[clearSpellCheckDecorations] Cleared all spell check decorations');
+      }
+    } catch (e) {
+      console.error('[clearSpellCheckDecorations] Error clearing decorations:', e);
+    }
+  },
+
+  /**
+   * Gets spell check suggestions for a specific decoration.
+   * @param {string} elementId - Editor container ID
+   * @param {string} decorationId - The decoration ID to get suggestions for
+   * @returns {Array} Array of suggestion strings
+   */
+  getSpellCheckSuggestionsForDecoration: function(elementId, decorationId) {
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry) {
+      console.warn('[getSpellCheckSuggestionsForDecoration] No editor found for:', elementId);
+      return [];
+    }
+
+    try {
+      // In Monaco, decorations don't have direct IDs we can query
+      // Suggestions are stored in the decoration options when created
+      // Return empty for now - suggestions should be retrieved through context menu
+      return [];
+    } catch (e) {
+      console.error('[getSpellCheckSuggestionsForDecoration] Error:', e);
+      return [];
+    }
+  },
+
+  /**
+   * Replaces a misspelled word with a suggestion.
+   * @param {string} elementId - Editor container ID
+   * @param {object} range - { startLineNumber, startColumn, endLineNumber, endColumn }
+   * @param {string} replacement - The replacement text
+   */
+  replaceSpellingError: function(elementId, range, replacement) {
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry) {
+      console.warn('[replaceSpellingError] No editor found for:', elementId);
+      return false;
+    }
+
+    try {
+      const editor = entry.editor;
+      const model = editor.getModel();
+      if (!model) return false;
+
+      // Create Monaco range from decoration range
+      const monacoRange = new monaco.Range(
+        range.startLineNumber,
+        range.startColumn,
+        range.endLineNumber,
+        range.endColumn
+      );
+
+      // Replace the text
+      editor.executeEdits('spellcheck', [
+        {
+          range: monacoRange,
+          text: replacement
+        }
+      ]);
+
+      console.log('[replaceSpellingError] Replaced text at', monacoRange);
+      return true;
+    } catch (e) {
+      console.error('[replaceSpellingError] Error replacing spelling error:', e);
       return false;
     }
   }

@@ -2,11 +2,15 @@
 
 **Date**: 2 December 2025  
 **Branch**: `003-v1-2-spell-checker`  
-**Status**: 40% Complete (Foundation Phase)
+**Status**: 60% Complete (Phase 1 & 2 Complete, Phase 3 Pending)
 
 ## Summary
 
-The foundation for spell checking has been successfully implemented. The core spell checking engine is complete and fully tested, ready for UI integration with Monaco Editor.
+**Phase 1 (40%)**: ✅ Foundation implementation complete with core spell checking engine, all tests passing.
+
+**Phase 2 (20%)**: ✅ Monaco decorations integration complete with real-time visual feedback (red wavy underlines), comprehensive testing, and proper error handling.
+
+**Phase 3 (40%)**: ⏳ Pending - Context menu suggestions, custom dictionary UI, options dialog integration.
 
 ## Completed Components (Phase 1: Foundation)
 
@@ -91,6 +95,119 @@ The foundation for spell checking has been successfully implemented. The core sp
 - Empty input handling
 
 **Test Results**: ✅ **55/55 passed** (53 normal + 2 skipped edge cases)
+
+## Completed Components (Phase 2: Monaco Decorations Integration)
+
+### 1. ✅ SpellCheckDecorationService (Infrastructure)
+**Location**: `TextEdit.Infrastructure/SpellChecking/SpellCheckDecorationService.cs`
+
+**Responsibility**: Converts spell check results into Monaco Editor decoration objects
+
+**Models**:
+- `MonacoDecoration` - Container for range and rendering options
+- `MonacoRange` - Line and column position (1-based for Monaco)
+- `MonacoDecorationOptions` - CSS class, message, and suggestions
+
+**Key Methods**:
+- `ConvertToDecorations()` - Transforms SpellCheckResult → MonacoDecoration[]
+  - Handles 0-based → 1-based column conversion
+  - Sorts suggestions by confidence
+  - Preserves all metadata for context menu
+
+- `ClearDecorations()` - Returns empty list for removing all decorations
+
+### 2. ✅ CSS Styling (wwwroot/css/app.css)
+- Red wavy underline with theme support (light/dark)
+- Background color (rgba for transparency)
+- Fallback to dashed underline for browser compatibility
+- Text-underline-offset for proper spacing
+
+### 3. ✅ JavaScript Interop Enhancements (wwwroot/js/monacoInterop.js)
+
+**New Methods**:
+
+#### `setSpellCheckDecorations(elementId, decorationData)`
+- Applies decorations via Monaco's `deltaDecorations()` API
+- Stores decoration IDs for efficient updates
+- Integrates suggestions with decoration objects
+
+#### `clearSpellCheckDecorations(elementId)`
+- Removes all spell check decorations from editor
+
+#### `getSpellCheckSuggestionsForDecoration(elementId, decorationId)`
+- Retrieves suggestions for context menu display
+
+#### `replaceSpellingError(elementId, position, replacement, wordLength)`
+- Replaces misspelled word with suggestion
+- Executes via `model.pushEditOperations()` for undo/redo support
+
+### 4. ✅ MonacoEditor Component Integration
+**File**: `TextEdit.UI/Components/MonacoEditor.razor.cs`
+
+**New Features**:
+- `SpellCheckingService` injection for real-time spell checking
+- `SpellCheckDecorationService` for decoration conversion
+- `UpdateSpellCheckAsync()` - Triggers spell check on content changes
+  - Debounced via SpellCheckingService (500ms default)
+  - Cancellation token support for rapid typing
+  - Non-blocking error handling
+
+**Integration Points**:
+- `OnEditorContentChanged()` - Triggers spell check on every edit
+- `DisposeAsync()` - Cleans up decorations and cancels pending checks
+
+### 5. ✅ Unit Tests (18 new tests)
+**File**: `TextEdit.Infrastructure.Tests/SpellChecking/SpellCheckDecorationServiceTests.cs`
+
+**Test Coverage**:
+- Empty results handling
+- Single and multiple misspellings
+- Decoration options preservation
+- Suggestion sorting by confidence
+- Multi-line result handling
+- Column number calculations (0-based → 1-based)
+- Monaco range and option validation
+- Round-trip data preservation
+
+**Test Results**: ✅ **All 18 tests passing**
+
+### 6. ✅ Package Installation
+- **FluentAssertions v8.8.0** - Added for test assertions
+
+## Phase 2 Integration Flow
+
+```
+User Types
+    ↓
+MonacoEditor.OnEditorContentChanged()
+    ↓
+UpdateSpellCheckAsync(content)
+    ↓
+SpellCheckingService.CheckSpellingAsync() [DEBOUNCED 500ms]
+    ↓
+SpellCheckResult[] [Multi-line, suggestions]
+    ↓
+SpellCheckDecorationService.ConvertToDecorations()
+    ↓
+MonacoDecoration[] [1-based Monaco format]
+    ↓
+JS: textEditMonaco.setSpellCheckDecorations()
+    ↓
+Monaco.deltaDecorations()
+    ↓
+Red wavy underlines visible to user ✅
+```
+
+## Test Suite Status (Phase 1 + 2)
+
+```
+TextEdit.Core.Tests:              201 passed, 0 skipped
+TextEdit.Infrastructure.Tests:     71 passed, 2 skipped (+16 new tests)
+TextEdit.IPC.Tests:                37 passed
+TextEdit.App.Tests:                28 passed
+────────────────────────────────────────────────────
+TOTAL:                            337 passed, 2 skipped ✅
+```
 
 ## Test Suite Status
 

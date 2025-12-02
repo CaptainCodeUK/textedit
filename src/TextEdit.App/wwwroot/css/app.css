@@ -187,6 +187,22 @@ html, body { height: 100%; margin: 0; }
   height: 100%;
 }
 
+.monaco-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+}
+
+#monaco-editor {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+}
+
 .editor-textarea {
   flex: 1 1 auto;
   min-height: 0;
@@ -564,3 +580,63 @@ textarea::selection, input::selection { background: color-mix(in srgb, var(--acc
 .font-size-dropdown {
     max-width: 80px;
 }
+
+/* Spell Check Decorations */
+
+/* Red wavy underline for misspelled words in Monaco Editor */
+.spell-check-error {
+    background: repeating-linear-gradient(
+        to right,
+        transparent,
+        transparent 2px,
+        rgba(220, 38, 38, 0.3) 2px,
+        rgba(220, 38, 38, 0.3) 4px
+    );
+    border-bottom: 2px solid transparent;
+    border-image: repeating-linear-gradient(
+        90deg,
+        #dc2626,
+        #dc2626 2px,
+        transparent 2px,
+        transparent 4px
+    ) 0 0 1 0;
+    text-decoration: underline wavy #dc2626;
+    text-underline-offset: 2px;
+}
+
+/* Light theme spell check error */
+[data-theme="light"] .spell-check-error {
+    text-decoration: underline wavy #dc2626;
+    background-color: rgba(220, 38, 38, 0.08);
+}
+
+/* Dark theme spell check error */
+[data-theme="dark"] .spell-check-error {
+    text-decoration: underline wavy #ef4444;
+    background-color: rgba(239, 68, 68, 0.12);
+}
+
+/* Fallback: simple red dashed underline for browsers that don't support wavy */
+@supports not (text-decoration: underline wavy) {
+    .spell-check-error {
+        border-bottom: 1px dashed #dc2626;
+        background: transparent;
+        text-decoration: none;
+    }
+}
+
+/* Spell check suggestion popup styles (for context menu) */
+.spell-check-suggestion {
+    background: rgba(220, 38, 38, 0.05);
+    border-left: 3px solid #dc2626;
+    padding: 4px 8px;
+    font-size: 12px;
+    color: var(--fg);
+}
+
+/* Hover state for suggestions in context menu */
+.spell-check-suggestion:hover {
+    background: rgba(220, 38, 38, 0.1);
+    cursor: pointer;
+}
+

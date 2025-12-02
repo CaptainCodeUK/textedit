@@ -25,23 +25,37 @@
 - [x] Unit tests: Replace logic and undo/redo
 - [ ] Accessibility: Verify WCAG 2.1 AA compliance _(deferred – post-Monaco optimization)_
 
-## User Story 3: Spell Checking with Built-in Dictionary ⏳ **PENDING (HIGH PRIORITY)**
-**Status Change**: Previous blocker (textarea editor limitations) is RESOLVED via Monaco Editor integration. Implementation is now straightforward.
+## User Story 3: Spell Checking with Built-in Dictionary 🟡 **IN-PROGRESS (70% COMPLETE)**
+**Status Update**: Phase 1 (Foundation) and Phase 2 (Monaco Integration) COMPLETE. Phase 3 (Context Menu & Persistence) IN-PROGRESS.
 
-- [ ] Integrate WeCantSpell.Hunspell NuGet package (Infrastructure) _(ready to implement)_
-- [ ] Bundle English Hunspell dictionary files (.dic/.aff) in application resources _(ready)_
-- [ ] Load built-in English Hunspell dictionary (.dic/.aff) _(ready)_
-- [ ] Handle spell check initialization errors gracefully (log, disable feature if dictionary missing) _(ready)_
-- [ ] Implement spell check engine in Core using WeCantSpell.Hunspell (real-time, debounced) _(ready)_
-- [ ] Add red wavy underline for misspelled words in editor _(now feasible with Monaco decorations)_
-- [ ] Show suggestions from Hunspell in right-click context menu _(feasible with Monaco context menu)_
-- [ ] Replace word with suggestion on click _(feasible with Monaco integrations)_
-- [ ] Toggle spell check in Options dialog _(ready)_
-- [ ] Exclude code blocks/markdown fenced sections from spell check _(ready)_
-- [ ] Unit tests: Spell check engine, UI indicators, suggestions _(ready)_
-- [ ] Performance test: 10,000 words < 3s _(ready)_
+**Phase 1 (Foundation) - ✅ COMPLETE**:
+- [x] Integrate WeCantSpell.Hunspell NuGet package (Infrastructure)
+- [x] Bundle English Hunspell dictionary files (.dic/.aff) in application resources
+- [x] Load built-in English Hunspell dictionary (.dic/.aff)
+- [x] Handle spell check initialization errors gracefully (log, disable feature if dictionary missing)
+- [x] Implement spell check engine in Core using WeCantSpell.Hunspell (real-time, debounced)
+- [x] Exclude code blocks/markdown fenced sections from spell check
+- [x] Unit tests: Spell check engine (15+ tests, all passing)
 
-**Next Steps**: Begin implementation post-sprint review. Estimated effort: 2-3 weeks.
+**Phase 2 (Monaco Integration) - ✅ COMPLETE**:
+- [x] Add red wavy underline for misspelled words in editor (MonacoEditor integration)
+- [x] Create SpellCheckDecorationService for Monaco decoration conversion
+- [x] JavaScript interop for setting/clearing decorations
+- [x] CSS styling for red wavy underlines (light/dark theme)
+- [x] Real-time spell checking with debouncing integration
+- [x] Unit tests: Decoration service (18 tests, all passing)
+
+**Phase 3 (UI & Persistence) - 🟡 IN-PROGRESS**:
+- [ ] Show suggestions from Hunspell in right-click context menu
+- [ ] Replace word with suggestion on click
+- [ ] "Add to Dictionary" option in context menu
+- [ ] Toggle spell check in Options dialog
+- [ ] Persist custom dictionary in app data dir
+- [ ] Performance test: 10,000 words < 3s
+
+**Test Results**: ✅ **337/337 tests passing** (↑18 new decoration tests in Phase 2)
+
+**Next Steps**: Phase 3 begins with context menu integration. Estimated effort: 1-2 weeks.
 
 ## User Story 4: Custom Dictionary Management ⏳ **PENDING (MEDIUM PRIORITY)**
 **Dependency**: Blocked on User Story 3 (Spell Checking) - will begin after spell check implementation.

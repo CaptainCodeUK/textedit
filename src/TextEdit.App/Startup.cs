@@ -84,6 +84,32 @@ public class Startup
         // Markdown rendering
         services.AddSingleton<MarkdownRenderer>();
         services.AddSingleton<MarkdownFormattingService>();
+        
+        // Spell checking (v1.2) - with graceful fallback if dictionaries are missing
+        TextEdit.Core.SpellChecking.ISpellChecker? spellChecker = null;
+        try
+        {
+            spellChecker = TextEdit.Infrastructure.SpellChecking.DictionaryService.LoadEnglishDictionary();
+        }
+        catch (Exception ex)
+        {
+            // Dictionary files not found or failed to load - spell checking will be disabled
+            System.Diagnostics.Debug.WriteLine($"Spell checking disabled: {ex.Message}");
+        }
+        
+        // Only register SpellCheckingService if we have a spell checker
+        if (spellChecker != null)
+        {
+            services.AddSingleton(spellChecker);
+            services.AddSingleton<TextEdit.Infrastructure.SpellChecking.SpellCheckingService>();
+        }
+        else
+        {
+            // Register a stub service that does nothing
+            services.AddSingleton(sp => new TextEdit.Infrastructure.SpellChecking.SpellCheckingService(
+                new TextEdit.Infrastructure.SpellChecking.StubSpellChecker()));
+        }
+        
         services.AddSingleton<IPreferencesRepository>(sp =>
         {
             var loggerFactory = sp.GetRequiredService<IAppLoggerFactory>();
@@ -93,8 +119,12 @@ public class Startup
         });
         services.AddSingleton<WindowStateRepository>();
         services.AddSingleton<ThemeDetectionService>();
-        services.AddSingleton<ThemeManager>();
-        services.AddSingleton<ElectronIpcListener>();
+        
+        // Register ThemeManager as singleton without IJSRuntime dependency
+        services.AddSingleton<ThemeManager>(sp => new ThemeManager());
+        
+        // Register ElectronIpcListener as scoped (not singleton) so it can use IJSRuntime
+        services.AddScoped<ElectronIpcListener>();
         
         // Phase 3 (v1.2): Auto-updates
         services.AddSingleton<TextEdit.Infrastructure.Updates.AutoUpdateService>(sp =>
