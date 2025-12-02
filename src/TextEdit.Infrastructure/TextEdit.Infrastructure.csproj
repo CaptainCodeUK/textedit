@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="ElectronNET.API" Version="23.6.2" />
+    <PackageReference Include="WeCantSpell.Hunspell" Version="7.0.1" />
   </ItemGroup>
 
 </Project>
