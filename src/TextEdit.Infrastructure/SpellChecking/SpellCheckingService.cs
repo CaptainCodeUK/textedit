@@ -10,8 +10,8 @@ namespace TextEdit.Infrastructure.SpellChecking;
 /// </summary>
 public class SpellCheckingService
 {
-    private readonly ISpellChecker _spellChecker;
-    private readonly SpellCheckPreferences _preferences;
+    private ISpellChecker _spellChecker;
+    private SpellCheckPreferences _preferences;
     private CancellationTokenSource? _debounceTokenSource;
     private DateTime _lastCheckTime = DateTime.MinValue;
     private readonly object _lockObject = new();
@@ -28,6 +28,35 @@ public class SpellCheckingService
         _spellChecker = spellChecker ?? throw new ArgumentNullException(nameof(spellChecker));
         _preferences = preferences ?? new SpellCheckPreferences();
     }
+
+    /// <summary>
+    /// Update the runtime preferences used by the spell checking service.
+    /// This allows the UI to change preferences (e.g., debounce interval) without restarting the service.
+    /// </summary>
+    public void UpdatePreferences(SpellCheckPreferences prefs)
+    {
+        if (prefs == null) throw new ArgumentNullException(nameof(prefs));
+        _preferences = prefs;
+    }
+
+    /// <summary>
+    /// Replace the underlying spell checker implementation at runtime.
+    /// This disposes the old checker and swaps the reference atomically.
+    /// </summary>
+    public void ReplaceSpellChecker(ISpellChecker newChecker)
+    {
+        if (newChecker == null) throw new ArgumentNullException(nameof(newChecker));
+        lock (_lockObject)
+        {
+            try { _spellChecker?.Dispose(); } catch { }
+            _spellChecker = newChecker;
+        }
+    }
+
+    /// <summary>
+    /// Runtime helper indicating if the backing spell checker is initialized.
+    /// </summary>
+    public bool IsInitialized => _spellChecker?.IsInitialized ?? false;
 
     /// <summary>
     /// Checks the spelling of words in the provided text.

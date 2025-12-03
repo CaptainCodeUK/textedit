@@ -39,6 +39,7 @@ public class AppState : IDisposable
     private readonly Microsoft.Extensions.Logging.ILogger<AppState>? _msLogger;
     private readonly Dictionary<Guid, FileWatcher> _watchers = new();
     private readonly Dictionary<Guid, DateTimeOffset> _lastExternalChange = new();
+    private readonly TextEdit.Infrastructure.SpellChecking.SpellCheckingService? _spellCheckingService;
 
     private readonly Dictionary<Guid, Document> _open = new();
     private int _stateVersion = 0;
@@ -55,7 +56,8 @@ public class AppState : IDisposable
         ThemeManager themeManager,
     IAppLoggerFactory? loggerFactory = null,
     Microsoft.Extensions.Logging.ILogger<AppState>? msLogger = null,
-        DialogService? dialogService = null)
+        DialogService? dialogService = null,
+        TextEdit.Infrastructure.SpellChecking.SpellCheckingService? spellCheckingService = null)
     {
         _docs = docs;
         _tabs = tabs;
@@ -77,6 +79,7 @@ public class AppState : IDisposable
         // Hook up autosave to trigger persistence
         _autosave.AutosaveRequested += HandleAutosaveAsync;
         _autosave.Start();
+        _spellCheckingService = spellCheckingService;
     }
 
     // Backwards-compatible constructor used in tests and earlier call sites
@@ -329,6 +332,15 @@ public class AppState : IDisposable
         _msLogger?.LogInformation("Loaded preferences (ms logger): LoggingEnabled={LoggingEnabled}, FileExtensions={ExtensionsCount}",
             Preferences.LoggingEnabled, Preferences.FileExtensions?.Count ?? 0);
         await ApplyThemeAsync();
+        // Apply spell check preferences to the runtime service if registered
+        try
+        {
+            if (Preferences.SpellCheck != null)
+            {
+                _spellCheckingService?.UpdatePreferences(Preferences.SpellCheck);
+            }
+        }
+        catch { /* ignore */ }
         NotifyChanged();
     }
 

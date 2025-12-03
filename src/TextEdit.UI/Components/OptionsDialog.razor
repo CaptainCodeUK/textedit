@@ -8,7 +8,13 @@
 @inject TextEdit.Infrastructure.Updates.AutoUpdateService AutoUpdateService
 @inject TextEdit.UI.App.DialogService DialogService
 @using System.Runtime.InteropServices
+@using System.IO
+@using Microsoft.AspNetCore.Components.Forms
 @using TextEdit.UI.Components.Editor
+@using Microsoft.Extensions.Configuration
+@inject TextEdit.Infrastructure.SpellChecking.SpellCheckingService SpellCheckingService
+@inject TextEdit.Infrastructure.SpellChecking.DictionaryInstaller DictionaryInstaller
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
 @if (IsVisible)
 {
@@ -28,6 +34,7 @@
                     <button role="tab" aria-selected="@(SelectedTab == OptionsTab.Logging ? "true" : "false")" aria-controls="panel-logging" @onclick="() => SelectTab(OptionsTab.Logging)" class="tab">Logging</button>
                     <button role="tab" aria-selected="@(SelectedTab == OptionsTab.Updates ? "true" : "false")" aria-controls="panel-updates" @onclick="() => SelectTab(OptionsTab.Updates)" class="tab">Updates</button>
                     <button role="tab" aria-selected="@(SelectedTab == OptionsTab.Editor ? "true" : "false")" aria-controls="panel-editor" @onclick="() => SelectTab(OptionsTab.Editor)" class="tab">Editor</button>
+                    <button role="tab" aria-selected="@(SelectedTab == OptionsTab.SpellCheck ? "true" : "false")" aria-controls="panel-spellcheck" @onclick="() => SelectTab(OptionsTab.SpellCheck)" class="tab">Spell Check</button>
                 </div>
 
                 @if (SelectedTab == OptionsTab.Extensions)
@@ -108,6 +115,51 @@
                             </label>
 
                             <p style="font-size:12px; color:var(--muted); margin:8px 0 0 0;">Font size and family can be changed using the toolbar dropdowns.</p>
+                        </div>
+                    </section>
+                }
+                @if (SelectedTab == OptionsTab.SpellCheck)
+                {
+                    <section id="panel-spellcheck" role="tabpanel" aria-labelledby="panel-spellcheck-label" style="margin-bottom: 20px;">
+                        <h3 style="font-size: 13px; font-weight: 600; margin: 0 0 8px 0; color: var(--fg);">Spell Check</h3>
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <label style="display:flex; gap:8px; align-items:center; cursor:pointer; color: var(--fg);">
+                                <input type="checkbox" checked="@AppState.Preferences.SpellCheck.IsEnabled" @onchange="ToggleSpellCheckEnabled" />
+                                <span>Enable spell checking</span>
+                            </label>
+                            <label style="display:flex; gap:8px; align-items:center; cursor:pointer; color: var(--fg);">
+                                <input type="checkbox" checked="@AppState.Preferences.SpellCheck.CheckCodeBlocks" @onchange="ToggleCheckCodeBlocks" />
+                                <span>Check code blocks and fenced markup</span>
+                            </label>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <label style="font-size:12px; color:var(--muted);">Debounce</label>
+                                <input type="number" min="0" value="@AppState.Preferences.SpellCheck.DebounceIntervalMs" @onchange="UpdateDebounceInterval" style="width:120px; padding:4px 8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); border-radius:4px;" />
+                                <label style="font-size:12px; color:var(--muted);">ms</label>
+                            </div>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <label style="font-size:12px; color:var(--muted);">Max suggestions</label>
+                                <input type="number" min="1" max="20" value="@AppState.Preferences.SpellCheck.MaxSuggestions" @onchange="UpdateMaxSuggestions" style="width:80px; padding:4px 8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); border-radius:4px;" />
+                            </div>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <button @onclick="InstallDefaultDictionaries" disabled="@_downloadInProgress" aria-label="Download default dictionaries" style="padding:6px 12px; background: var(--surface); color: var(--fg); border:1px solid var(--border); border-radius:4px; cursor:pointer; font-size:12px;">@(_downloadInProgress ? "Downloading..." : "Download default dictionaries")</button>
+
+                                <label for="dictionary-files" aria-label="Choose dictionary files (.dic/.aff)" class="button-like" style="padding:6px 12px; background: var(--surface); color: var(--fg); border:1px solid var(--border); border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:12px;">Select dictionary files...</label>
+                                <button @onclick="OpenDictionaryFolder" aria-label="Open dictionary folder" style="padding:6px 12px; background: var(--surface); color: var(--fg); border:1px solid var(--border); border-radius:4px; cursor:pointer; font-size:12px;">Open dictionary folder</button>
+                            </div>
+                            <!-- Hidden file inputs for in-dialog selection -->
+                            <InputFile id="dictionary-files" style="display:none" Multiple OnChange="OnFilesSelected" accept=".dic,.aff" />
+                            <div style="font-size:12px; margin-top:6px; color:var(--muted);">
+                                @if (!string.IsNullOrWhiteSpace(_selectedDicFileName)) { <div>.dic: <strong>@_selectedDicFileName</strong></div> }
+                                @if (!string.IsNullOrWhiteSpace(_selectedAffFileName)) { <div>.aff: <strong>@_selectedAffFileName</strong></div> }
+                            </div>
+                            <div style="padding:8px; font-size:12px; color:var(--muted); background:var(--surface); border:1px solid var(--border); border-radius:6px;">
+                                <div style="margin-bottom:4px;">Status: <strong style="color:var(--fg);">@(SpellCheckingService?.IsInitialized == true ? "Ready" : "Disabled (no dictionary loaded)")</strong></div>
+                                <div>Custom dictionary path: <strong>@TextEdit.Infrastructure.SpellChecking.DictionaryService.GetCustomDictionaryPath()</strong></div>
+                                @if (!string.IsNullOrWhiteSpace(_downloadStatus))
+                                {
+                                    <div style="margin-top:6px;color:var(--fg);">@_downloadStatus</div>
+                                }
+                            </div>
                         </div>
                     </section>
                 }
@@ -227,6 +279,7 @@
         Logging,
         Updates,
         Editor
+        , SpellCheck
     }
     private string _currentVersion = GetVersion();
     private string _updateStatus = "Idle";
@@ -393,6 +446,211 @@
         AppState.Preferences.FileExtensions.RemoveAll(e => string.Equals(e, ext, StringComparison.OrdinalIgnoreCase));
         AppState.Preferences.NormalizeExtensions();
         await AppState.SavePreferencesAsync();
+    }
+
+    // Spell check-specific options and actions
+    private async Task ToggleSpellCheckEnabled(ChangeEventArgs e)
+    {
+        var enabled = (bool)(e.Value ?? false);
+        AppState.Preferences.SpellCheck.IsEnabled = enabled;
+        try
+        {
+            await AppState.SavePreferencesAsync();
+            // Apply to runtime spell checker
+            try { SpellCheckingService?.UpdatePreferences(AppState.Preferences.SpellCheck); } catch { }
+            // If disabling, clear decorations in editors
+            if (!enabled)
+            {
+                try { await JS.InvokeVoidAsync("textEditMonaco.clearSpellCheckDecorations", "monaco-editor"); } catch { }
+            }
+        }
+        catch (System.Exception ex)
+        {
+            // revert and notify user
+            AppState.Preferences.SpellCheck.IsEnabled = !enabled;
+            DialogService.ShowErrorDialog("Preferences Error", $"Failed to save preferences: {ex.Message}");
+        }
+    }
+
+    private async Task ToggleCheckCodeBlocks(ChangeEventArgs e)
+    {
+        var enabled = (bool)(e.Value ?? false);
+        AppState.Preferences.SpellCheck.CheckCodeBlocks = enabled;
+        try
+        {
+            await AppState.SavePreferencesAsync();
+            try { SpellCheckingService?.UpdatePreferences(AppState.Preferences.SpellCheck); } catch { }
+        }
+        catch (System.Exception ex)
+        {
+            AppState.Preferences.SpellCheck.CheckCodeBlocks = !enabled;
+            DialogService.ShowErrorDialog("Preferences Error", $"Failed to save preferences: {ex.Message}");
+        }
+    }
+
+    private async Task UpdateDebounceInterval(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var ms) && ms >= 0)
+        {
+            AppState.Preferences.SpellCheck.DebounceIntervalMs = ms;
+            try
+            {
+                await AppState.SavePreferencesAsync();
+                SpellCheckingService?.UpdatePreferences(AppState.Preferences.SpellCheck);
+            }
+            catch (System.Exception ex)
+            {
+                DialogService.ShowErrorDialog("Preferences Error", $"Failed to save preferences: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task UpdateMaxSuggestions(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var n) && n >= 1 && n <= 20)
+        {
+            AppState.Preferences.SpellCheck.MaxSuggestions = n;
+            try
+            {
+                await AppState.SavePreferencesAsync();
+                SpellCheckingService?.UpdatePreferences(AppState.Preferences.SpellCheck);
+            }
+            catch (System.Exception ex)
+            {
+                DialogService.ShowErrorDialog("Preferences Error", $"Failed to save preferences: {ex.Message}");
+            }
+        }
+    }
+
+    private bool _downloadInProgress = false;
+    private string _downloadStatus = string.Empty;
+    // _downloadConfirmPending removed: we use immediate download with inline status
+    private string? _selectedDicFileName;
+    private string? _selectedAffFileName;
+
+    private async Task InstallDefaultDictionaries()
+    {
+    // reset confirm (no longer used)
+        var dicUrl = Configuration["SpellCheck:DefaultDicUrl"];
+        var affUrl = Configuration["SpellCheck:DefaultAffUrl"];
+        if (string.IsNullOrWhiteSpace(dicUrl) || string.IsNullOrWhiteSpace(affUrl))
+        {
+            _downloadStatus = "Default dictionary URLs are not configured.";
+            return;
+        }
+
+        _downloadInProgress = true;
+        _downloadStatus = "Downloading...";
+        StateHasChanged();
+    System.Diagnostics.Debug.WriteLine("[OptionsDialog] Starting dictionary download");
+
+    var success = await DictionaryInstaller.DownloadAndInstallDefaultDictionaryAsync(dicUrl!, affUrl!);
+        _downloadInProgress = false;
+
+        if (success)
+        {
+            _downloadStatus = "Download complete. Dictionaries installed.";
+            System.Diagnostics.Debug.WriteLine("[OptionsDialog] Download complete: attempting to load new dictionaries");
+            // Attempt to reinitialize runtime spell checker (best-effort)
+            try
+            {
+                var dicPath = Path.Combine(TextEdit.Infrastructure.SpellChecking.DictionaryService.GetCustomDictionaryPath(), TextEdit.Infrastructure.SpellChecking.DictionaryService.EnglishDicFileName);
+                var affPath = Path.Combine(TextEdit.Infrastructure.SpellChecking.DictionaryService.GetCustomDictionaryPath(), TextEdit.Infrastructure.SpellChecking.DictionaryService.EnglishAffFileName);
+                var checker = TextEdit.Infrastructure.SpellChecking.DictionaryService.LoadFromFiles(dicPath, affPath);
+                if (checker != null)
+                {
+                    SpellCheckingService?.ReplaceSpellChecker(checker);
+                    SpellCheckingService?.UpdatePreferences(AppState.Preferences.SpellCheck);
+                }
+            }
+            catch (Exception ex)
+            {
+                _downloadStatus = $"Downloaded but failed to load dictionaries: {ex.Message}";
+                System.Diagnostics.Debug.WriteLine($"[OptionsDialog] Failed to load dictionaries after download: {ex.Message}");
+            }
+        }
+        else
+        {
+            _downloadStatus = "Download failed. Check network or try again.";
+            System.Diagnostics.Debug.WriteLine("[OptionsDialog] Download failed");
+        }
+        StateHasChanged();
+    }
+
+    // Removed confirm helpers; downloads now start on single click with inline status
+
+    // TriggerDicSelector removed: use label[for] to open file picker without JS interop.
+
+    private async Task OnFilesSelected(InputFileChangeEventArgs e)
+    {
+        var files = e.GetMultipleFiles();
+        // find dic and aff
+        IBrowserFile? dic = null;
+        IBrowserFile? aff = null;
+        foreach (var f in files)
+        {
+            var ext = Path.GetExtension(f.Name)?.ToLowerInvariant();
+            if (ext == ".dic") dic = f;
+            if (ext == ".aff") aff = f;
+        }
+        if (dic == null || aff == null)
+        {
+            _downloadStatus = "Select both .dic and .aff files.";
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            var customPath = TextEdit.Infrastructure.SpellChecking.DictionaryService.GetCustomDictionaryPath();
+            TextEdit.Infrastructure.SpellChecking.DictionaryService.EnsureCustomDictionaryDirectory();
+            var destDic = Path.Combine(customPath, TextEdit.Infrastructure.SpellChecking.DictionaryService.EnglishDicFileName);
+            var destAff = Path.Combine(customPath, TextEdit.Infrastructure.SpellChecking.DictionaryService.EnglishAffFileName);
+
+            // Save dic
+            using (var fs = File.Create(destDic))
+            using (var rs = dic.OpenReadStream(50_000_000))
+            {
+                await rs.CopyToAsync(fs);
+            }
+            // Save aff
+            using (var fs2 = File.Create(destAff))
+            using (var rs2 = aff.OpenReadStream(20_000_000))
+            {
+                await rs2.CopyToAsync(fs2);
+            }
+
+            _selectedDicFileName = dic.Name;
+            _selectedAffFileName = aff.Name;
+            _downloadStatus = "Custom dictionaries installed.";
+            StateHasChanged();
+            // Attempt to reinitialize runtime spell checker
+            try
+            {
+                var checker = TextEdit.Infrastructure.SpellChecking.DictionaryService.LoadFromFiles(destDic, destAff);
+                if (checker != null)
+                {
+                    SpellCheckingService?.ReplaceSpellChecker(checker);
+                }
+            }
+            catch { }
+        }
+        catch (Exception ex)
+        {
+            _downloadStatus = $"Failed to install custom dictionaries: {ex.Message}";
+        }
+    }
+
+    private Task ChooseCustomDicAndAff() => Task.CompletedTask; // label[for] triggers picker; placeholder kept for compatibility
+
+    private async Task OpenDictionaryFolder()
+    {
+        var customPath = TextEdit.Infrastructure.SpellChecking.DictionaryService.GetCustomDictionaryPath();
+        try
+        {
+            await IpcBridge.OpenExternalAsync(customPath);
+        }
+        catch { }
     }
 
     private void OpenLogFolder()

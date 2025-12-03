@@ -72,12 +72,19 @@ public partial class MonacoEditor : IAsyncDisposable
 
     public async Task TriggerSpellCheckAsync()
     {
-        if (_lastValue != null)
+        if (_lastValue == null)
+            return;
+
+        // Respect user preference to enable/disable spell check
+        if (!AppState.Preferences.SpellCheck.IsEnabled)
         {
-            var misspelledWords = await SpellCheckingService.CheckSpellingAsync(_lastValue);
-            // Use the correct interop method name defined in monacoInterop.js
-            await JS.InvokeVoidAsync("textEditMonaco.setSpellCheckDecorations", "monaco-editor", misspelledWords);
+            try { await JS.InvokeVoidAsync("textEditMonaco.clearSpellCheckDecorations", "monaco-editor"); } catch { }
+            return;
         }
+
+        var misspelledWords = await SpellCheckingService.CheckSpellingAsync(_lastValue);
+        // Use the correct interop method name defined in monacoInterop.js
+        await JS.InvokeVoidAsync("textEditMonaco.setSpellCheckDecorations", "monaco-editor", misspelledWords);
     }
 
     protected override async Task OnParametersSetAsync()
@@ -158,6 +165,13 @@ public partial class MonacoEditor : IAsyncDisposable
             // Cancel previous spell check if still running
             _spellCheckCts?.Cancel();
             _spellCheckCts = new CancellationTokenSource();
+
+            // Respect user preference
+            if (!AppState.Preferences.SpellCheck.IsEnabled)
+            {
+                await JS.InvokeVoidAsync("textEditMonaco.clearSpellCheckDecorations", "monaco-editor");
+                return;
+            }
 
             // Check spelling with the debounced service
             var results = await SpellCheckingService.CheckSpellingAsync(text, _spellCheckCts.Token);

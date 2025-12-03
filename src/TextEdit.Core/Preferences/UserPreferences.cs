@@ -53,6 +53,12 @@ public class UserPreferences
     }
 
     /// <summary>
+    /// Spell check preferences.
+    /// Added in v1.2 to persist spell checking options across sessions.
+    /// </summary>
+    public TextEdit.Core.SpellChecking.SpellCheckPreferences SpellCheck { get; set; } = new TextEdit.Core.SpellChecking.SpellCheckPreferences();
+
+    /// <summary>
     /// Normalize extensions (lowercase, ensure leading dot) and remove duplicates.
     /// Also ensures required defaults (.txt, .md) are present.
     /// </summary>

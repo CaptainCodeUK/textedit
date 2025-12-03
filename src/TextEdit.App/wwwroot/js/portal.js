@@ -126,3 +126,11 @@ window.textEditPortal = {
     return true;
   }
 };
+// Small helper for Blazor to trigger a click on an element by id
+window.textEditPortal.triggerClick = function (id) {
+  try {
+    var el = document.getElementById(id);
+    if (el) { el.click(); return true; }
+  } catch (err) { /* ignore */ }
+  return false;
+};

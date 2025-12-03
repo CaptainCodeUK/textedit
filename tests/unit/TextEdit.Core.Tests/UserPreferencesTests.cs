@@ -207,4 +207,17 @@ public class UserPreferencesTests
         // Assert
         Assert.True(prefs.ToolbarVisible);
     }
+
+    [Fact]
+    public void SpellCheck_Defaults_ArePresent()
+    {
+        // Arrange & Act
+        var prefs = new UserPreferences();
+
+        // Assert
+        Assert.NotNull(prefs.SpellCheck);
+        Assert.True(prefs.SpellCheck.IsEnabled);
+        Assert.Equal(500, prefs.SpellCheck.DebounceIntervalMs);
+        Assert.False(prefs.SpellCheck.CheckCodeBlocks);
+    }
 }

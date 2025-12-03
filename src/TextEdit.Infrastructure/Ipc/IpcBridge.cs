@@ -115,6 +115,36 @@ public class IpcBridge
     }
 
     /// <summary>
+    /// Show the native Open File dialog with a custom filter (for dictionary files, etc.).
+    /// </summary>
+    /// <param name="filterName">Display name for the filter (e.g. "Dictionary Files").</param>
+    /// <param name="extensions">Array of extensions without leading dots (e.g. { "dic", "aff" }).</param>
+    /// <param name="allowMultiple">Allow multiple selection when true.</param>
+    public virtual async Task<string[]?> ShowOpenFileDialogWithFilterAsync(string filterName, string[] extensions, bool allowMultiple = false)
+    {
+        if (!HybridSupport.IsElectronActive)
+        {
+            return null;
+        }
+
+        var opts = new OpenDialogOptions
+        {
+            Properties = allowMultiple ? new[] { OpenDialogProperty.openFile, OpenDialogProperty.multiSelections } : new[] { OpenDialogProperty.openFile },
+            Filters = new[]
+            {
+                new FileFilter { Name = filterName ?? "Files", Extensions = (extensions?.Length ?? 0) > 0 ? extensions : new[] { "*" } },
+                new FileFilter { Name = "All Files", Extensions = new[] { "*" } }
+            }
+        };
+
+        var window = Electron.WindowManager.BrowserWindows.FirstOrDefault();
+        var result = await Electron.Dialog.ShowOpenDialogAsync(window, opts);
+        if (result is null || result.Length == 0)
+            return null;
+        return result;
+    }
+
+    /// <summary>
     /// Show the native Save File dialog and return the chosen path or null when cancelled.
     /// Appends a default extension when missing.
     /// </summary>

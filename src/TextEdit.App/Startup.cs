@@ -87,7 +87,7 @@ public class Startup
         services.AddSingleton<MarkdownRenderer>();
         services.AddSingleton<MarkdownFormattingService>();
         
-        // Spell checking (v1.2) - with graceful fallback if dictionaries are missing
+    // Spell checking (v1.2) - with graceful fallback if dictionaries are missing
         TextEdit.Core.SpellChecking.ISpellChecker? spellChecker = null;
         try
         {
@@ -128,7 +128,7 @@ public class Startup
             }
         }
 
-        // Only register SpellCheckingService if we have a spell checker
+    // Only register SpellCheckingService if we have a spell checker
         if (spellChecker != null)
         {
             System.Diagnostics.Debug.WriteLine($"Spell checking enabled. SpellChecker initialized: {spellChecker.IsInitialized}");
@@ -151,7 +151,7 @@ public class Startup
             // for full Hunspell dictionaries and is intended for development/test use.
             
             // Register a stub or demo spell checker as fallback
-            services.AddSingleton<TextEdit.Core.SpellChecking.ISpellChecker>(sp => new TextEdit.Infrastructure.SpellChecking.DemoSpellChecker());
+        services.AddSingleton<TextEdit.Core.SpellChecking.ISpellChecker>(sp => new TextEdit.Infrastructure.SpellChecking.DemoSpellChecker());
             services.AddSingleton<TextEdit.Infrastructure.SpellChecking.SpellCheckingService>();
     }
         
@@ -163,6 +163,8 @@ public class Startup
             return new TextEdit.Infrastructure.Persistence.PreferencesRepository(logger, msLogger);
         });
         services.AddSingleton<WindowStateRepository>();
+    // Register dictionary installer for user-initiated dictionary downloads
+    services.AddSingleton<TextEdit.Infrastructure.SpellChecking.DictionaryInstaller>(sp => new TextEdit.Infrastructure.SpellChecking.DictionaryInstaller(new System.Net.Http.HttpClient()));
         services.AddSingleton<ThemeDetectionService>();
         
         // Register ThemeManager as singleton without IJSRuntime dependency
@@ -179,8 +181,22 @@ public class Startup
             return new TextEdit.Infrastructure.Updates.AutoUpdateService(logger);
         });
         
-        // UI state
-        services.AddSingleton<AppState>();
+        // UI state (ensure spell checking service is available to AppState so it can apply prefs on load)
+        services.AddSingleton<AppState>(sp => new AppState(
+            sp.GetRequiredService<DocumentService>(),
+            sp.GetRequiredService<TabService>(),
+            sp.GetRequiredService<IpcBridge>(),
+            sp.GetRequiredService<PersistenceService>(),
+            sp.GetRequiredService<AutosaveService>(),
+            sp.GetRequiredService<PerformanceLogger>(),
+            sp.GetRequiredService<IPreferencesRepository>(),
+            sp.GetRequiredService<ThemeDetectionService>(),
+            sp.GetRequiredService<ThemeManager>(),
+            sp.GetService<IAppLoggerFactory>(),
+            sp.GetService<Microsoft.Extensions.Logging.ILogger<AppState>>(),
+            sp.GetService<DialogService>(),
+            sp.GetService<TextEdit.Infrastructure.SpellChecking.SpellCheckingService>()
+        ));
         // Dialog service
         services.AddSingleton<DialogService>();
     }
