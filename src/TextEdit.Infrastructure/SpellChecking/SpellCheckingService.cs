@@ -173,7 +173,8 @@ public class SpellCheckingService
                     StartPosition = startPos,
                     EndPosition = endPos,
                     LineNumber = lineNumber,
-                    ColumnNumber = match.Index + 1,
+                    // ColumnNumber is 0-based in SpellCheckResult to match tests and easier manipulation
+                    ColumnNumber = match.Index,
                     Suggestions = suggestions
                 });
             }

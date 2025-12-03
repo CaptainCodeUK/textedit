@@ -94,6 +94,14 @@ public partial class TextEditor : ComponentBase, IDisposable
         EditorCommandHub.ToggleToolbarRequested = HandleToggleToolbar;
         EditorCommandHub.AboutRequested = HandleAboutRequested; // T055
         EditorCommandHub.OptionsRequested = HandleOptionsRequested; // US3
+        // Manual spell check via menu/shortcut
+        EditorCommandHub.SpellCheckRequested = async () =>
+        {
+            if (_monacoEditor != null)
+            {
+                await _monacoEditor.TriggerSpellCheckAsync();
+            }
+        };
         
         // Format menu commands (Monaco handles find/replace/undo natively)
         EditorCommandHub.FormatHeading1Requested = () => HandleFormatCommand(MarkdownFormattingService.MarkdownFormat.H1);
@@ -142,6 +150,10 @@ public partial class TextEditor : ComponentBase, IDisposable
                         document.addEventListener('blazor-toggle-preview', () => {
                             console.log('[TextEditor.razor] blazor-toggle-preview fired - calling HandleTogglePreviewFromJS');
                             DotNet.invokeMethodAsync('TextEdit.UI', 'HandleTogglePreviewFromJS');
+                        });
+                        document.addEventListener('blazor-spell-check', () => {
+                            console.log('[TextEditor.razor] blazor-spell-check fired - invoking SpellCheckRequested');
+                            DotNet.invokeMethodAsync('TextEdit.UI', 'HandleSpellCheckFromJS');
                         });
                         document.addEventListener('monaco-selection-changed', () => {
                             console.log('[TextEditor.razor] monaco-selection-changed fired - calling HandleMonacoSelectionChanged');
@@ -193,6 +205,13 @@ public partial class TextEditor : ComponentBase, IDisposable
         if (_currentInstance == null) return Task.CompletedTask;
         _currentInstance.DialogService?.ShowOptionsDialog();
         return Task.CompletedTask;
+    }
+
+    [Microsoft.JSInterop.JSInvokable]
+    public static Task HandleSpellCheckFromJS()
+    {
+        if (_currentInstance == null) return Task.CompletedTask;
+        return EditorCommandHub.InvokeSafe(EditorCommandHub.SpellCheckRequested);
     }
 
     private Task HandleOptionsRequested()

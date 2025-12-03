@@ -41,6 +41,9 @@ public static class EditorCommandHub
     public static Func<Task>? FormatBulletListRequested { get; set; }
     public static Func<Task>? FormatNumberedListRequested { get; set; }
     
+    // Spell check command - allows menu/shortcut to trigger spell check
+    public static Func<Task>? SpellCheckRequested { get; set; }
+    
     // Font change commands (from Toolbar)
     public static Func<int, Task>? FontSizeChanged { get; set; }
     public static Func<string, Task>? FontFamilyChanged { get; set; }

@@ -114,11 +114,52 @@ window.textEditMonaco = window.textEditMonaco || {
       }
     );
     
+    // F7 - manual spell check trigger
+    editor.addCommand(
+      monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyS,
+      () => {
+        console.log('[monacoInterop] F7 triggered - dispatching blazor-spell-check');
+        document.dispatchEvent(new CustomEvent('blazor-spell-check'));
+      }
+    );
+    
     const keyDownListener = null;
 
     // Save editor instance for later
     window.textEditMonaco.editors[elementId] = { editor, changeListener, selectionListener, keyDownListener };
     return true;
+  },
+
+  /**
+   * Ensures the content change listener is attached for the specified editor.
+   * This is idempotent and safe to call if the listener is already attached.
+   */
+  attachContentChangeListener: function(elementId, dotNetRef) {
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry) {
+      console.warn('[attachContentChangeListener] No editor found for:', elementId);
+      return false;
+    }
+
+    if (entry.contentChangeAttached) {
+      console.log('[attachContentChangeListener] Content change listener already attached for', elementId);
+      return true;
+    }
+
+    try {
+      const listener = entry.editor.onDidChangeModelContent(() => {
+        try {
+          dotNetRef.invokeMethodAsync('OnEditorContentChanged', entry.editor.getValue()).catch(e => console.error('[attachContentChangeListener] callback error', e));
+        } catch (e) { /* ignore */ }
+      });
+      entry.contentChangeListener = listener;
+      entry.contentChangeAttached = true;
+      console.log('[attachContentChangeListener] Attached listener for', elementId);
+      return true;
+    } catch (e) {
+      console.error('[attachContentChangeListener] Error attaching listener for', elementId, e);
+      return false;
+    }
   },
 
   getValue: function(elementId) {
@@ -486,22 +527,22 @@ window.textEditMonaco = window.textEditMonaco || {
       // Transform decoration data into Monaco decoration objects
       const decorations = decorationData.map(d => ({
         range: new monaco.Range(
-          d.range.startLineNumber,
-          d.range.startColumn,
-          d.range.endLineNumber,
-          d.range.endColumn
+          (d.range.startLineNumber !== undefined ? d.range.startLineNumber : d.range.StartLineNumber),
+          (d.range.startColumn !== undefined ? d.range.startColumn : d.range.StartColumn),
+          (d.range.endLineNumber !== undefined ? d.range.endLineNumber : d.range.EndLineNumber),
+          (d.range.endColumn !== undefined ? d.range.endColumn : d.range.EndColumn)
         ),
-        options: {
-          isWholeLine: d.options.isWholeLine || false,
-          className: d.options.className || 'spell-check-error',
-          glyphMarginClassName: d.options.glyphMarginClassName,
-          glyphMarginHoverMessage: d.options.glyphMarginHoverMessage,
-          inlineClassName: d.options.inlineClassName,
-          inlineClassNameAffectsLetterSpacing: d.options.inlineClassNameAffectsLetterSpacing || false,
-          beforeContentClassName: d.options.beforeContentClassName,
-          afterContentClassName: d.options.afterContentClassName,
-          suggestions: d.options.suggestions || [],
-          message: d.options.message || ''
+          options: {
+          isWholeLine: (d.options.isWholeLine !== undefined ? d.options.isWholeLine : d.options.IsWholeLine) || false,
+          className: (d.options.className !== undefined ? d.options.className : d.options.ClassName) || 'spell-check-error',
+          glyphMarginClassName: d.options.glyphMarginClassName || d.options.GlyphMarginClassName,
+          glyphMarginHoverMessage: d.options.glyphMarginHoverMessage || d.options.GlyphMarginHoverMessage,
+          inlineClassName: d.options.inlineClassName || d.options.InlineClassName,
+          inlineClassNameAffectsLetterSpacing: (d.options.inlineClassNameAffectsLetterSpacing !== undefined ? d.options.inlineClassNameAffectsLetterSpacing : d.options.InlineClassNameAffectsLetterSpacing) || false,
+          beforeContentClassName: d.options.beforeContentClassName || d.options.BeforeContentClassName,
+          afterContentClassName: d.options.afterContentClassName || d.options.AfterContentClassName,
+          suggestions: d.options.suggestions || d.options.Suggestions || [],
+          message: d.options.message || d.options.Message || ''
         }
       }));
 
@@ -520,6 +561,12 @@ window.textEditMonaco = window.textEditMonaco || {
     } catch (e) {
       console.error('[setSpellCheckDecorations] Error setting decorations:', e);
     }
+  },
+
+  // Backwards compatibility: alias `updateSpellCheckDecorations` -> calls `setSpellCheckDecorations`
+  updateSpellCheckDecorations: function(elementId, decorationData) {
+    console.log('[updateSpellCheckDecorations] alias called');
+    return window.textEditMonaco.setSpellCheckDecorations(elementId, decorationData);
   },
 
   /**

@@ -45,10 +45,10 @@ public class SpellCheckDecorationService
                 Options = new MonacoDecorationOptions
                 {
                     IsWholeLine = false,
-                    ClassName = MisspellingClassName,
+                    // Use inline class to apply styling only to the text span (Monaco inline classes)
+                    InlineClassName = MisspellingClassName,
                     GlyphMarginClassName = null,
                     GlyphMarginHoverMessage = string.Empty,
-                    InlineClassName = null,
                     InlineClassNameAffectsLetterSpacing = false,
                     BeforeContentClassName = null,
                     AfterContentClassName = null,

@@ -34,7 +34,7 @@ public partial class MonacoEditor : IAsyncDisposable
         // Only initialize on client (when JS is available)
         // The firstRender parameter tells us this is the FIRST render in the component lifecycle
         // But in ServerPrerendered, we need to check if JS is available
-        
+
         if (!_initialized)
         {
             _initialized = true; // Set immediately to prevent duplicate calls
@@ -48,19 +48,35 @@ public partial class MonacoEditor : IAsyncDisposable
 
                 // Apply persisted settings
                 await ApplyPersistedSettings();
-                
-                try {
+
+                try
+                {
                     await JS.InvokeVoidAsync("editorFocus.setActiveEditor", "monaco-editor");
                     await JS.InvokeVoidAsync("editorFocus.focusActiveEditor");
-                } catch { }
+                }
+                catch { }
+
+                // Attach event listener for content changes to trigger spell check
+                await JS.InvokeVoidAsync("textEditMonaco.attachContentChangeListener", "monaco-editor", _dotNetRef);
+
+                // Trigger initial spell check
+                await TriggerSpellCheckAsync();
             }
             catch (Exception ex)
             {
-                // Log error but don't crash the component
                 System.Diagnostics.Debug.WriteLine($"[MonacoEditor] Monaco editor initialization error: {ex.Message}");
                 System.Diagnostics.Debug.WriteLine($"[MonacoEditor] Stack trace: {ex.StackTrace}");
-                // Don't throw - let the component render without Monaco
             }
+        }
+    }
+
+    public async Task TriggerSpellCheckAsync()
+    {
+        if (_lastValue != null)
+        {
+            var misspelledWords = await SpellCheckingService.CheckSpellingAsync(_lastValue);
+            // Use the correct interop method name defined in monacoInterop.js
+            await JS.InvokeVoidAsync("textEditMonaco.setSpellCheckDecorations", "monaco-editor", misspelledWords);
         }
     }
 
@@ -70,6 +86,8 @@ public partial class MonacoEditor : IAsyncDisposable
         {
             await JS.InvokeVoidAsync("textEditMonaco.setValue", "monaco-editor", Value ?? string.Empty);
             _lastValue = Value;
+            // When the editor content changes due to navigation (loading existing content) trigger a spell check
+            _ = UpdateSpellCheckAsync(Value ?? string.Empty);
         }
         await base.OnParametersSetAsync();
     }
@@ -81,7 +99,7 @@ public partial class MonacoEditor : IAsyncDisposable
         _lastValue = content;
         Value = content;
         await ValueChanged.InvokeAsync(content);
-        
+
         // Trigger spell checking on content change
         _ = UpdateSpellCheckAsync(content);
     }
@@ -143,16 +161,14 @@ public partial class MonacoEditor : IAsyncDisposable
 
             // Check spelling with the debounced service
             var results = await SpellCheckingService.CheckSpellingAsync(text, _spellCheckCts.Token);
+            System.Diagnostics.Debug.WriteLine($"[MonacoEditor] Spell check found {results.Count} misspellings");
 
             // Convert results to Monaco decorations
             var decorations = _decorationService.ConvertToDecorations(results);
 
             // Apply decorations to editor via JavaScript
-            await JS.InvokeVoidAsync(
-                "textEditMonaco.setSpellCheckDecorations",
-                "monaco-editor",
-                decorations
-            );
+            await JS.InvokeVoidAsync("textEditMonaco.setSpellCheckDecorations", "monaco-editor", decorations);
+            System.Diagnostics.Debug.WriteLine("[MonacoEditor] setSpellCheckDecorations invoked");
         }
         catch (OperationCanceledException)
         {
@@ -168,22 +184,22 @@ public partial class MonacoEditor : IAsyncDisposable
     private async Task ApplyPersistedSettings()
     {
         if (!_initialized) return;
-        
+
         try
         {
             // Apply line numbers setting
             await JS.InvokeVoidAsync("textEditMonaco.setLineNumbers", "monaco-editor", AppState.Preferences.ShowLineNumbers);
-            
+
             // Apply minimap setting
             await JS.InvokeVoidAsync("textEditMonaco.setMinimap", "monaco-editor", AppState.Preferences.ShowMinimap);
-            
+
             // Apply font size setting
             await JS.InvokeVoidAsync("textEditMonaco.setFontSize", "monaco-editor", AppState.Preferences.FontSize);
-            
+
             // Apply font family setting
             if (!string.IsNullOrEmpty(AppState.Preferences.FontFamily))
                 await JS.InvokeVoidAsync("textEditMonaco.setFontFamily", "monaco-editor", AppState.Preferences.FontFamily);
-            
+
             // Apply theme setting
             var monacoTheme = AppState.Preferences.Theme switch
             {
@@ -202,16 +218,16 @@ public partial class MonacoEditor : IAsyncDisposable
         {
             // Clear spell check decorations first
             await JS.InvokeVoidAsync("textEditMonaco.clearSpellCheckDecorations", "monaco-editor");
-            
+
             // Then dispose editor
             await JS.InvokeVoidAsync("textEditMonaco.disposeEditor", "monaco-editor");
         }
         catch { }
-        
+
         // Cancel any pending spell check operations
         _spellCheckCts?.Cancel();
         _spellCheckCts?.Dispose();
-        
+
         _dotNetRef?.Dispose();
     }
 }

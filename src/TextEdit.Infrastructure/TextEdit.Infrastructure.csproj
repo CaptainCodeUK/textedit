@@ -14,4 +14,9 @@
     <PackageReference Include="WeCantSpell.Hunspell" Version="7.0.1" />
   </ItemGroup>
 
+  <!-- Embed small demonstration dictionaries so embedded loading works in dev -->
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\Dictionaries\**\*.*" />
+  </ItemGroup>
+
 </Project>

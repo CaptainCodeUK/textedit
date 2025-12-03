@@ -394,6 +394,7 @@ public static partial class ElectronHost
                 new MenuItem { Label = "Find Previous", Accelerator = "Shift+F3", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.FindPreviousRequested); } },
                 // Replace commands (US2)
                 new MenuItem { Label = "Replace…", Accelerator = "CmdOrCtrl+H", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.ReplaceRequested); } },
+                new MenuItem { Label = "Check Spelling", Accelerator = "F7", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.SpellCheckRequested); } },
                 new MenuItem { Type = MenuType.separator },
                 new MenuItem { Label = OperatingSystem.IsMacOS() ? "Preferences…" : "Options…", Accelerator = OperatingSystem.IsMacOS() ? "Cmd+," : "Ctrl+,", Click = () => { _ = EditorCommandHub.InvokeSafe(EditorCommandHub.OptionsRequested); } },
             }

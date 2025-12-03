@@ -110,7 +110,7 @@ public class SpellCheckDecorationServiceTests
         // Assert
         Assert.NotNull(decorations[0].Options);
         Assert.False(decorations[0].Options.IsWholeLine);
-        Assert.Equal("spell-check-error", decorations[0].Options.ClassName);
+    Assert.Equal("spell-check-error", decorations[0].Options.InlineClassName);
         Assert.Equal("teh", decorations[0].Options.Message);
     }
 
@@ -394,7 +394,7 @@ public class SpellCheckDecorationServiceTests
         Assert.Equal(1, decoration.Range.StartColumn);
         Assert.Equal(1, decoration.Range.EndLineNumber);
         Assert.Equal(5, decoration.Range.EndColumn); // 0+4+1
-        Assert.Equal("spell-check-error", decoration.Options.ClassName);
+    Assert.Equal("spell-check-error", decoration.Options.InlineClassName);
         Assert.Equal("helo", decoration.Options.Message);
         Assert.Equal(2, decoration.Options.Suggestions.Count);
     }

@@ -16,6 +16,14 @@ Scrappy Text Editor was formerly named “TextEdit” in early internal builds; 
 - **Session Persistence** - Automatically saves your work on close and restores it on next launch
 - **Smart Autosave** - Recovers unsaved work after unexpected crashes (30-second intervals)
 - **Word Wrap** - Toggle word wrapping with Alt+Z
+    
+Spell checking: a minimal embedded English dictionary is included for development.
+To use a full Hunspell `en_US` dictionary, place `en_US.dic` and `en_US.aff` in:
+	- Linux: `~/.config/TextEdit/Dictionaries/`
+	- Windows: `%AppData%\TextEdit/Dictionaries/`
+	- macOS: `~/Library/Application Support/TextEdit/Dictionaries/`
+
+You can also embed dictionaries into the runtime by adding `.dic`/`.aff` files under `src/TextEdit.Infrastructure/SpellChecking/Resources/Dictionaries/` and they will be loaded at startup.
 
 ### Markdown Support
 - **Live Preview** - Render markdown with GitHub Flavored Markdown support (Alt+P to toggle)

@@ -4,6 +4,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using TextEdit.Core.Abstractions;
+using TextEdit.Core.SpellChecking;
+using System.Net.Http;
 using TextEdit.Core.Documents;
 using TextEdit.Core.Editing;
 using TextEdit.Infrastructure.Autosave;
@@ -97,18 +99,61 @@ public class Startup
             System.Diagnostics.Debug.WriteLine($"Spell checking disabled: {ex.Message}");
         }
         
+        // If we couldn't load embedded dictionary earlier, try downloading defaults from configured URLs
+        if (spellChecker == null)
+        {
+            var spellCheckOptions = Configuration.GetSection("SpellCheck").Get<SpellCheckOptions>();
+            if (spellCheckOptions?.DefaultDicUrl != null && spellCheckOptions?.DefaultAffUrl != null)
+            {
+                try
+                {
+                    var installer = new TextEdit.Infrastructure.SpellChecking.DictionaryInstaller(new HttpClient());
+                    var downloaded = installer.DownloadAndInstallDefaultDictionaryAsync(spellCheckOptions.DefaultDicUrl, spellCheckOptions.DefaultAffUrl).GetAwaiter().GetResult();
+                    if (downloaded)
+                    {
+                        var customPath = TextEdit.Infrastructure.SpellChecking.DictionaryService.GetCustomDictionaryPath();
+                        var dicPath = Path.Combine(customPath, TextEdit.Infrastructure.SpellChecking.DictionaryService.EnglishDicFileName);
+                        var affPath = Path.Combine(customPath, TextEdit.Infrastructure.SpellChecking.DictionaryService.EnglishAffFileName);
+                        if (File.Exists(dicPath) && File.Exists(affPath))
+                        {
+                            spellChecker = TextEdit.Infrastructure.SpellChecking.DictionaryService.LoadFromFiles(dicPath, affPath);
+                            System.Diagnostics.Debug.WriteLine("Downloaded and installed default dictionaries successfully.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Failed to download default dictionaries: {ex.Message}");
+                }
+            }
+        }
+
         // Only register SpellCheckingService if we have a spell checker
         if (spellChecker != null)
         {
+            System.Diagnostics.Debug.WriteLine($"Spell checking enabled. SpellChecker initialized: {spellChecker.IsInitialized}");
             services.AddSingleton(spellChecker);
             services.AddSingleton<TextEdit.Infrastructure.SpellChecking.SpellCheckingService>();
+            // Ensure embedded dictionaries are copied to user's custom dictionary path, if missing
+            try
+            {
+                TextEdit.Infrastructure.SpellChecking.DictionaryService.EnsureEmbeddedDictionaryInstalledToCustomPath();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to install embedded dictionaries to custom path: {ex.Message}");
+            }
         }
         else
         {
-            // Register a stub service that does nothing
-            services.AddSingleton(sp => new TextEdit.Infrastructure.SpellChecking.SpellCheckingService(
-                new TextEdit.Infrastructure.SpellChecking.StubSpellChecker()));
-        }
+            // Dictionary load failed. Register a demo spell checker for development
+            // to provide visual feedback in the editor. This is not a replacement
+            // for full Hunspell dictionaries and is intended for development/test use.
+            
+            // Register a stub or demo spell checker as fallback
+            services.AddSingleton<TextEdit.Core.SpellChecking.ISpellChecker>(sp => new TextEdit.Infrastructure.SpellChecking.DemoSpellChecker());
+            services.AddSingleton<TextEdit.Infrastructure.SpellChecking.SpellCheckingService>();
+    }
         
         services.AddSingleton<IPreferencesRepository>(sp =>
         {

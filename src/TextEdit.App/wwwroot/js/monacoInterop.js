@@ -42,9 +42,39 @@ window.textEditMonaco = window.textEditMonaco || {
       } catch (e) { /* ignore */ }
     });
 
+    // F7 - manual spell check trigger
+    try {
+      editor.addCommand(
+        monaco.KeyCode.KeyF7,
+        () => {
+          document.dispatchEvent(new CustomEvent('blazor-spell-check'));
+        }
+      );
+    } catch (e) { /* ignore */ }
+
     // Save editor instance for later
     window.textEditMonaco.editors[elementId] = { editor, changeListener };
     return true;
+  },
+
+  attachContentChangeListener: function(elementId, dotNetRef) {
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry) {
+      console.warn('[attachContentChangeListener] No editor found for:', elementId);
+      return false;
+    }
+    if (entry.contentChangeAttached) return true;
+    try {
+      const listener = entry.editor.onDidChangeModelContent(() => {
+        dotNetRef.invokeMethodAsync('OnEditorContentChanged', entry.editor.getValue()).catch(e => console.error('[attachContentChangeListener] callback error', e));
+      });
+      entry.contentChangeListener = listener;
+      entry.contentChangeAttached = true;
+      return true;
+    } catch (e) {
+      console.error('[attachContentChangeListener] Error attaching listener for', elementId, e);
+      return false;
+    }
   },
 
   getValue: function(elementId) {
@@ -97,23 +127,23 @@ window.textEditMonaco = window.textEditMonaco || {
       // Transform decoration data into Monaco decoration objects
       const decorations = decorationData.map(d => ({
         range: new monaco.Range(
-          d.range.startLineNumber,
-          d.range.startColumn,
-          d.range.endLineNumber,
-          d.range.endColumn
+          (d.range.startLineNumber !== undefined ? d.range.startLineNumber : d.range.StartLineNumber),
+          (d.range.startColumn !== undefined ? d.range.startColumn : d.range.StartColumn),
+          (d.range.endLineNumber !== undefined ? d.range.endLineNumber : d.range.EndLineNumber),
+          (d.range.endColumn !== undefined ? d.range.endColumn : d.range.EndColumn)
         ),
-        options: {
-          isWholeLine: d.options.isWholeLine || false,
-          className: d.options.className || 'spell-check-error',
-          glyphMarginClassName: d.options.glyphMarginClassName,
-          glyphMarginHoverMessage: d.options.glyphMarginHoverMessage,
-          inlineClassName: d.options.inlineClassName,
-          inlineClassNameAffectsLetterSpacing: d.options.inlineClassNameAffectsLetterSpacing || false,
-          beforeContentClassName: d.options.beforeContentClassName,
-          afterContentClassName: d.options.afterContentClassName,
+          options: {
+          isWholeLine: (d.options.isWholeLine !== undefined ? d.options.isWholeLine : d.options.IsWholeLine) || false,
+          className: (d.options.className !== undefined ? d.options.className : d.options.ClassName) || 'spell-check-error',
+          glyphMarginClassName: d.options.glyphMarginClassName || d.options.GlyphMarginClassName,
+          glyphMarginHoverMessage: d.options.glyphMarginHoverMessage || d.options.GlyphMarginHoverMessage,
+          inlineClassName: d.options.inlineClassName || d.options.InlineClassName,
+          inlineClassNameAffectsLetterSpacing: (d.options.inlineClassNameAffectsLetterSpacing !== undefined ? d.options.inlineClassNameAffectsLetterSpacing : d.options.InlineClassNameAffectsLetterSpacing) || false,
+          beforeContentClassName: d.options.beforeContentClassName || d.options.BeforeContentClassName,
+          afterContentClassName: d.options.afterContentClassName || d.options.AfterContentClassName,
           // Store suggestions in a custom property for context menu access
-          suggestions: d.options.suggestions || [],
-          message: d.options.message || ''
+          suggestions: d.options.suggestions || d.options.Suggestions || [],
+          message: d.options.message || d.options.Message || ''
         }
       }));
 
@@ -133,6 +163,11 @@ window.textEditMonaco = window.textEditMonaco || {
     } catch (e) {
       console.error('[setSpellCheckDecorations] Error setting decorations:', e);
     }
+  },
+
+  updateSpellCheckDecorations: function(elementId, decorationData) {
+    // Backwards compatibility alias
+    return window.textEditMonaco.setSpellCheckDecorations(elementId, decorationData);
   },
 
   /**

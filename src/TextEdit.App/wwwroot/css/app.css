@@ -585,21 +585,7 @@ textarea::selection, input::selection { background: color-mix(in srgb, var(--acc
 
 /* Red wavy underline for misspelled words in Monaco Editor */
 .spell-check-error {
-    background: repeating-linear-gradient(
-        to right,
-        transparent,
-        transparent 2px,
-        rgba(220, 38, 38, 0.3) 2px,
-        rgba(220, 38, 38, 0.3) 4px
-    );
-    border-bottom: 2px solid transparent;
-    border-image: repeating-linear-gradient(
-        90deg,
-        #dc2626,
-        #dc2626 2px,
-        transparent 2px,
-        transparent 4px
-    ) 0 0 1 0;
+    /* Use wavy underline for misspelled words; do not use background to avoid block artifacts inside Monaco */
     text-decoration: underline wavy #dc2626;
     text-underline-offset: 2px;
 }
@@ -607,13 +593,11 @@ textarea::selection, input::selection { background: color-mix(in srgb, var(--acc
 /* Light theme spell check error */
 [data-theme="light"] .spell-check-error {
     text-decoration: underline wavy #dc2626;
-    background-color: rgba(220, 38, 38, 0.08);
 }
 
 /* Dark theme spell check error */
 [data-theme="dark"] .spell-check-error {
     text-decoration: underline wavy #ef4444;
-    background-color: rgba(239, 68, 68, 0.12);
 }
 
 /* Fallback: simple red dashed underline for browsers that don't support wavy */

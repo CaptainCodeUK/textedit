@@ -8,9 +8,9 @@ namespace TextEdit.Infrastructure.SpellChecking;
 /// </summary>
 public class DictionaryService
 {
-    private const string BuiltInDictionaryPath = "Resources/Dictionaries";
-    private const string EnglishDicFileName = "en_US.dic";
-    private const string EnglishAffFileName = "en_US.aff";
+    public const string BuiltInDictionaryPath = "Resources/Dictionaries";
+    public const string EnglishDicFileName = "en_US.dic";
+    public const string EnglishAffFileName = "en_US.aff";
 
     /// <summary>
     /// Loads the built-in English dictionary.
@@ -31,16 +31,26 @@ public class DictionaryService
             using (var dicStream = assembly.GetManifestResourceStream(dicResourceName))
             using (var affStream = assembly.GetManifestResourceStream(affResourceName))
             {
-                if (dicStream == null || affStream == null)
+                if (dicStream != null && affStream != null)
                 {
-                    throw new InvalidOperationException(
-                        $"Dictionary resources not found. Expected: {dicResourceName}, {affResourceName}");
+                    // Loaded from embedded resources
+                    spellChecker.LoadDictionary(dicStream, affStream);
+                    return spellChecker;
                 }
-
-                spellChecker.LoadDictionary(dicStream, affStream);
             }
 
-            return spellChecker;
+            // If embedded resources are not present, check the custom dictionary path on disk
+            var customPath = GetCustomDictionaryPath();
+            var dicPath = Path.Combine(customPath, EnglishDicFileName);
+            var affPath = Path.Combine(customPath, EnglishAffFileName);
+            if (File.Exists(dicPath) && File.Exists(affPath))
+            {
+                // Load from file system
+                return LoadFromFiles(dicPath, affPath);
+            }
+
+            throw new InvalidOperationException(
+                $"Dictionary resources not found. Expected embedded: {dicResourceName}/{affResourceName} or files: {dicPath}/{affPath}");
         }
         catch (Exception ex)
         {
@@ -99,6 +109,37 @@ public class DictionaryService
         if (!Directory.Exists(dictPath))
         {
             Directory.CreateDirectory(dictPath);
+        }
+    }
+
+    /// <summary>
+    /// If embedded dictionaries exist, copy them to the user's custom dictionary directory if they are not already present.
+    /// This makes it easy for the UI to list and manage dictionary files at runtime.
+    /// </summary>
+    public static void EnsureEmbeddedDictionaryInstalledToCustomPath()
+    {
+        var assembly = typeof(DictionaryService).Assembly;
+        var dicResourceName = $"{assembly.GetName().Name}.{BuiltInDictionaryPath.Replace("/", ".")}.{EnglishDicFileName}";
+        var affResourceName = $"{assembly.GetName().Name}.{BuiltInDictionaryPath.Replace("/", ".")}.{EnglishAffFileName}";
+
+        using var dicStream = assembly.GetManifestResourceStream(dicResourceName);
+        using var affStream = assembly.GetManifestResourceStream(affResourceName);
+        if (dicStream == null || affStream == null) return;
+
+        EnsureCustomDictionaryDirectory();
+        var customDir = GetCustomDictionaryPath();
+        var dicPath = Path.Combine(customDir, EnglishDicFileName);
+        var affPath = Path.Combine(customDir, EnglishAffFileName);
+
+        if (!File.Exists(dicPath))
+        {
+            using var outDic = File.OpenWrite(dicPath);
+            dicStream.CopyTo(outDic);
+        }
+        if (!File.Exists(affPath))
+        {
+            using var outAff = File.OpenWrite(affPath);
+            affStream.CopyTo(outAff);
         }
     }
 }
