@@ -26,7 +26,9 @@ public class SpellCheckResult
     public required int LineNumber { get; init; }
 
     /// <summary>
-    /// Gets the column number where the misspelling starts (1-based).
+    /// Gets the column number where the misspelling starts (0-based).
+    /// Implementation note: this is zero-based to match internal indexes (Regex.Match.Index).
+    /// Convert to Monaco 1-based column values in the decoration service.
     /// </summary>
     public required int ColumnNumber { get; init; }
 

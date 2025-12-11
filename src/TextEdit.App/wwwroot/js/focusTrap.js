@@ -64,6 +64,14 @@ window.textEditFocusTrap = {
       dialog.tabIndex = -1; dialog.focus();
     } catch (err) { }
   },
+  focusElementById: function (id) {
+    try {
+      var el = document.getElementById(id);
+      if (el && typeof el.focus === 'function') {
+        el.focus();
+      }
+    } catch (e) { }
+  },
   
   release: function (dialogSelector) {
     if (this.activeTraps[dialogSelector]) {

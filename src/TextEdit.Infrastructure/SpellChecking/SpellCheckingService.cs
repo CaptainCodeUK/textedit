@@ -175,7 +175,8 @@ public class SpellCheckingService
         var results = new List<SpellCheckResult>();
 
         // Word pattern: sequence of letters
-        var wordPattern = new Regex(@"\b\w+\b", RegexOptions.Compiled);
+    // Match Unicode letters (including diacritics), apostrophes and hyphens for contractions and hyphenated words
+    var wordPattern = new Regex(@"\b[\p{L}\p{M}'-]+\b", RegexOptions.Compiled);
         var matches = wordPattern.Matches(line);
 
         foreach (Match match in matches)
@@ -190,6 +191,10 @@ public class SpellCheckingService
 
             // Skip if word length exceeds maximum (if set)
             if (_preferences.MaxWordLengthToCheck > 0 && word.Length > _preferences.MaxWordLengthToCheck)
+                continue;
+
+            // Skip session-ignored words
+            if (_ignoredWords.Contains(word))
                 continue;
 
             // Check if word is misspelled
@@ -210,6 +215,25 @@ public class SpellCheckingService
         }
 
         return results;
+    }
+
+    private readonly HashSet<string> _ignoredWords = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Ignore a word for the current session (transient until reload).
+    /// </summary>
+    public void IgnoreWordOnce(string word)
+    {
+        if (string.IsNullOrWhiteSpace(word)) return;
+        _ignoredWords.Add(word);
+    }
+
+    /// <summary>
+    /// Clear session ignored words.
+    /// </summary>
+    public void ClearIgnoredWords()
+    {
+        _ignoredWords.Clear();
     }
 
     private (int, int)[] GetCodeBlockRanges(string text)

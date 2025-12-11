@@ -36,51 +36,55 @@ public class PlaywrightDomTests : IAsyncLifetime
         
         _playwright = await Playwright.CreateAsync();
         
-        // Try to connect to an already-running app first. If anything fails, mark tests as skipped
+        // Try to connect to an already-running app first. If connect fails we'll attempt to launch the app and reconnect
         try
         {
             _browser = await _playwright.Chromium.ConnectOverCDPAsync(RemoteDebuggingUrl);
             _page = _browser.Contexts.FirstOrDefault()?.Pages.FirstOrDefault();
-
             if (_page == null)
             {
-                // Browser connected but no page - close and try to launch
-                await _browser.CloseAsync();
+                // Browser connected but no page - close and force launch
+                try { await _browser.CloseAsync(); } catch { }
                 _browser = null;
             }
+        }
+        catch (Exception)
+        {
+            // Connect failed - we'll try launching the app below
+            _browser = null;
+        }
 
-            if (_browser == null)
+        if (_browser == null)
+        {
+            try
             {
-                // App not running - launch it with remote debugging
                 await LaunchAppWithRemoteDebuggingAsync();
-
-                // Wait and retry connection
+                // Wait a bit and try to connect to the CDP endpoint again
                 await Task.Delay(3000);
                 _browser = await _playwright.Chromium.ConnectOverCDPAsync(RemoteDebuggingUrl);
-
-                // Wait for page to be available
-                var stopwatch = Stopwatch.StartNew();
-                while ((_page = _browser.Contexts.FirstOrDefault()?.Pages.FirstOrDefault()) == null && stopwatch.ElapsedMilliseconds < AppStartupTimeoutMs)
-                {
-                    await Task.Delay(500);
-                }
-
-                if (_page == null)
-                {
-                    _skipReason = "Could not find a page in the connected browser context.";
-                    return;
-                }
-
-                // Wait for the app to be fully loaded
-                await _page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+            }
+            catch (Exception ex)
+            {
+                _skipReason = ex.Message;
+                return;
             }
         }
-        catch (Exception ex)
+
+        // Wait for page to be available
+        var stopwatch = Stopwatch.StartNew();
+        while ((_page = _browser.Contexts.FirstOrDefault()?.Pages.FirstOrDefault()) == null && stopwatch.ElapsedMilliseconds < AppStartupTimeoutMs)
         {
-            // Capture the failure and skip tests instead of failing the build
-            _skipReason = ex.Message;
+            await Task.Delay(500);
+        }
+
+        if (_page == null)
+        {
+            _skipReason = "Could not find a page in the connected browser context.";
             return;
         }
+
+        // Wait for the app to be fully loaded
+        await _page.WaitForLoadStateAsync(LoadState.NetworkIdle);
     }
     
     public async Task DisposeAsync()

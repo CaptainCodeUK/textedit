@@ -18,7 +18,7 @@ public partial class MonacoEditor : IAsyncDisposable
     private string? _lastValue;
     private SpellCheckDecorationService _decorationService = new();
     private CancellationTokenSource? _spellCheckCts;
-    private bool _isClientInitialized;
+    // private bool _isClientInitialized; // not used - removed to avoid warnings
 
     protected override void OnInitialized()
     {
@@ -83,8 +83,16 @@ public partial class MonacoEditor : IAsyncDisposable
         }
 
         var misspelledWords = await SpellCheckingService.CheckSpellingAsync(_lastValue);
-        // Use the correct interop method name defined in monacoInterop.js
-        await JS.InvokeVoidAsync("textEditMonaco.setSpellCheckDecorations", "monaco-editor", misspelledWords);
+        // Convert results to Monaco decorations then call JS
+        var decorations = _decorationService.ConvertToDecorations(misspelledWords);
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(decorations);
+            System.Diagnostics.Debug.WriteLine($"[MonacoEditor] Decorations JSON (initial): {json}");
+            try { await JS.InvokeVoidAsync("textEditMonaco.debugLog", json); } catch { }
+        }
+        catch { }
+        await JS.InvokeVoidAsync("textEditMonaco.setSpellCheckDecorations", "monaco-editor", decorations);
     }
 
     protected override async Task OnParametersSetAsync()
@@ -176,9 +184,20 @@ public partial class MonacoEditor : IAsyncDisposable
             // Check spelling with the debounced service
             var results = await SpellCheckingService.CheckSpellingAsync(text, _spellCheckCts.Token);
             System.Diagnostics.Debug.WriteLine($"[MonacoEditor] Spell check found {results.Count} misspellings");
+            foreach (var r in results)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MonacoEditor] Misspelling: '{r.Word}' at L{r.LineNumber}:{r.ColumnNumber + 1} Suggestions: {string.Join(',', r.Suggestions.Select(s=>s.Word))}");
+            }
 
             // Convert results to Monaco decorations
             var decorations = _decorationService.ConvertToDecorations(results);
+            try
+            {
+                var json = System.Text.Json.JsonSerializer.Serialize(decorations);
+                System.Diagnostics.Debug.WriteLine($"[MonacoEditor] Decorations JSON: {json}");
+                try { await JS.InvokeVoidAsync("textEditMonaco.debugLog", json); } catch { }
+            }
+            catch { }
 
             // Apply decorations to editor via JavaScript
             await JS.InvokeVoidAsync("textEditMonaco.setSpellCheckDecorations", "monaco-editor", decorations);

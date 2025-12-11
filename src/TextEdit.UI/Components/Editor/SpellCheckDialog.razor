@@ -1,0 +1,283 @@
+@using Microsoft.AspNetCore.Components
+@using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Components.Web
+@using System.Collections.Generic
+
+@inherits ComponentBase
+@namespace TextEdit.UI.Components.Editor
+@inject IJSRuntime JS
+
+@* Spell-check context dialog used to show suggestions and actions for a single misspelling. *@
+@if (Visible)
+{
+    <div class="dialog-overlay" @onclick="OnCloseClicked" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index: 1000;">
+        <div id="spellcheck-dialog" class="dialog-content" role="dialog" aria-modal="true" aria-labelledby="spellcheck-dialog-title" aria-describedby="spellcheck-dialog-desc" tabindex="-1" @ref="_dialogRef" @onclick:stopPropagation="true" @onkeydown="HandleKeyDown" style="min-width:420px; max-width:760px; width:100%; background: var(--bg); color: var(--fg); border-radius: 8px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15), 0 10px 10px -5px rgba(0,0,0,0.05); overflow: hidden; display:flex; flex-direction:column; max-height:70vh;">
+                        <div style="padding:12px 12px 0 12px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border);">
+                                <div style="display:flex; gap:6px; align-items:center;">
+                                    <button class="btn small" title="Previous misspelling" aria-label="Previous misspelling" @onclick="OnPrevClicked">◀</button>
+                                    <h3 id="spellcheck-dialog-title" style="margin:0; font-size:14px;">Spell Check</h3>
+                                    <button class="btn small" title="Next misspelling" aria-label="Next misspelling" @onclick="OnNextClicked">▶</button>
+                                </div>
+                                <button aria-label="Close" @onclick="Close" style="border:none;background:transparent;color:var(--muted);font-size:18px;">×</button>
+                        </div>
+
+            <div style="display:flex; padding:12px; gap:12px; overflow:auto;">
+                <!-- Left: suggestions + context -->
+                <div style="flex:1 1 60%; display:flex; flex-direction:column; gap:10px; min-width:0;">
+                    <div style="font-size:13px;">Word: <strong>@Word</strong></div>
+                    <div style="font-size:12px; color:var(--muted);">Context</div>
+                    <div id="spellcheck-dialog-desc" style="background:var(--surface); border:1px solid var(--border); padding:8px; border-radius:6px; font-family:var(--mono); white-space:pre-wrap; overflow:auto; max-height:180px;">@Context</div>
+
+                    <div>
+                        <div style="font-size:12px; color:var(--muted); margin-top:6px; margin-bottom:6px;">Suggestions</div>
+                        @if (Suggestions?.Count > 0)
+                        {
+                            <div style="display:flex; flex-direction:column; gap:6px;">
+                                  @for (int i = 0; i < Suggestions.Count; i++)
+                                  {
+                                      var s = Suggestions[i];
+                                      <button id="spell-suggestion-@i" @onclick="() => OnSuggestionClicked(s, i)" class="btn suggestion @(i == _selectedSuggestionIndex ? "selected" : "")" title="Replace with @s" aria-label="Replace with @s">@s</button>
+                                  }
+                              </div>
+                        }
+                        else
+                        {
+                            <div style="font-size:12px; color:var(--muted);">No suggestions available.</div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Right: stacked action buttons -->
+                <div style="flex:0 0 150px; display:flex; flex-direction:column; gap:8px; align-items:stretch;">
+                    <button @onclick="ReplaceWithSelected" class="btn primary stacked" disabled="@(!HasSelection)">Replace</button>
+                    <button @onclick="ReplaceAll" class="btn stacked">Replace All</button>
+                    <button @onclick="AddToDictionary" class="btn stacked">Add to Dictionary</button>
+                    <button @onclick="Ignore" class="btn stacked">Ignore</button>
+                    <button @onclick="IgnoreAll" class="btn stacked">Ignore All</button>
+                </div>
+            </div>
+
+            <!-- Fixed footer inside dialog-content -->
+            <div style="border-top:1px solid var(--border); padding:8px 12px; display:flex; justify-content:flex-end; background:var(--bg);">
+                <button @onclick="Close" class="btn small" style="padding:6px 12px;">Close</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool Visible { get; set; }
+
+    [Parameter]
+    public string? Word { get; set; }
+
+    [Parameter]
+    public MarkupString? Context { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<string>? Suggestions { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnReplace { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnReplaceAll { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnAddToDictionary { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnIgnore { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnIgnoreAll { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback OnPrev { get; set; }
+
+    [Parameter]
+    public EventCallback OnNext { get; set; }
+
+    private int _selectedSuggestionIndex = -1;
+    // suggestion refs removed - we focus by id via JS interop instead
+    private bool HasSelection => (_selectedSuggestionIndex >= 0 && Suggestions != null && _selectedSuggestionIndex < Suggestions.Count) || (Suggestions?.Count > 0);
+
+    private async Task OnSuggestionClicked(string suggestion, int index)
+    {
+        _selectedSuggestionIndex = index;
+        await Replace(suggestion);
+    }
+
+    private async Task Replace(string suggestion)
+    {
+        var list = Suggestions?.ToList();
+        _selectedSuggestionIndex = list?.IndexOf(suggestion) ?? -1;
+        if (OnReplace.HasDelegate) await OnReplace.InvokeAsync(suggestion);
+        await Close();
+        // After close, return focus to editor
+        try { await JS.InvokeVoidAsync("editorFocus.focusActiveEditor"); } catch { }
+    }
+
+    private async Task ReplaceWithSelected()
+    {
+        if (!HasSelection) return;
+        var s = (_selectedSuggestionIndex >= 0 && Suggestions != null && _selectedSuggestionIndex < Suggestions.Count) ? Suggestions[_selectedSuggestionIndex] : Suggestions?.FirstOrDefault();
+        if (s != null && OnReplace.HasDelegate) await OnReplace.InvokeAsync(s);
+        await Close();
+    }
+
+    private async Task ReplaceAll()
+    {
+        var s = (_selectedSuggestionIndex >= 0 && Suggestions != null && _selectedSuggestionIndex < Suggestions.Count) ? Suggestions[_selectedSuggestionIndex] : Suggestions?.FirstOrDefault() ?? string.Empty;
+        if (OnReplaceAll.HasDelegate) await OnReplaceAll.InvokeAsync(s);
+        await Close();
+    }
+
+    private async Task AddToDictionary()
+    {
+        if (Word is null) return;
+        if (OnAddToDictionary.HasDelegate) await OnAddToDictionary.InvokeAsync(Word);
+        await Close();
+    }
+
+    private async Task Ignore()
+    {
+        if (Word is null) return;
+        if (OnIgnore.HasDelegate) await OnIgnore.InvokeAsync(Word);
+        await Close();
+    }
+
+    private async Task IgnoreAll()
+    {
+        if (Word is null) return;
+        if (OnIgnoreAll.HasDelegate) await OnIgnoreAll.InvokeAsync(Word);
+        await Close();
+    }
+
+    private async Task Close()
+    {
+        if (OnClose.HasDelegate) await OnClose.InvokeAsync();
+    }
+
+    private ElementReference _dialogRef;
+    private DotNetObjectReference<SpellCheckDialog>? _dotNetRef;
+    private bool _trapAttached;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+    if (Visible && !_trapAttached)
+        {
+            await Task.Delay(50); // let DOM settle and focus
+            await _dialogRef.FocusAsync();
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            try
+            {
+                await JS.InvokeVoidAsync("textEditFocusTrap.trap", "#spellcheck-dialog", _dotNetRef, "CloseDialog");
+            }
+            catch { }
+            // Initialize selection and focus to first suggestion when dialog opens
+            if (Suggestions?.Count > 0)
+            {
+                _selectedSuggestionIndex = 0;
+                await FocusSelectedSuggestion();
+            }
+            _trapAttached = true;
+        }
+        else if (!Visible && _trapAttached)
+        {
+            try { await JS.InvokeVoidAsync("textEditFocusTrap.release", "#spellcheck-dialog"); } catch { }
+            _trapAttached = false;
+        }
+    }
+
+    protected override Task OnParametersSetAsync()
+    {
+        // Reset selection state when parameters change
+        if (!Visible)
+        {
+            _selectedSuggestionIndex = -1;
+        }
+        return base.OnParametersSetAsync();
+    }
+
+    [JSInvokable]
+    public async Task CloseDialog()
+    {
+        if (OnClose.HasDelegate) await OnClose.InvokeAsync();
+        try { await JS.InvokeVoidAsync("editorFocus.focusActiveEditor"); } catch { }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            await Close();
+            try { await JS.InvokeVoidAsync("editorFocus.focusActiveEditor"); } catch { }
+            return;
+        }
+
+        if (e.Key == "ArrowDown")
+        {
+            if (Suggestions?.Count > 0)
+            {
+                _selectedSuggestionIndex = (_selectedSuggestionIndex + 1) % Suggestions.Count;
+                await FocusSelectedSuggestion();
+            }
+        }
+        else if (e.Key == "ArrowUp")
+        {
+            if (Suggestions?.Count > 0)
+            {
+                _selectedSuggestionIndex = (_selectedSuggestionIndex - 1 + Suggestions.Count) % Suggestions.Count;
+                await FocusSelectedSuggestion();
+            }
+        }
+        else if (e.Key == "Enter")
+        {
+            if (HasSelection && Suggestions?.Count > 0)
+            {
+                var s = (_selectedSuggestionIndex >= 0 && _selectedSuggestionIndex < Suggestions.Count) ? Suggestions[_selectedSuggestionIndex] : Suggestions.FirstOrDefault();
+                if (s != null) await Replace(s);
+            }
+        }
+    }
+
+    private async Task OnCloseClicked()
+    {
+        await Close();
+    }
+
+    private async Task OnPrevClicked()
+    {
+        if (OnPrev.HasDelegate) await OnPrev.InvokeAsync();
+    }
+
+    private async Task OnNextClicked()
+    {
+        if (OnNext.HasDelegate) await OnNext.InvokeAsync();
+    }
+
+    public void Dispose()
+    {
+        _ = JS.InvokeVoidAsync("textEditFocusTrap.release", "#spellcheck-dialog");
+        _trapAttached = false;
+        _dotNetRef?.Dispose();
+    }
+
+    private async Task FocusSelectedSuggestion()
+    {
+        try
+        {
+            if (_selectedSuggestionIndex >= 0 && Suggestions != null && _selectedSuggestionIndex < Suggestions.Count)
+            {
+                var id = $"spell-suggestion-{_selectedSuggestionIndex}";
+                try { await JS.InvokeVoidAsync("textEditFocusTrap.focusElementById", id); } catch { }
+            }
+        }
+        catch { }
+    }
+}

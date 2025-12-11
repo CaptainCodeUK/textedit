@@ -103,22 +103,47 @@ public class Startup
         if (spellChecker == null)
         {
             var spellCheckOptions = Configuration.GetSection("SpellCheck").Get<SpellCheckOptions>();
-            if (spellCheckOptions?.DefaultDicUrl != null && spellCheckOptions?.DefaultAffUrl != null)
+            // If running in CI, prefer the demo spell checker to avoid network/download flakiness in CI environments
+            var isCi = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI"));
+            if (!isCi && spellCheckOptions?.AutoDownloadOnStartup == true && spellCheckOptions?.DefaultDicUrl != null && spellCheckOptions?.DefaultAffUrl != null)
             {
                 try
                 {
                     var installer = new TextEdit.Infrastructure.SpellChecking.DictionaryInstaller(new HttpClient());
-                    var downloaded = installer.DownloadAndInstallDefaultDictionaryAsync(spellCheckOptions.DefaultDicUrl, spellCheckOptions.DefaultAffUrl).GetAwaiter().GetResult();
-                    if (downloaded)
+                    var retryCount = Math.Max(1, spellCheckOptions.DownloadRetryCount);
+                    var timeoutSec = Math.Max(5, spellCheckOptions.DownloadTimeoutSeconds);
+                    var success = false;
+                    for (int attempt = 1; attempt <= retryCount; attempt++)
                     {
-                        var customPath = TextEdit.Infrastructure.SpellChecking.DictionaryService.GetCustomDictionaryPath();
-                        var dicPath = Path.Combine(customPath, TextEdit.Infrastructure.SpellChecking.DictionaryService.EnglishDicFileName);
-                        var affPath = Path.Combine(customPath, TextEdit.Infrastructure.SpellChecking.DictionaryService.EnglishAffFileName);
-                        if (File.Exists(dicPath) && File.Exists(affPath))
+                        try
                         {
-                            spellChecker = TextEdit.Infrastructure.SpellChecking.DictionaryService.LoadFromFiles(dicPath, affPath);
-                            System.Diagnostics.Debug.WriteLine("Downloaded and installed default dictionaries successfully.");
+                            using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(timeoutSec));
+                            System.Diagnostics.Debug.WriteLine($"Attempting to download default dictionaries (attempt {attempt}/{retryCount})...");
+                            var downloaded = installer.DownloadAndInstallDefaultDictionaryAsync(spellCheckOptions.DefaultDicUrl, spellCheckOptions.DefaultAffUrl, cts.Token).GetAwaiter().GetResult();
+                            if (downloaded)
+                            {
+                                var customPath = TextEdit.Infrastructure.SpellChecking.DictionaryService.GetCustomDictionaryPath();
+                                var dicPath = Path.Combine(customPath, TextEdit.Infrastructure.SpellChecking.DictionaryService.EnglishDicFileName);
+                                var affPath = Path.Combine(customPath, TextEdit.Infrastructure.SpellChecking.DictionaryService.EnglishAffFileName);
+                                if (File.Exists(dicPath) && File.Exists(affPath))
+                                {
+                                    spellChecker = TextEdit.Infrastructure.SpellChecking.DictionaryService.LoadFromFiles(dicPath, affPath);
+                                    System.Diagnostics.Debug.WriteLine("Downloaded and installed default dictionaries successfully.");
+                                    success = true;
+                                    break;
+                                }
+                            }
                         }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Dictionary download attempt {attempt} failed: {ex.Message}");
+                        }
+                        // small delay before retrying
+                        System.Threading.Thread.Sleep(500);
+                    }
+                    if (!success)
+                    {
+                        System.Diagnostics.Debug.WriteLine("Failed to download default dictionaries after retries.");
                     }
                 }
                 catch (Exception ex)
@@ -126,9 +151,29 @@ public class Startup
                     System.Diagnostics.Debug.WriteLine($"Failed to download default dictionaries: {ex.Message}");
                 }
             }
+            else if (isCi)
+            {
+                System.Diagnostics.Debug.WriteLine("CI detected - skipping auto-download of dictionaries and keeping demo spell checker for stability.");
+            }
         }
 
     // Only register SpellCheckingService if we have a spell checker
+        if (spellChecker != null)
+        {
+            // Check if the loaded dictionary is too small - treat minimal demo dictionary as 'not loaded' for runtime to reduce false-positives
+            try
+            {
+                var minWords = Configuration.GetSection("SpellCheck").Get<SpellCheckOptions>()?.MinDictionaryWords ?? 50;
+                if (TextEdit.Infrastructure.SpellChecking.DictionaryService.LastLoadedDictionaryWordCount > 0 && TextEdit.Infrastructure.SpellChecking.DictionaryService.LastLoadedDictionaryWordCount < minWords)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Spell checking: loaded dictionary appears to be minimal ({TextEdit.Infrastructure.SpellChecking.DictionaryService.LastLoadedDictionaryWordCount} words), using demo spell checker instead to reduce false positives.");
+                    spellChecker?.Dispose();
+                    spellChecker = null;
+                }
+            }
+            catch { }
+        }
+
         if (spellChecker != null)
         {
             System.Diagnostics.Debug.WriteLine($"Spell checking enabled. SpellChecker initialized: {spellChecker.IsInitialized}");
@@ -165,6 +210,8 @@ public class Startup
         services.AddSingleton<WindowStateRepository>();
     // Register dictionary installer for user-initiated dictionary downloads
     services.AddSingleton<TextEdit.Infrastructure.SpellChecking.DictionaryInstaller>(sp => new TextEdit.Infrastructure.SpellChecking.DictionaryInstaller(new System.Net.Http.HttpClient()));
+    // Background hosted service to auto-download dictionaries if configured
+    services.AddHostedService<TextEdit.Infrastructure.SpellChecking.DictionaryBackgroundService>();
         services.AddSingleton<ThemeDetectionService>();
         
         // Register ThemeManager as singleton without IJSRuntime dependency
@@ -197,6 +244,8 @@ public class Startup
             sp.GetService<DialogService>(),
             sp.GetService<TextEdit.Infrastructure.SpellChecking.SpellCheckingService>()
         ));
+        // Expose AppState as IDictionaryInstallNotifier so infrastructure can report install progress
+        services.AddSingleton<TextEdit.Core.SpellChecking.IDictionaryInstallNotifier>(sp => sp.GetRequiredService<AppState>());
         // Dialog service
         services.AddSingleton<DialogService>();
     }

@@ -1,4 +1,5 @@
 @using TextEdit.UI.App
+@using TextEdit.Core.SpellChecking
 @inject AppState AppState
 @implements IDisposable
 
@@ -57,6 +58,30 @@
             <span aria-label="Document has unsaved changes" style="margin-left: 4px;">●</span>
         }
     </span>
+    <span class="status-item" style="font-size:0.85rem; color:var(--muted); margin-left: 12px;">
+        @if (AppState.DictionaryInstallState == DictionaryDownloadState.InProgress)
+        {
+            <span title="Installing dictionaries...">Spell: Installing...</span>
+        }
+        else if (AppState.DictionaryInstallState == DictionaryDownloadState.Completed)
+        {
+            <text>Spell: On (@AppState.LoadedDictionaryWordCount words)</text>
+        }
+        else if (AppState.DictionaryInstallState == DictionaryDownloadState.Failed)
+        {
+            <span title="Automatic install failed">Spell: Failed to install</span>
+            <button class="status-link" style="margin-left:8px; font-size:0.75rem;" @onclick="OpenOptions">Install manually</button>
+        }
+        else if (AppState.IsDemoSpellCheckerActive)
+        {
+            <span title="Demo spell checker is active and only flags a small set of common misspellings. Open Options to install a full dictionary.">Spell: Demo (@AppState.LoadedDictionaryWordCount words)</span>
+            <button class="status-link" style="margin-left:8px; font-size:0.75rem;" @onclick="OpenOptions">Install dictionary</button>
+        }
+        else
+        {
+            <text>Spell: On (@AppState.LoadedDictionaryWordCount words)</text>
+        }
+    </span>
 </div>
 
 <!-- Screen reader announcements (visually hidden) -->
@@ -97,6 +122,8 @@
         _lastCaretLine = AppState.EditorState.CaretLine;
         _lastCaretColumn = AppState.EditorState.CaretColumn;
         _lastCharacterCount = AppState.EditorState.CharacterCount;
+        // Subscribe to AppState notifications for dictionary installation events
+        AppState.NotificationRequested += async (msg) => await AnnounceAsync(msg);
     }
 
     protected override bool ShouldRender()
@@ -236,5 +263,11 @@
     {
         AppState.EditorState.Changed -= OnEditorStateChanged;
         AppState.Changed -= OnAppStateChanged;
+    }
+
+    private Task OpenOptions()
+    {
+        // Use the EditorCommandHub to open the Options dialog if available
+        return EditorCommandHub.InvokeSafe(EditorCommandHub.OptionsRequested);
     }
 }

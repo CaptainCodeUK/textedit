@@ -1,10 +1,15 @@
 window.textEditMonaco = window.textEditMonaco || {
   editors: {},
+  pendingSpellCheckDecorations: {},
   
   // Test function to verify JS interop is working
   testFunction: function() {
     console.log('[monacoInterop] testFunction called');
     return { message: 'Hello from testFunction', timestamp: new Date().getTime() };
+  },
+
+  debugLog: function(obj) {
+    try { console.debug('[monacoInterop] debugLog:', obj); } catch (e) { }
   },
   
   loadMonaco: (function() {
@@ -58,9 +63,13 @@ window.textEditMonaco = window.textEditMonaco || {
   createEditor: function(elementId, dotNetRef, options) {
     console.log('[monacoInterop] createEditor called for', elementId);
     options = options || {};
+    // Ensure an entry exists early so other functions can detect 'pending' editors
+    if (!window.textEditMonaco.editors[elementId]) {
+      window.textEditMonaco.editors[elementId] = { editor: null };
+    }
 
-    // Prevent duplicate initialization
-    if (window.textEditMonaco.editors[elementId]) {
+    // Prevent duplicate initialization (only if editor already created)
+    if (window.textEditMonaco.editors[elementId] && window.textEditMonaco.editors[elementId].editor) {
       console.warn('[monacoInterop] Editor already exists for', elementId);
       return false;
     }
@@ -116,7 +125,7 @@ window.textEditMonaco = window.textEditMonaco || {
     
     // F7 - manual spell check trigger
     editor.addCommand(
-      monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyS,
+      monaco.KeyCode.F7,
       () => {
         console.log('[monacoInterop] F7 triggered - dispatching blazor-spell-check');
         document.dispatchEvent(new CustomEvent('blazor-spell-check'));
@@ -125,8 +134,37 @@ window.textEditMonaco = window.textEditMonaco || {
     
     const keyDownListener = null;
 
-    // Save editor instance for later
-    window.textEditMonaco.editors[elementId] = { editor, changeListener, selectionListener, keyDownListener };
+  // Save editor instance for later
+  window.textEditMonaco.editors[elementId] = { editor, changeListener, selectionListener, keyDownListener };
+    // Flush any pending spell check decorations that were queued while editor initialization was pending
+      try {
+      const pending = window.textEditMonaco.pendingSpellCheckDecorations && window.textEditMonaco.pendingSpellCheckDecorations[elementId];
+      if (pending) {
+        const pendingIsArray = Array.isArray(pending);
+        const pendingLength = pendingIsArray ? pending.length : 0;
+        if (pendingIsArray && pendingLength === 0) {
+          console.log('[createEditor] Applying queued clear for', elementId);
+          // apply clear in a micro-task to let the editor settle
+          setTimeout(() => {
+            try { window.textEditMonaco.clearSpellCheckDecorations(elementId); } catch (e) { console.error('[createEditor] Error applying queued clear for pending decorations:', e); }
+          }, 10);
+        }
+        else if (pendingIsArray) {
+          console.log('[createEditor] Applying queued spell check decorations for', elementId, 'count:', pendingLength);
+          setTimeout(() => {
+            try { window.textEditMonaco.setSpellCheckDecorations(elementId, pending); } catch (e) { console.error('[createEditor] Error applying pending decorations:', e); }
+          }, 10);
+        }
+        else {
+          // Non-array payload; try to set decorations as-is and log accordingly
+          console.log('[createEditor] Applying queued spell check decorations (unknown shape) for', elementId);
+          setTimeout(() => {
+            try { window.textEditMonaco.setSpellCheckDecorations(elementId, pending); } catch (e) { console.error('[createEditor] Error applying pending decorations (unknown shape):', e); }
+          }, 10);
+        }
+        delete window.textEditMonaco.pendingSpellCheckDecorations[elementId];
+      }
+    } catch (e) { console.error('[createEditor] Error while flushing pending spell check decorations:', e); }
     return true;
   },
 
@@ -136,7 +174,7 @@ window.textEditMonaco = window.textEditMonaco || {
    */
   attachContentChangeListener: function(elementId, dotNetRef) {
     const entry = window.textEditMonaco.editors[elementId];
-    if (!entry) {
+    if (!entry || !entry.editor) {
       console.warn('[attachContentChangeListener] No editor found for:', elementId);
       return false;
     }
@@ -164,21 +202,22 @@ window.textEditMonaco = window.textEditMonaco || {
 
   getValue: function(elementId) {
     const entry = window.textEditMonaco.editors[elementId];
-    return entry?.editor.getValue() ?? null;
+    try { return (entry && entry.editor && typeof entry.editor.getValue === 'function') ? entry.editor.getValue() : null; } catch (e) { console.error('[getValue] Error:', e); return null; }
   },
 
   setValue: function(elementId, value) {
     const entry = window.textEditMonaco.editors[elementId];
-    entry?.editor.setValue(value);
+    try { if (entry && entry.editor && typeof entry.editor.setValue === 'function') entry.editor.setValue(value); }
+    catch (e) { console.error('[setValue] Error setting value:', e); }
   },
 
   disposeEditor: function(elementId) {
     const entry = window.textEditMonaco.editors[elementId];
     if (!entry) return;
-    entry.changeListener.dispose();
-    if (entry.selectionListener) entry.selectionListener.dispose();
-    if (entry.keyDownListener) entry.keyDownListener.dispose();
-    entry.editor.dispose();
+    try { if (entry.changeListener && typeof entry.changeListener.dispose === 'function') entry.changeListener.dispose(); } catch (e) { console.warn('[disposeEditor] Failed hashing changeListener', e); }
+    try { if (entry.selectionListener && typeof entry.selectionListener.dispose === 'function') entry.selectionListener.dispose(); } catch (e) { console.warn('[disposeEditor] Failed disposing selectionListener', e); }
+    try { if (entry.keyDownListener && typeof entry.keyDownListener.dispose === 'function') entry.keyDownListener.dispose(); } catch (e) { console.warn('[disposeEditor] Failed disposing keyDownListener', e); }
+    try { if (entry.editor && typeof entry.editor.dispose === 'function') entry.editor.dispose(); } catch (e) { console.warn('[disposeEditor] Failed disposing editor', e); }
     delete window.textEditMonaco.editors[elementId];
   },
 
@@ -322,6 +361,52 @@ window.textEditMonaco = window.textEditMonaco || {
     } catch (e) {
       console.error('[monacoInterop] getSelectionRange failed:', e);
       return { start: 0, end: 0 };
+    }
+  },
+
+  /**
+   * Get spell check decoration at current caret position (if any).
+   * Returns an object { range: { startLineNumber, startColumn, endLineNumber, endColumn }, word, suggestions }
+   */
+  getSpellCheckDecorationAtCaret: function (elementId) {
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry || !entry.editor) return null;
+    try {
+      const pos = entry.editor.getPosition();
+      if (!pos) return null;
+      const model = entry.editor.getModel();
+      if (!model) return null;
+      const decorations = model.getDecorationsInRange(new monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column));
+      for (const dec of decorations) {
+        const opts = dec.options || {};
+        const className = opts.className || opts.inlineClassName || '';
+        if (className.indexOf('spell-check-error') >= 0 || className.indexOf('spell-check') >= 0) {
+          const range = dec.range;
+          const text = model.getValueInRange(range);
+            let suggestions = opts.suggestions || opts.Suggestions || opts.SUGGESTIONS || [];
+            // Normalize suggestions to objects with a Word property if they are strings
+            try {
+              suggestions = suggestions.map(s => {
+                try {
+                  if (typeof s === 'string') return { Word: s, Confidence: 50, IsPrimary: false };
+                  if (s && typeof s === 'object' && (s.Word || s.word)) {
+                    return { Word: s.Word || s.word, Confidence: s.Confidence || s.confidence || 50, IsPrimary: s.IsPrimary || s.isPrimary || false };
+                  }
+                  return s;
+                } catch (e) { return s; }
+              });
+            } catch (e) { /* ignore normalization errors */ }
+          return {
+            range: { startLineNumber: range.startLineNumber, startColumn: range.startColumn, endLineNumber: range.endLineNumber, endColumn: range.endColumn },
+            word: text,
+            suggestions: suggestions
+          };
+        }
+      }
+      return null;
+    } catch (e) {
+      console.error('[getSpellCheckDecorationAtCaret] Error:', e);
+      return null;
     }
   },
 
@@ -518,33 +603,92 @@ window.textEditMonaco = window.textEditMonaco || {
    */
   setSpellCheckDecorations: function(elementId, decorationData) {
     const entry = window.textEditMonaco.editors[elementId];
-    if (!entry) {
-      console.warn('[setSpellCheckDecorations] No editor found for:', elementId);
+    if (!entry || !entry.editor) {
+      console.warn('[setSpellCheckDecorations] No editor found for (or not initialized yet):', elementId);
+      // If no editor yet, queue decorations to be applied once the editor is created.
+      // If decorationData is empty, this signals a clear; queue an explicit clear operation instead of an empty array
+      try {
+        const isArray = Array.isArray(decorationData);
+        const length = isArray ? decorationData.length : 0;
+        if (!isArray || length === 0) {
+          // Queue a clear operation for this editor when it is created
+          window.textEditMonaco.pendingSpellCheckDecorations[elementId] = [];
+          console.log('[setSpellCheckDecorations] Queued clear for', elementId);
+        } else {
+          const clone = JSON.parse(JSON.stringify(decorationData));
+          window.textEditMonaco.pendingSpellCheckDecorations[elementId] = clone;
+          console.log('[setSpellCheckDecorations] Queued', clone.length, 'decorations for', elementId);
+        }
+      } catch (e) {
+        // Fallback: store as-is
+        window.textEditMonaco.pendingSpellCheckDecorations[elementId] = decorationData;
+      }
       return;
     }
 
     try {
       // Transform decoration data into Monaco decoration objects
-      const decorations = decorationData.map(d => ({
-        range: new monaco.Range(
-          (d.range.startLineNumber !== undefined ? d.range.startLineNumber : d.range.StartLineNumber),
-          (d.range.startColumn !== undefined ? d.range.startColumn : d.range.StartColumn),
-          (d.range.endLineNumber !== undefined ? d.range.endLineNumber : d.range.EndLineNumber),
-          (d.range.endColumn !== undefined ? d.range.endColumn : d.range.EndColumn)
-        ),
-          options: {
-          isWholeLine: (d.options.isWholeLine !== undefined ? d.options.isWholeLine : d.options.IsWholeLine) || false,
-          className: (d.options.className !== undefined ? d.options.className : d.options.ClassName) || 'spell-check-error',
-          glyphMarginClassName: d.options.glyphMarginClassName || d.options.GlyphMarginClassName,
-          glyphMarginHoverMessage: d.options.glyphMarginHoverMessage || d.options.GlyphMarginHoverMessage,
-          inlineClassName: d.options.inlineClassName || d.options.InlineClassName,
-          inlineClassNameAffectsLetterSpacing: (d.options.inlineClassNameAffectsLetterSpacing !== undefined ? d.options.inlineClassNameAffectsLetterSpacing : d.options.InlineClassNameAffectsLetterSpacing) || false,
-          beforeContentClassName: d.options.beforeContentClassName || d.options.BeforeContentClassName,
-          afterContentClassName: d.options.afterContentClassName || d.options.AfterContentClassName,
-          suggestions: d.options.suggestions || d.options.Suggestions || [],
-          message: d.options.message || d.options.Message || ''
+      const dataArray = Array.isArray(decorationData) ? decorationData : [];
+      const validDecorationData = [];
+      const invalidEntries = [];
+      dataArray.forEach((d, idx) => {
+        if (!d) { invalidEntries.push({ idx, reason: 'null or undefined', item: d }); return; }
+        const r = d.range || d.Range || {};
+        const startLine = (r.startLineNumber !== undefined ? r.startLineNumber : r.StartLineNumber);
+        const startCol = (r.startColumn !== undefined ? r.startColumn : r.StartColumn);
+        const endLine = (r.endLineNumber !== undefined ? r.endLineNumber : r.EndLineNumber);
+        const endCol = (r.endColumn !== undefined ? r.endColumn : r.EndColumn);
+  const reasons = [];
+        if (!Number.isInteger(startLine)) reasons.push('startLine not integer:' + startLine);
+        if (!Number.isInteger(startCol)) reasons.push('startCol not integer:' + startCol);
+        if (!Number.isInteger(endLine)) reasons.push('endLine not integer:' + endLine);
+  if (!Number.isInteger(endCol)) reasons.push('endCol not integer:' + endCol);
+  if (Number.isInteger(startCol) && Number.isInteger(endCol) && endCol < startCol) reasons.push('endCol < startCol');
+        if (reasons.length > 0) { invalidEntries.push({ idx, reasons, item: d }); return; }
+        validDecorationData.push(d);
+      });
+      if (invalidEntries.length > 0) {
+        // Build a readable report string to ensure the console displays it fully and helps debugging
+        try {
+          const report = invalidEntries.map(e => ({ idx: e.idx, reasons: e.reasons || e.reason, item: e.item }));
+          console.warn('[setSpellCheckDecorations] Skipping invalid decoration entries:', JSON.stringify(report, null, 2));
+        } catch (e) {
+          console.warn('[setSpellCheckDecorations] Skipping invalid decoration entries (could not stringify)', invalidEntries);
         }
-      }));
+      }
+      if (validDecorationData.length === 0) {
+        // Nothing valid to apply; clear any previous decorations and return
+        if (entry.spellCheckDecorationsId && entry.spellCheckDecorationsId.length > 0) {
+          entry.spellCheckDecorationsId = entry.editor.deltaDecorations(entry.spellCheckDecorationsId, []);
+        }
+        console.log('[setSpellCheckDecorations] No valid decorations to apply, cleared previous ones');
+        return;
+      }
+
+      const decorations = validDecorationData.map(d => {
+        const r = d.range || d.Range || {};
+        const opts = d.options || d.Options || {};
+        return {
+          range: new monaco.Range(
+            (r.startLineNumber !== undefined ? r.startLineNumber : r.StartLineNumber),
+            (r.startColumn !== undefined ? r.startColumn : r.StartColumn),
+            (r.endLineNumber !== undefined ? r.endLineNumber : r.EndLineNumber),
+            (r.endColumn !== undefined ? r.endColumn : r.EndColumn)
+          ),
+          options: {
+            isWholeLine: (opts.isWholeLine !== undefined ? opts.isWholeLine : opts.IsWholeLine) || false,
+            className: (opts.className !== undefined ? opts.className : opts.ClassName) || 'spell-check-error',
+            glyphMarginClassName: opts.glyphMarginClassName || opts.GlyphMarginClassName,
+            glyphMarginHoverMessage: opts.glyphMarginHoverMessage || opts.GlyphMarginHoverMessage,
+            inlineClassName: opts.inlineClassName || opts.InlineClassName,
+            inlineClassNameAffectsLetterSpacing: (opts.inlineClassNameAffectsLetterSpacing !== undefined ? opts.inlineClassNameAffectsLetterSpacing : opts.InlineClassNameAffectsLetterSpacing) || false,
+            beforeContentClassName: opts.beforeContentClassName || opts.BeforeContentClassName,
+            afterContentClassName: opts.afterContentClassName || opts.AfterContentClassName,
+            suggestions: opts.suggestions || opts.Suggestions || [],
+            message: opts.message || opts.Message || ''
+          }
+        };
+      });
 
       // Apply decorations to editor
       if (!entry.spellCheckDecorationsId) {
@@ -557,7 +701,8 @@ window.textEditMonaco = window.textEditMonaco || {
         decorations
       );
 
-      console.log('[setSpellCheckDecorations] Applied', decorations.length, 'decorations');
+  console.log('[setSpellCheckDecorations] Applied', decorations.length, 'decorations');
+  try { console.debug('[setSpellCheckDecorations] decorations:', JSON.stringify(decorations, null, 2)); } catch (e) { }
     } catch (e) {
       console.error('[setSpellCheckDecorations] Error setting decorations:', e);
     }
@@ -575,8 +720,11 @@ window.textEditMonaco = window.textEditMonaco || {
    */
   clearSpellCheckDecorations: function(elementId) {
     const entry = window.textEditMonaco.editors[elementId];
-    if (!entry) {
-      console.warn('[clearSpellCheckDecorations] No editor found for:', elementId);
+    if (!entry || !entry.editor) {
+      console.warn('[clearSpellCheckDecorations] No editor found for (or not initialized yet):', elementId);
+      // Queue clear operation until editor available
+      window.textEditMonaco.pendingSpellCheckDecorations[elementId] = [];
+      console.log('[clearSpellCheckDecorations] Queued clear for', elementId);
       return;
     }
 
@@ -590,6 +738,102 @@ window.textEditMonaco = window.textEditMonaco || {
       }
     } catch (e) {
       console.error('[clearSpellCheckDecorations] Error clearing decorations:', e);
+    }
+  },
+
+  /**
+   * Move caret to the next spelling error (decoration) after current caret position.
+   * Returns true if moved to a next error; false otherwise.
+   */
+  moveToNextSpellingError: function(elementId) {
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry || !entry.editor) return false;
+    try {
+      const model = entry.editor.getModel();
+      if (!model) return false;
+      const decIds = entry.spellCheckDecorationsId || [];
+      if (decIds.length === 0) return false;
+      // Collect ranges
+      const ranges = decIds.map(id => ({ id, range: model.getDecorationRange(id) })).filter(r => r.range);
+      if (ranges.length === 0) return false;
+      const pos = entry.editor.getPosition();
+      if (!pos) return false;
+      // Find next decoration whose start is after the current position
+      const currentOffset = model.getOffsetAt(pos);
+      let candidate = null;
+      let candidateOffset = Number.MAX_SAFE_INTEGER;
+      for (const r of ranges) {
+        const startOffset = model.getOffsetAt(r.range.getStartPosition());
+        if (startOffset > currentOffset && startOffset < candidateOffset) {
+          candidate = r.range;
+          candidateOffset = startOffset;
+        }
+      }
+      // If none found, wrap to the first
+      if (!candidate) candidate = ranges[0].range;
+      entry.editor.setPosition(candidate.getStartPosition());
+      entry.editor.revealRangeInCenter(candidate);
+      return true;
+    } catch (e) {
+      console.error('[moveToNextSpellingError] Error:', e);
+      return false;
+    }
+  },
+
+  /**
+   * Move caret to the previous spelling error (decoration) before current caret position.
+   * Returns true if moved to a previous error; false otherwise.
+   */
+  moveToPrevSpellingError: function(elementId) {
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry || !entry.editor) return false;
+    try {
+      const model = entry.editor.getModel();
+      if (!model) return false;
+      const decIds = entry.spellCheckDecorationsId || [];
+      if (decIds.length === 0) return false;
+      const ranges = decIds.map(id => ({ id, range: model.getDecorationRange(id) })).filter(r => r.range);
+      if (ranges.length === 0) return false;
+      const pos = entry.editor.getPosition();
+      if (!pos) return false;
+      const currentOffset = model.getOffsetAt(pos);
+      let candidate = null;
+      let candidateOffset = -1;
+      for (const r of ranges) {
+        const startOffset = model.getOffsetAt(r.range.getStartPosition());
+        if (startOffset < currentOffset && startOffset > candidateOffset) {
+          candidate = r.range;
+          candidateOffset = startOffset;
+        }
+      }
+      // If none found, wrap to the last
+      if (!candidate) candidate = ranges[ranges.length - 1].range;
+      entry.editor.setPosition(candidate.getStartPosition());
+      entry.editor.revealRangeInCenter(candidate);
+      return true;
+    } catch (e) {
+      console.error('[moveToPrevSpellingError] Error:', e);
+      return false;
+    }
+  },
+
+  /**
+   * Sets the caret position in the editor at the given line/column.
+   * @param {string} elementId
+   * @param {number} line
+   * @param {number} column
+   */
+  setCaretPositionAt: function(elementId, line, column) {
+    const entry = window.textEditMonaco.editors[elementId];
+    if (!entry || !entry.editor) return false;
+    try {
+      const pos = new monaco.Position(line, column);
+      entry.editor.setPosition(pos);
+      entry.editor.revealPositionInCenter(pos);
+      return true;
+    } catch (e) {
+      console.error('[setCaretPositionAt] Error:', e);
+      return false;
     }
   },
 

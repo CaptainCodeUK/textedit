@@ -313,6 +313,43 @@ textarea::selection, input::selection { background: color-mix(in srgb, var(--acc
     color: var(--muted);
 }
 
+/* Spell-check word highlight used in SpellCheckDialog */
+.textedit-spell-mark {
+    background: var(--accent-subtle);
+    border-radius: 4px;
+    padding: 0 3px;
+    color: inherit;
+    font-weight: 600;
+}
+
+/* Standard button variants used across the UI */
+button.btn {
+    padding: 6px 12px;
+    background: var(--surface);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+button.btn.small { padding: 4px 8px; font-size: 12px; border-radius: 4px; }
+
+button.btn.primary { background: var(--accent); color: var(--accent-contrast); border-color: transparent; }
+
+button.btn.suggestion { text-align:left; padding:8px 10px; background:var(--bg); color:var(--fg); border: 1px solid var(--border); }
+button.btn.suggestion.selected { background: color-mix(in srgb, var(--accent) 10%, var(--bg)); border-color: var(--accent); }
+
+button.btn[disabled], button.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Buttons used for stacked action lists inside dialogs */
+button.btn.stacked { width: 100%; display: block; }
+
+/* Hover & focus states for buttons */
+button.btn:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+button.btn.primary:hover:not(:disabled) { filter: brightness(0.94); }
+button.btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
 /* Prevent focus on header and footer */
 .app-header, .app-footer {
   -webkit-user-select: none;

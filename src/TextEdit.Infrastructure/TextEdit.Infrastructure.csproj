@@ -16,7 +16,7 @@
 
   <!-- Embed small demonstration dictionaries so embedded loading works in dev -->
   <ItemGroup>
-    <EmbeddedResource Include="Resources\Dictionaries\**\*.*" />
+    <EmbeddedResource Include="**\Resources\Dictionaries\**\*.*" />
   </ItemGroup>
 
 </Project>

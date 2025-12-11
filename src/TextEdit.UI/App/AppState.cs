@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using TextEdit.Infrastructure.Themes;
 using TextEdit.UI.Services;
 using System.IO;
+using TextEdit.Core.SpellChecking;
 
 namespace TextEdit.UI.App;
 
@@ -23,7 +24,7 @@ namespace TextEdit.UI.App;
 /// Central UI state container coordinating documents, tabs, persistence, IPC and theme.
 /// Components subscribe to <see cref="Changed"/> and use <see cref="StateVersion"/> to optimize re-renders.
 /// </summary>
-public class AppState : IDisposable
+public class AppState : IDisposable, IDictionaryInstallNotifier
 {
     private readonly DocumentService _docs;
     private readonly TabService _tabs;
@@ -81,6 +82,13 @@ public class AppState : IDisposable
         _autosave.Start();
         _spellCheckingService = spellCheckingService;
     }
+
+    /// <summary>
+    /// Number of words in last loaded dictionary (if any). 0 if none.
+    /// </summary>
+    public int LoadedDictionaryWordCount => TextEdit.Infrastructure.SpellChecking.DictionaryService.LastLoadedDictionaryWordCount;
+
+    public bool IsDemoSpellCheckerActive => _spellCheckingService == null || _spellCheckingService == default;
 
     // Backwards-compatible constructor used in tests and earlier call sites
     public AppState(
@@ -163,6 +171,16 @@ public class AppState : IDisposable
     /// Raised when state changes and components should re-render.
     /// </summary>
     public event Action? Changed;
+    /// <summary>
+    /// Notification requested by background services (e.g., dictionary install completed)
+    /// Handlers may be async; we will invoke them with Task.WhenAll when raised.
+    /// </summary>
+    public event Func<string, Task>? NotificationRequested;
+
+    private DictionaryDownloadState _dictionaryDownloadState = DictionaryDownloadState.NotStarted;
+    public DictionaryDownloadState DictionaryInstallState => _dictionaryDownloadState;
+    private string? _dictionaryInstallMessage;
+    public string? DictionaryInstallMessage => _dictionaryInstallMessage;
     
     /// <summary>
     /// Raised when the theme changes, allowing editors to update their theme dynamically.
@@ -178,6 +196,22 @@ public class AppState : IDisposable
 
     // Notify UI that document state (e.g., dirty flag) changed
     public void NotifyDocumentUpdated() => NotifyChanged();
+
+    public async Task SetDictionaryInstallStateAsync(DictionaryDownloadState state, string? message = null)
+    {
+        _dictionaryDownloadState = state;
+        _dictionaryInstallMessage = message;
+        NotifyChanged();
+        if (!string.IsNullOrEmpty(message) && NotificationRequested != null)
+        {
+            try
+            {
+                var handlers = NotificationRequested.GetInvocationList().OfType<Func<string, Task>>();
+                await Task.WhenAll(handlers.Select(h => h.Invoke(message)));
+            }
+            catch { }
+        }
+    }
 
     /// <summary>
     /// Notify UI that toolbar state changed (e.g., Cut/Copy button enabling based on selection)

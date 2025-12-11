@@ -115,6 +115,25 @@ public class SpellCheckDecorationServiceTests
     }
 
     [Fact]
+    public void ConvertToDecorations_SkipsInvalidRanges()
+    {
+        // Arrange: invalid column (negative) and invalid end <= start
+        var results = new List<SpellCheckResult>
+        {
+            new SpellCheckResult { Word = "x", StartPosition = 0, EndPosition = 1, LineNumber = 1, ColumnNumber = -2, Suggestions = new List<SpellCheckSuggestion>() },
+            new SpellCheckResult { Word = "y", StartPosition = 0, EndPosition = 1, LineNumber = 1, ColumnNumber = 10, Suggestions = new List<SpellCheckSuggestion>() }
+        };
+
+        // Act
+        var decorations = _service.ConvertToDecorations(results);
+
+        // Assert - the first should be skipped, the second should be converted if its end column is appropriate
+        Assert.True(decorations.Count <= results.Count);
+        // Specifically ensure none have start column < 1
+        Assert.DoesNotContain(decorations.Select(d => d.Range.StartColumn), c => c < 1);
+    }
+
+    [Fact]
     public void ConvertToDecorations_IncludesSuggestions()
     {
         // Arrange

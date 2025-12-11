@@ -8,6 +8,7 @@ namespace TextEdit.Infrastructure.SpellChecking;
 /// </summary>
 public class DictionaryService
 {
+        public static int LastLoadedDictionaryWordCount { get; private set; } = 0;
     public const string BuiltInDictionaryPath = "Resources/Dictionaries";
     public const string EnglishDicFileName = "en_US.dic";
     public const string EnglishAffFileName = "en_US.aff";
@@ -28,13 +29,37 @@ public class DictionaryService
             var dicResourceName = $"{assembly.GetName().Name}.{BuiltInDictionaryPath.Replace("/", ".")}.{EnglishDicFileName}";
             var affResourceName = $"{assembly.GetName().Name}.{BuiltInDictionaryPath.Replace("/", ".")}.{EnglishAffFileName}";
 
-            using (var dicStream = assembly.GetManifestResourceStream(dicResourceName))
-            using (var affStream = assembly.GetManifestResourceStream(affResourceName))
+            // If the direct resource name isn't found (resource may be under a sub-namespace like SpellChecking.Resources), try to locate by suffix
+            if (assembly.GetManifestResourceInfo(dicResourceName) == null)
             {
-                if (dicStream != null && affStream != null)
+                var found = FindResourceBySuffix(assembly, "." + EnglishDicFileName);
+                if (!string.IsNullOrEmpty(found)) dicResourceName = found;
+            }
+            if (assembly.GetManifestResourceInfo(affResourceName) == null)
+            {
+                var found = FindResourceBySuffix(assembly, "." + EnglishAffFileName);
+                if (!string.IsNullOrEmpty(found)) affResourceName = found;
+            }
+
+            using (var dicStreamOrig = assembly.GetManifestResourceStream(dicResourceName))
+            using (var affStreamOrig = assembly.GetManifestResourceStream(affResourceName))
+            {
+                if (dicStreamOrig != null && affStreamOrig != null)
                 {
-                    // Loaded from embedded resources
-                    spellChecker.LoadDictionary(dicStream, affStream);
+                    // Create copy of the embedded streams so we can inspect the dic file and still pass streams to the spell checker
+                    var dicMem = new MemoryStream();
+                    var affMem = new MemoryStream();
+                    dicStreamOrig.CopyTo(dicMem);
+                    affStreamOrig.CopyTo(affMem);
+                    dicMem.Position = 0;
+                    affMem.Position = 0;
+
+                    // Count dictionary entries - skip potential first-line count header
+                    LastLoadedDictionaryWordCount = CountDictionaryWords(dicMem);
+                    dicMem.Position = 0;
+
+                    spellChecker.LoadDictionary(dicMem, affMem);
+                    System.Diagnostics.Debug.WriteLine($"[DictionaryService] Loaded embedded English dictionary - words: {LastLoadedDictionaryWordCount}");
                     return spellChecker;
                 }
             }
@@ -45,8 +70,15 @@ public class DictionaryService
             var affPath = Path.Combine(customPath, EnglishAffFileName);
             if (File.Exists(dicPath) && File.Exists(affPath))
             {
-                // Load from file system
-                return LoadFromFiles(dicPath, affPath);
+                // Load from file system (we will compute the size for diagnostics)
+                var checker = LoadFromFiles(dicPath, affPath);
+                try
+                {
+                    LastLoadedDictionaryWordCount = CountDictionaryWords(File.OpenRead(dicPath));
+                    System.Diagnostics.Debug.WriteLine($"[DictionaryService] Loaded English dictionary from path {dicPath} - words: {LastLoadedDictionaryWordCount}");
+                }
+                catch { }
+                return checker;
             }
 
             throw new InvalidOperationException(
@@ -57,6 +89,21 @@ public class DictionaryService
             spellChecker.Dispose();
             throw new InvalidOperationException("Failed to load English dictionary.", ex);
         }
+    }
+
+    private static string? FindResourceBySuffix(System.Reflection.Assembly assembly, string suffix)
+    {
+        try
+        {
+            var resources = assembly.GetManifestResourceNames();
+            foreach (var r in resources)
+            {
+                if (r.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                    return r;
+            }
+        }
+        catch { }
+        return null;
     }
 
     /// <summary>
@@ -77,6 +124,8 @@ public class DictionaryService
             using (var dicStream = File.OpenRead(dicFilePath))
             using (var affStream = File.OpenRead(affFilePath))
             {
+                // Count words for diagnostics
+                LastLoadedDictionaryWordCount = CountDictionaryWords(new MemoryStream(File.ReadAllBytes(dicFilePath)));
                 spellChecker.LoadDictionary(dicStream, affStream);
             }
 
@@ -86,6 +135,40 @@ public class DictionaryService
         {
             spellChecker.Dispose();
             throw new InvalidOperationException("Failed to load dictionary from files.", ex);
+        }
+    }
+
+    private static int CountDictionaryWords(Stream dicStream)
+    {
+        try
+        {
+            dicStream.Position = 0;
+            using var sr = new StreamReader(dicStream, leaveOpen: true);
+            int count = 0;
+            bool checkedHeader = false;
+            while (!sr.EndOfStream)
+            {
+                var line = sr.ReadLine();
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                if (!checkedHeader)
+                {
+                    // Some dictionaries include a count on the first line
+                    var first = line.Trim();
+                    if (int.TryParse(first, out _))
+                    {
+                        checkedHeader = true; continue;
+                    }
+                    checkedHeader = true;
+                }
+                count++;
+            }
+            dicStream.Position = 0;
+            return count;
+        }
+        catch
+        {
+            try { dicStream.Position = 0; } catch { }
+            return 0;
         }
     }
 
@@ -121,6 +204,16 @@ public class DictionaryService
         var assembly = typeof(DictionaryService).Assembly;
         var dicResourceName = $"{assembly.GetName().Name}.{BuiltInDictionaryPath.Replace("/", ".")}.{EnglishDicFileName}";
         var affResourceName = $"{assembly.GetName().Name}.{BuiltInDictionaryPath.Replace("/", ".")}.{EnglishAffFileName}";
+        if (assembly.GetManifestResourceInfo(dicResourceName) == null)
+        {
+            var found = FindResourceBySuffix(assembly, "." + EnglishDicFileName);
+            if (!string.IsNullOrEmpty(found)) dicResourceName = found;
+        }
+        if (assembly.GetManifestResourceInfo(affResourceName) == null)
+        {
+            var found = FindResourceBySuffix(assembly, "." + EnglishAffFileName);
+            if (!string.IsNullOrEmpty(found)) affResourceName = found;
+        }
 
         using var dicStream = assembly.GetManifestResourceStream(dicResourceName);
         using var affStream = assembly.GetManifestResourceStream(affResourceName);

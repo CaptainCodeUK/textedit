@@ -17,6 +17,7 @@ public partial class TextEditor : ComponentBase, IDisposable
     [Inject] protected DocumentService DocumentService { get; set; } = default!;
     [Inject] protected IUndoRedoService UndoRedo { get; set; } = default!;
     [Inject] protected IpcBridge Ipc { get; set; } = default!;
+    [Inject] protected TextEdit.Infrastructure.SpellChecking.SpellCheckingService SpellCheckingService { get; set; } = default!;
     [Inject] protected AppState AppState { get; set; } = default!;
     [Inject] protected IJSRuntime JSRuntime { get; set; } = default!;
     [Inject] protected DialogService DialogService { get; set; } = default!; // For About dialog
@@ -26,6 +27,36 @@ public partial class TextEditor : ComponentBase, IDisposable
     protected Document? CurrentDoc => AppState.ActiveDocument;
     protected EditorState State => AppState.EditorState;
     private MonacoEditor? _monacoEditor;
+    // Spell check popup
+    private bool _spellDialogVisible;
+    private string? _spellDialogWord;
+    private TextEdit.Core.SpellChecking.SpellCheckSuggestion[]? _spellDialogSuggestions;
+    private int _spellDialogStartLine;
+    private int _spellDialogStartColumn;
+    private int _spellDialogEndLine;
+    private int _spellDialogEndColumn;
+    private MarkupString? _spellDialogContext;
+
+    private class SpellCheckDecoration
+    {
+        public class DRange
+        {
+            public int StartLineNumber { get; set; }
+            public int StartColumn { get; set; }
+            public int EndLineNumber { get; set; }
+            public int EndColumn { get; set; }
+        }
+        public DRange Range { get; set; } = new DRange();
+        public string Word { get; set; } = string.Empty;
+    public object[]? Suggestions { get; set; }
+
+        public class SuggestionDTO
+        {
+            public string? Word { get; set; }
+            public bool IsPrimary { get; set; }
+            public int Confidence { get; set; }
+        }
+    }
     private bool _suppressUndoPush;
     private CancellationTokenSource? _undoCts;
     private Guid? _lastEditedDocId;
@@ -101,6 +132,8 @@ public partial class TextEditor : ComponentBase, IDisposable
             {
                 await _monacoEditor.TriggerSpellCheckAsync();
             }
+            // Open suggestions dialog for current caret position
+            await ShowSpellCheckDialogAtCaretAsync();
         };
         
         // Format menu commands (Monaco handles find/replace/undo natively)
@@ -174,6 +207,15 @@ public partial class TextEditor : ComponentBase, IDisposable
             State.CharacterCount = CurrentDoc?.Content.Length ?? 0;
             _lastActiveDocId = CurrentDoc?.Id;
             await UpdateCaretPosition();
+            // Trigger spell check on load if the document contains content
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(Content) && _monacoEditor != null)
+                {
+                    await _monacoEditor.TriggerSpellCheckAsync();
+                }
+            }
+            catch { }
         }
         if (_pendingCaretSync)
         {
@@ -196,6 +238,8 @@ public partial class TextEditor : ComponentBase, IDisposable
                 catch { /* ignore */ }
             }
             await UpdateCaretPosition();
+            // After switching document and restoring caret, re-run spell check to refresh decorations
+            try { if (_monacoEditor != null) await _monacoEditor.TriggerSpellCheckAsync(); } catch { }
         }
     }
 
@@ -212,6 +256,313 @@ public partial class TextEditor : ComponentBase, IDisposable
     {
         if (_currentInstance == null) return Task.CompletedTask;
         return EditorCommandHub.InvokeSafe(EditorCommandHub.SpellCheckRequested);
+    }
+
+    /// <summary>
+    /// Show the spell check suggestions dialog at caret if a decoration exists at caret.
+    /// </summary>
+    public async Task ShowSpellCheckDialogAtCaretAsync()
+    {
+        try
+        {
+            Console.WriteLine("[ShowSpellCheckDialogAtCaretAsync] invoked");
+            if (_monacoEditor == null) return;
+            var jsResult = await JSRuntime.InvokeAsync<SpellCheckDecoration?>("textEditMonaco.getSpellCheckDecorationAtCaret", "monaco-editor");
+            // Small polling window to allow decorations to be applied by TriggerSpellCheckAsync
+            var pollCount = 0;
+            while (jsResult == null && pollCount < 5)
+            {
+                await Task.Delay(100);
+                jsResult = await JSRuntime.InvokeAsync<SpellCheckDecoration?>("textEditMonaco.getSpellCheckDecorationAtCaret", "monaco-editor");
+                pollCount++;
+            }
+            if (jsResult == null)
+            {
+                // No decoration at caret; try to infer word at caret and get suggestions directly
+                try
+                {
+                    var caretOffset = await JSRuntime.InvokeAsync<int>("textEditMonaco.getCaretOffset", "monaco-editor");
+                    if (caretOffset <= 0 || CurrentDoc == null) return;
+                    var content = CurrentDoc.Content ?? string.Empty;
+                    if (caretOffset > content.Length) caretOffset = content.Length;
+                    // Find word boundaries around the caret
+                    int start = caretOffset;
+                    while (start > 0 && char.IsLetterOrDigit(content[start - 1])) start--;
+                    int end = caretOffset;
+                    while (end < content.Length && char.IsLetterOrDigit(content[end])) end++;
+                    if (end <= start) return; // no word at caret
+                    var word = content.Substring(start, end - start);
+                    if (string.IsNullOrWhiteSpace(word)) return;
+                    // get suggestions from service
+                            var fallbackSuggestions = SpellCheckingService.GetSuggestions(word);
+                    _spellDialogWord = word;
+                            _spellDialogSuggestions = fallbackSuggestions.ToArray();
+                    // convert start offset to line/column
+                    var lines = content.Split('\n');
+                    int running = 0;
+                    int foundLine = 0;
+                    int foundColumn = 0;
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        var lineLen = lines[i].Length + 1; // +1 for newline
+                        if (start >= running && start < running + lineLen)
+                        {
+                            foundLine = i + 1; // 1-based
+                            foundColumn = start - running + 1; // 1-based
+                            break;
+                        }
+                        running += lineLen;
+                    }
+                    _spellDialogStartLine = foundLine;
+                    _spellDialogStartColumn = foundColumn;
+                    _spellDialogEndLine = foundLine;
+                    _spellDialogEndColumn = foundColumn + (end - start);
+                    _spellDialogContext = new MarkupString(System.Net.WebUtility.HtmlEncode(lines[Math.Max(0, foundLine - 1)] ?? string.Empty));
+                    _spellDialogVisible = true;
+                    await InvokeAsync(StateHasChanged);
+                    return;
+                }
+                catch (Exception ex2)
+                {
+                    Console.WriteLine($"[ShowSpellCheckDialogAtCaretAsync] Fallback error: {ex2}");
+                    return;
+                }
+            }
+            _spellDialogWord = jsResult.Word;
+            var suggestions = new List<TextEdit.Core.SpellChecking.SpellCheckSuggestion>();
+            if (jsResult.Suggestions != null)
+            {
+                foreach (var s in jsResult.Suggestions)
+                {
+                    try
+                    {
+                        var parsed = TextEdit.UI.Services.SpellCheckSuggestionMapper.Parse(s);
+                        if (parsed != null)
+                            suggestions.Add(parsed);
+                    }
+                    catch
+                    {
+                        // ignore malformed suggestions
+                    }
+                }
+            }
+            _spellDialogSuggestions = suggestions.ToArray();
+            _spellDialogStartLine = jsResult.Range.StartLineNumber;
+            _spellDialogStartColumn = jsResult.Range.StartColumn;
+            _spellDialogEndLine = jsResult.Range.EndLineNumber;
+            _spellDialogEndColumn = jsResult.Range.EndColumn;
+            // Build a small context line from the document content if available
+            try
+            {
+                if (CurrentDoc != null)
+                {
+                    var lines = (CurrentDoc.Content ?? string.Empty).Split('\n');
+                    var idx = Math.Max(0, _spellDialogStartLine - 1);
+                    if (idx >= 0 && idx < lines.Length)
+                    {
+                        var line = lines[idx];
+                        var startIndex = Math.Max(0, _spellDialogStartColumn - 1);
+                        var endIndex = Math.Min(line.Length, Math.Max(startIndex, _spellDialogEndColumn - 1));
+                        if (startIndex >= 0 && startIndex < line.Length && endIndex > startIndex)
+                        {
+                            var before = System.Net.WebUtility.HtmlEncode(line.Substring(0, startIndex));
+                            var word = System.Net.WebUtility.HtmlEncode(line.Substring(startIndex, Math.Min(endIndex - startIndex, line.Length - startIndex)));
+                            var after = System.Net.WebUtility.HtmlEncode(line.Substring(startIndex + Math.Min(endIndex - startIndex, line.Length - startIndex)));
+                            var html = $"{before}<mark class=\"textedit-spell-mark\">{word}</mark>{after}";
+                            _spellDialogContext = new MarkupString(html);
+                        }
+                        else
+                        {
+                            _spellDialogContext = new MarkupString(System.Net.WebUtility.HtmlEncode(line));
+                        }
+                    }
+                    else
+                    {
+                        _spellDialogContext = new MarkupString(string.Empty);
+                    }
+                }
+                else
+                {
+                    _spellDialogContext = new MarkupString(string.Empty);
+                }
+            }
+            catch { _spellDialogContext = new MarkupString(string.Empty); }
+            _spellDialogVisible = true;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ShowSpellCheckDialogAtCaretAsync] Error: {ex}");
+        }
+    }
+
+    private async Task OnSpellReplace(string replacement)
+    {
+        try
+        {
+            // Replace in-editor at specific range
+            await JSRuntime.InvokeVoidAsync("textEditMonaco.replaceSpellingError", "monaco-editor", new
+            {
+                range = new
+                {
+                    startLineNumber = _spellDialogStartLine,
+                    startColumn = _spellDialogStartColumn,
+                    endLineNumber = _spellDialogEndLine,
+                    endColumn = _spellDialogEndColumn
+                },
+                replacement = replacement
+            });
+            // Rerun spell check to refresh decorations
+            if (_monacoEditor != null) await _monacoEditor.TriggerSpellCheckAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[OnSpellReplace] Error: {ex}");
+        }
+        finally
+        {
+            _spellDialogVisible = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task OnSpellPrev()
+    {
+        try
+        {
+            var moved = false;
+            try
+            {
+                moved = await JSRuntime.InvokeAsync<bool>("textEditMonaco.moveToPrevSpellingError", "monaco-editor");
+            }
+            catch { }
+            if (!moved)
+            {
+                // Fallback: find previous result from the SpellCheckingService and position caret
+                var caretOffset = await JSRuntime.InvokeAsync<int>("textEditMonaco.getCaretOffset", "monaco-editor");
+                if (CurrentDoc == null) return;
+                var results = (await SpellCheckingService.CheckSpellingAsync(CurrentDoc.Content)).ToList();
+                // find previous by start position
+                var prev = results.Where(r => r.StartPosition < caretOffset).OrderByDescending(r => r.StartPosition).FirstOrDefault();
+                if (prev != null)
+                {
+                    var line = prev.LineNumber;
+                    var column = prev.ColumnNumber + 1; // Monaco 1-based
+                    await JSRuntime.InvokeVoidAsync("textEditMonaco.setCaretPositionAt", "monaco-editor", line, column);
+                    await ShowSpellCheckDialogAtCaretAsync();
+                }
+            }
+            else
+            {
+                await ShowSpellCheckDialogAtCaretAsync();
+            }
+        }
+        catch (Exception ex) { Console.WriteLine($"[OnSpellPrev] Error: {ex}"); }
+    }
+
+    private async Task OnSpellNext()
+    {
+        try
+        {
+            var moved = false;
+            try
+            {
+                moved = await JSRuntime.InvokeAsync<bool>("textEditMonaco.moveToNextSpellingError", "monaco-editor");
+            }
+            catch { }
+            if (!moved)
+            {
+                // Fallback
+                var caretOffset = await JSRuntime.InvokeAsync<int>("textEditMonaco.getCaretOffset", "monaco-editor");
+                if (CurrentDoc == null) return;
+                var results = (await SpellCheckingService.CheckSpellingAsync(CurrentDoc.Content)).ToList();
+                var next = results.Where(r => r.StartPosition > caretOffset).OrderBy(r => r.StartPosition).FirstOrDefault();
+                if (next != null)
+                {
+                    var line = next.LineNumber;
+                    var column = next.ColumnNumber + 1;
+                    await JSRuntime.InvokeVoidAsync("textEditMonaco.setCaretPositionAt", "monaco-editor", line, column);
+                    await ShowSpellCheckDialogAtCaretAsync();
+                }
+            }
+            else
+            {
+                await ShowSpellCheckDialogAtCaretAsync();
+            }
+        }
+        catch (Exception ex) { Console.WriteLine($"[OnSpellNext] Error: {ex}"); }
+    }
+
+    private async Task OnSpellReplaceAll(string replacement)
+    {
+        try
+        {
+            if (CurrentDoc == null) return;
+            var op = new TextEdit.Core.Searching.ReplaceOperation(new TextEdit.Core.Searching.FindQuery(_spellDialogWord ?? string.Empty, false, true), replacement);
+            var count = DocumentService.ReplaceAll(CurrentDoc, op);
+            if (count > 0)
+            {
+                AppState.NotifyDocumentUpdated();
+            }
+            if (_monacoEditor != null) await _monacoEditor.TriggerSpellCheckAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[OnSpellReplaceAll] Error: {ex}");
+        }
+        finally
+        {
+            _spellDialogVisible = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task OnSpellAddToDictionary(string word)
+    {
+        try
+        {
+            if (SpellCheckingService != null && !string.IsNullOrWhiteSpace(word))
+            {
+                SpellCheckingService.AddWordToDictionary(word);
+            }
+            if (_monacoEditor != null) await _monacoEditor.TriggerSpellCheckAsync();
+        }
+        catch { }
+        finally
+        {
+            _spellDialogVisible = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task OnSpellIgnore(string word)
+    {
+        try
+        {
+            SpellCheckingService?.IgnoreWordOnce(word);
+            if (_monacoEditor != null) await _monacoEditor.TriggerSpellCheckAsync();
+        }
+        catch { }
+        finally
+        {
+            _spellDialogVisible = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task OnSpellIgnoreAll(string word)
+    {
+        try
+        {
+            SpellCheckingService?.AddWordToDictionary(word);
+            if (_monacoEditor != null) await _monacoEditor.TriggerSpellCheckAsync();
+        }
+        catch { }
+        finally
+        {
+            _spellDialogVisible = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private Task HandleOptionsRequested()

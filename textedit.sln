@@ -33,6 +33,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "benchmarks", "benchmarks", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TextEdit.Benchmarks", "tests\benchmarks\TextEdit.Benchmarks\TextEdit.Benchmarks.csproj", "{3D017837-052E-4908-B4E5-8CD985950009}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TextEdit.UI.Tests", "tests\unit\TextEdit.UI.Tests\TextEdit.UI.Tests.csproj", "{37A5BC19-8F58-4699-B2EC-983C78D9A963}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -163,6 +165,18 @@ Global
 		{3D017837-052E-4908-B4E5-8CD985950009}.Release|x64.Build.0 = Release|Any CPU
 		{3D017837-052E-4908-B4E5-8CD985950009}.Release|x86.ActiveCfg = Release|Any CPU
 		{3D017837-052E-4908-B4E5-8CD985950009}.Release|x86.Build.0 = Release|Any CPU
+		{37A5BC19-8F58-4699-B2EC-983C78D9A963}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{37A5BC19-8F58-4699-B2EC-983C78D9A963}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{37A5BC19-8F58-4699-B2EC-983C78D9A963}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{37A5BC19-8F58-4699-B2EC-983C78D9A963}.Debug|x64.Build.0 = Debug|Any CPU
+		{37A5BC19-8F58-4699-B2EC-983C78D9A963}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{37A5BC19-8F58-4699-B2EC-983C78D9A963}.Debug|x86.Build.0 = Debug|Any CPU
+		{37A5BC19-8F58-4699-B2EC-983C78D9A963}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{37A5BC19-8F58-4699-B2EC-983C78D9A963}.Release|Any CPU.Build.0 = Release|Any CPU
+		{37A5BC19-8F58-4699-B2EC-983C78D9A963}.Release|x64.ActiveCfg = Release|Any CPU
+		{37A5BC19-8F58-4699-B2EC-983C78D9A963}.Release|x64.Build.0 = Release|Any CPU
+		{37A5BC19-8F58-4699-B2EC-983C78D9A963}.Release|x86.ActiveCfg = Release|Any CPU
+		{37A5BC19-8F58-4699-B2EC-983C78D9A963}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -181,5 +195,6 @@ Global
 		{60E38CF8-2527-476A-8E8E-F94794A994D5} = {9D556B49-86D1-93A7-9596-FFAAB74EC556}
 		{6C73E6AB-D704-A97F-1BED-3C67E832B020} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{3D017837-052E-4908-B4E5-8CD985950009} = {6C73E6AB-D704-A97F-1BED-3C67E832B020}
+		{37A5BC19-8F58-4699-B2EC-983C78D9A963} = {9D556B49-86D1-93A7-9596-FFAAB74EC556}
 	EndGlobalSection
 EndGlobal

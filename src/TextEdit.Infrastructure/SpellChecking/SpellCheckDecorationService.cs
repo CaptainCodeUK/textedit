@@ -32,15 +32,32 @@ public class SpellCheckDecorationService
 
         foreach (var result in results)
         {
-            // Monaco uses 1-based line numbers and 0-based column positions
+            // Ensure the result has logical values and convert to Monaco 1-based columns
+            int startLine = result.LineNumber;
+            int startColumn = result.ColumnNumber + 1; // Convert from 0-based to Monaco 1-based
+            int endLine = result.LineNumber;
+            int endColumn = startColumn + Math.Max(0, result.Word?.Length ?? 0);
+
+            // Validate values - skip invalid ranges
+            if (startLine < 1 || startColumn < 1 || endLine < 1 || endColumn < startColumn)
+            {
+                // Skip the invalid decoration - do not throw, but log for diagnostics.
+                try
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SpellCheckDecorationService] Skipping invalid decoration for '{result.Word}' L{result.LineNumber} C{result.ColumnNumber} -> start:{startColumn} end:{endColumn}");
+                }
+                catch { }
+                continue;
+            }
+
             decorations.Add(new MonacoDecoration
             {
                 Range = new MonacoRange
                 {
-                    StartLineNumber = result.LineNumber,
-                    StartColumn = result.ColumnNumber + 1, // Convert to 1-based
-                    EndLineNumber = result.LineNumber,
-                    EndColumn = result.ColumnNumber + result.Word.Length + 1 // 1-based, inclusive
+                    StartLineNumber = startLine,
+                    StartColumn = startColumn,
+                    EndLineNumber = endLine,
+                    EndColumn = endColumn
                 },
                 Options = new MonacoDecorationOptions
                 {
